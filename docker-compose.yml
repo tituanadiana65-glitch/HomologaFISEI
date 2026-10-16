@@ -1,0 +1,60 @@
+x-servicio: &servicio
+  restart: on-failure
+  depends_on:
+    sqlserver: { condition: service_healthy }
+    rabbitmq: { condition: service_started }
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Homologa2026*"
+    ports: ["1433:1433"]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Homologa2026*' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports: ["5672:5672", "15672:15672"]
+
+  api-gateway:
+    build: ./api-gateway
+    environment:
+      PORT: "3000"
+      MS_CATALOGO: http://ms-catalogo:3002
+      MS_REGLAS: http://ms-motor-reglas:3004
+      MS_AGENTE: http://ms-agente-ia:3005
+    ports: ["3000:3000"]
+
+  ms-catalogo:
+    <<: *servicio
+    build: ./ms-catalogo
+    environment:
+      PORT: "3002"
+      SERVICIO: ms-catalogo
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=catalogo_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+    ports: ["3002:3002"]
+
+  ms-motor-reglas:
+    <<: *servicio
+    build: ./ms-motor-reglas
+    environment:
+      PORT: "3004"
+      SERVICIO: ms-motor-reglas
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=reglas_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+    ports: ["3004:3004"]
+
+  ms-agente-ia:
+    <<: *servicio
+    build: ./ms-agente-ia
+    environment:
+      PORT: "3005"
+      SERVICIO: ms-agente-ia
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=homologacion_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MS_CATALOGO: http://ms-catalogo:3002
+      MS_REGLAS: http://ms-motor-reglas:3004
+    ports: ["3005:3005"]
