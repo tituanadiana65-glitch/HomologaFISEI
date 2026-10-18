@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  servicios:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio: [api-gateway, ms-catalogo, ms-motor-reglas, ms-agente-ia]
+    defaults:
+      run:
+        working-directory: ${{ matrix.servicio }}
+    env:
+      DATABASE_URL: "sqlserver://localhost:1433;database=ci;user=sa;password=x;trustServerCertificate=true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.servicio }}/package-lock.json
+      - run: npm ci
+      - name: Generar cliente Prisma
+        if: hashFiles(format('{0}/prisma/schema.prisma', matrix.servicio)) != ''
+        run: npx prisma generate
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
