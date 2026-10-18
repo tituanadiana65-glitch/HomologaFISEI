@@ -7,7 +7,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Ejemplo {
-  id     Int    @id @default(autoincrement())
-  nombre String
+model Carrera {
+  id          Int          @id @default(autoincrement())
+  codigo      String       @unique // TI, SW
+  nombre      String       // Tecnologías de la Información
+  asignaturas Asignatura[]
+}
+
+model Asignatura {
+  id                   Int         @id @default(autoincrement())
+  codigo               String      @unique // UTA-FISEI-TI-MP-UB-02-01
+  nombre               String
+  nivel                String      // PRIMERO, SEGUNDO...
+  creditos             Int
+  horasTotales         Int
+  unidadOrganizacional String      // BÁSICA, PROFESIONAL...
+  periodo              String      // JULIO 2026 - DICIEMBRE 2026
+  docente              String
+  objetivoGeneral      String      @db.NVarChar(Max)
+  carreraId            Int
+  carrera              Carrera     @relation(fields: [carreraId], references: [id])
+  unidades             Unidad[]
+  requisitos           Requisito[]
+}
+
+model Unidad {
+  id           Int        @id @default(autoincrement())
+  numero       Int
+  horas        Int
+  contenido    String     @db.NVarChar(Max)
+  asignaturaId Int
+  asignatura   Asignatura @relation(fields: [asignaturaId], references: [id], onDelete: Cascade)
+}
+
+model Requisito {
+  id           Int        @id @default(autoincrement())
+  tipo         String     // PRE o CO
+  codigo       String
+  nombre       String
+  asignaturaId Int
+  asignatura   Asignatura @relation(fields: [asignaturaId], references: [id], onDelete: Cascade)
 }
