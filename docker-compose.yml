@@ -73,5 +73,16 @@ services:
     ports: ["3005:3005"]
     extra_hosts: ["host.docker.internal:host-gateway"] # para usar Ollama instalado en la PC
 
+  ms-solicitudes:
+    <<: *servicio
+    build: ./ms-solicitudes
+    environment:
+      PORT: "3003"
+      SERVICIO: ms-solicitudes
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=solicitudes_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MS_CATALOGO: http://ms-catalogo:3002
+    ports: ["3003:3003"]
+
 volumes:
   sqlserver-datos:
