@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HomologaFISEI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tinta: #1D2B24;
+    --suave: #56655C;
+    --verde: #1E6B45;
+    --verde-claro: #E6F0EA;
+    --papel: #F6F8F6;
+    --blanco: #FFFFFF;
+    --linea: #D3DCD6;
+    --rojo: #A8261F;
+    --rojo-claro: #FBEAE8;
+    --ambar: #8A5A00;
+    --ambar-claro: #FFF4DC;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--papel); color: var(--tinta); font: 16px/1.5 "Public Sans", system-ui, sans-serif; }
+  header { background: var(--verde); color: #fff; padding: 14px 24px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  header p { margin: 0; opacity: .85; font-size: 14px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section.paso { background: var(--blanco); border: 1px solid var(--linea); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+  .paso h2 { margin: 0 0 4px; font-size: 18px; display: flex; gap: 10px; align-items: center; }
+  .paso h2 .n { width: 26px; height: 26px; border-radius: 50%; background: var(--verde); color: #fff; font-size: 14px; display: inline-grid; place-items: center; flex: none; }
+  .paso > p { margin: 0 0 16px; color: var(--suave); font-size: 14px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
+  select, input { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--linea); border-radius: 4px; background: #fff; color: var(--tinta); }
+  select:focus, input:focus, button:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
+  .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  fieldset { border: 1px solid var(--linea); border-radius: 4px; padding: 4px 12px 12px; margin: 12px 0 0; }
+  legend { font-size: 13px; color: var(--suave); padding: 0 4px; }
+  button { margin-top: 16px; font: inherit; font-weight: 600; background: var(--verde); color: #fff; border: 0; border-radius: 4px; padding: 10px 16px; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: wait; }
+  button.secundario { background: transparent; color: var(--verde); border: 1px solid var(--verde); padding: 6px 12px; margin-top: 0; font-size: 14px; }
+  .carreras { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; }
+  .carreras span { background: var(--verde-claro); border-radius: 4px; padding: 4px 8px; }
+  ul.log { list-style: none; padding: 0; margin: 12px 0 0; font-size: 13px; max-height: 180px; overflow: auto; }
+  ul.log li { padding: 3px 0; border-bottom: 1px solid var(--papel); }
+  .ok { color: var(--verde); } .error { color: var(--rojo); }
+
+  /* El informe se presenta como una resolución: es la pieza principal de la demo */
+  .informe { background: var(--blanco); border: 1px solid var(--linea); border-radius: 6px; min-height: 420px; }
+  .informe .vacio { padding: 48px 32px; color: var(--suave); }
+  .informe .vacio strong { color: var(--tinta); display: block; font-size: 18px; margin-bottom: 6px; }
+  .cabecera { padding: 24px 28px 20px; border-bottom: 1px solid var(--linea); }
+  .cabecera .ruta { font-size: 14px; color: var(--suave); }
+  .cabecera .ruta b { color: var(--tinta); font-weight: 600; }
+  .veredicto { font-size: 34px; line-height: 1.15; font-weight: 700; margin: 10px 0 4px; }
+  .veredicto.si { color: var(--verde); } .veredicto.no { color: var(--rojo); } .veredicto.pend { color: var(--ambar); }
+  .cabecera small { color: var(--suave); }
+  ol.causas { list-style: none; margin: 0; padding: 8px 28px 16px; }
+  ol.causas li { display: grid; grid-template-columns: 64px 28px 1fr; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--papel); align-items: start; }
+  ol.causas .cod { font-weight: 700; font-size: 14px; }
+  ol.causas .marca { font-weight: 700; }
+  .marca.si { color: var(--verde); } .marca.no { color: var(--rojo); }
+  .temas { padding: 0 28px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px; }
+  .temas h3 { font-size: 14px; margin: 8px 0 4px; }
+  .temas ul { margin: 0; padding-left: 18px; }
+  .nota { margin: 0 28px 24px; padding: 10px 12px; border-radius: 4px; font-size: 14px; background: var(--ambar-claro); color: var(--ambar); }
+  .historial { margin-top: 20px; }
+  .historial h2 { font-size: 16px; margin: 0 0 8px; }
+  .historial table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--blanco); border: 1px solid var(--linea); }
+  .historial td, .historial th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--papel); }
+  .historial tr[data-id] { cursor: pointer; }
+  .historial tr[data-id]:hover { background: var(--verde-claro); }
+  @media (prefers-reduced-motion: no-preference) { .informe .cabecera { animation: aparecer .25s ease-out; } }
+  @keyframes aparecer { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>HomologaFISEI</h1>
+  <p>Homologación de asignaturas en cambios de carrera · Sprint 1</p>
+</header>
+<main>
+  <div>
+    <section class="paso" aria-labelledby="t1">
+      <h2 id="t1"><span class="n">1</span>Cargar planes analíticos</h2>
+      <p>Sube los PDF de los planes analíticos. Si un plan ya existe, se actualiza.</p>
+      <div class="carreras" id="carreras">Cargando carreras…</div>
+      <label for="archivos">Archivos PDF</label>
+      <input id="archivos" type="file" accept="application/pdf,.pdf" multiple>
+      <label for="carreraPlan">Carrera</label>
+      <select id="carreraPlan">
+        <option value="">Detectar por el código del plan</option>
+        <option value="TI">Tecnologías de la Información</option>
+        <option value="SW">Software</option>
+      </select>
+      <button id="btnImportar">Importar planes</button>
+      <ul class="log" id="logImport" aria-live="polite"></ul>
+    </section>
+
+    <section class="paso" aria-labelledby="t2">
+      <h2 id="t2"><span class="n">2</span>Homologar una asignatura</h2>
+      <p>Elige la materia aprobada y la materia de la nueva carrera.</p>
+      <fieldset>
+        <legend>Materia aprobada</legend>
+        <label for="carA">Carrera de origen</label>
+        <select id="carA"><option value="TI">Tecnologías de la Información</option><option value="SW">Software</option></select>
+        <label for="matA">Asignatura</label>
+        <select id="matA"></select>
+        <div class="fila">
+          <div><label for="nota">Nota final</label><input id="nota" type="number" min="0" max="10" step="0.1" value="8.5"></div>
+          <div><label for="anio">Año de aprobación</label><input id="anio" type="number" min="1990" max="2100" value="2025"></div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Materia nueva</legend>
+        <label for="carB">Carrera de destino</label>
+        <select id="carB"><option value="SW">Software</option><option value="TI">Tecnologías de la Información</option></select>
+        <label for="matB">Asignatura</label>
+        <select id="matB"></select>
+      </fieldset>
+      <button id="btnHomologar">Homologar</button>
+    </section>
+  </div>
+
+  <div>
+    <article class="informe" id="informe" aria-live="polite">
+      <div class="vacio"><strong>Aquí aparece el resultado.</strong>Carga los planes, elige dos asignaturas y pulsa Homologar. El informe explica cada regla que se aplicó.</div>
+    </article>
+    <div class="historial">
+      <h2>Últimas homologaciones <button class="secundario" id="btnRefrescar">Actualizar</button></h2>
+      <table><thead><tr><th>#</th><th>Aprobada → Nueva</th><th>Resultado</th></tr></thead><tbody id="historial"></tbody></table>
+    </div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nombres = { 'Homologable': 'si', 'No homologable': 'no', 'Pendiente': 'pend' };
+
+async function api(url, opciones) {
+  const r = await fetch(url, opciones);
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(Array.isArray(datos.message) ? datos.message.join(', ') : (datos.message || `Error ${r.status}`));
+  return datos;
+}
+
+async function cargarCarreras() {
+  try {
+    const cs = await api('/api/catalogo/carreras');
+    $('carreras').innerHTML = cs.map((c) => `<span>${esc(c.nombre)}: <b>${c._count.asignaturas}</b> asignaturas</span>`).join('');
+  } catch (e) { $('carreras').innerHTML = `<span class="error">El catálogo no responde: ${esc(e.message)}</span>`; }
+}
+
+async function cargarMaterias(selCarrera, selMateria, preferida) {
+  const lista = await api(`/api/catalogo/asignaturas?carrera=${$(selCarrera).value}`).catch(() => []);
+  $(selMateria).innerHTML = lista.length
+    ? lista.map((a) => `<option value="${esc(a.codigo)}">${esc(a.nombre)} · ${a.creditos} cr · ${a.horasTotales} h</option>`).join('')
+    : '<option value="">Primero carga los planes de esta carrera</option>';
+  const p = lista.find((a) => a.nombre === preferida);
+  if (p) $(selMateria).value = p.codigo;
+}
+
+async function refrescarMaterias() {
+  const actual = $('matA').selectedOptions[0]?.textContent.split(' · ')[0];
+  await cargarMaterias('carA', 'matA', actual || 'CALCULO INTEGRAL');
+  await cargarMaterias('carB', 'matB', $('matA').selectedOptions[0]?.textContent.split(' · ')[0]);
+}
+
+$('btnImportar').onclick = async () => {
+  const archivos = [...$('archivos').files];
+  if (!archivos.length) { $('logImport').innerHTML = '<li class="error">Elige al menos un PDF.</li>'; return; }
+  $('btnImportar').disabled = true; $('logImport').innerHTML = '';
+  let ok = 0;
+  for (const f of archivos) {
+    const form = new FormData(); form.append('archivo', f);
+    const carrera = $('carreraPlan').value;
+    try {
+      const r = await api(`/api/catalogo/planes/importar${carrera ? `?carrera=${carrera}` : ''}`, { method: 'POST', body: form });
+      ok++; $('logImport').insertAdjacentHTML('afterbegin', `<li class="ok">✓ ${esc(r.nombre)} (${esc(r.carrera)}) · ${r.creditos} cr · ${r.horasTotales} h</li>`);
+    } catch (e) { $('logImport').insertAdjacentHTML('afterbegin', `<li class="error">✗ ${esc(f.name)}: ${esc(e.message)}</li>`); }
+  }
+  $('logImport').insertAdjacentHTML('afterbegin', `<li><b>Importados ${ok} de ${archivos.length}</b></li>`);
+  $('btnImportar').disabled = false;
+  await cargarCarreras(); await refrescarMaterias();
+};
+
+function mostrarInforme(i) {
+  const clase = nombres[i.resultado] || 'pend';
+  const causas = i.causas.map((c) => `<li><span class="cod">${esc(c.regla)}</span><span class="marca ${c.cumple ? 'si' : 'no'}" aria-label="${c.cumple ? 'cumple' : 'no cumple'}">${c.cumple ? '✓' : '✗'}</span><span>${esc(c.causa)}</span></li>`).join('');
+  const lista = (xs) => xs.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p>—</p>';
+  $('informe').innerHTML = `
+    <div class="cabecera">
+      <div class="ruta"><b>${esc(i.aprobada)}</b> frente a <b>${esc(i.nueva)}</b></div>
+      <div class="veredicto ${clase}">${esc(i.resultado)}</div>
+      <small>Informe ${i.id ? '#' + i.id : ''} ${i.fecha ? '· ' + new Date(i.fecha).toLocaleString('es-EC') : ''}</small>
+    </div>
+    <ol class="causas">${causas}</ol>
+    ${i.resultado === 'Pendiente' ? '<p class="nota">Las reglas numéricas se cumplen, pero falta el análisis de contenidos del agente de IA. Revisa la clave IA_API_KEY en el archivo .env (o espera un minuto si se alcanzó el límite gratuito).</p>' : ''}
+    <div class="temas">
+      <div><h3>Temas que coinciden</h3>${lista(i.temasCoinciden)}</div>
+      <div><h3>Temas que faltan</h3>${lista(i.temasFaltan)}</div>
+    </div>
+    ${i.prerrequisitosNueva.length ? `<p class="nota">Prerrequisitos de la materia nueva: ${esc(i.prerrequisitosNueva.join(', '))}</p>` : ''}`;
+}
+
+$('btnHomologar').onclick = async () => {
+  if (!$('matA').value || !$('matB').value) { $('informe').innerHTML = '<div class="vacio"><strong>Faltan asignaturas.</strong>Carga primero los planes analíticos de las dos carreras.</div>'; return; }
+  $('btnHomologar').disabled = true; $('btnHomologar').textContent = 'Analizando…';
+  try {
+    const i = await api('/api/agente/homologar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigoAprobada: $('matA').value, codigoNueva: $('matB').value, nota: Number($('nota').value), anio: Number($('anio').value) }) });
+    mostrarInforme(i); cargarHistorial();
+  } catch (e) { $('informe').innerHTML = `<div class="vacio"><strong>No se pudo homologar.</strong>${esc(e.message)}</div>`; }
+  $('btnHomologar').disabled = false; $('btnHomologar').textContent = 'Homologar';
+};
+
+async function cargarHistorial() {
+  const filas = await api('/api/agente/homologaciones').catch(() => []);
+  $('historial').innerHTML = filas.length ? filas.map((f) => `<tr data-id="${f.id}" tabindex="0"><td>${f.id}</td><td>${esc(f.codigoAprobada)} → ${esc(f.codigoNueva)}</td><td class="${nombres[f.resultado] === 'si' ? 'ok' : nombres[f.resultado] === 'no' ? 'error' : ''}">${esc(f.resultado)}</td></tr>`).join('')
+    : '<tr><td colspan="3">Todavía no hay homologaciones.</td></tr>';
+}
+$('historial').addEventListener('click', async (e) => {
+  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+  mostrarInforme(await api(`/api/agente/homologaciones/${tr.dataset.id}`));
+});
+$('historial').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.closest('tr[data-id]')?.click(); });
+$('btnRefrescar').onclick = cargarHistorial;
+$('carA').onchange = () => cargarMaterias('carA', 'matA');
+$('carB').onchange = () => cargarMaterias('carB', 'matB', $('matA').selectedOptions[0]?.textContent.split(' · ')[0]);
+$('matA').onchange = () => cargarMaterias('carB', 'matB', $('matA').selectedOptions[0]?.textContent.split(' · ')[0]);
+
+cargarCarreras(); refrescarMaterias(); cargarHistorial();
+</script>
+</body>
+</html>

@@ -7,7 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Ejemplo {
-  id     Int    @id @default(autoincrement())
-  nombre String
+// Resultado de cada homologación con su informe (RN-11: cada decisión explicada).
+model Homologacion {
+  id             Int      @id @default(autoincrement())
+  codigoAprobada String
+  codigoNueva    String
+  nota           Float?
+  anio           Int?
+  resultado      String // Homologable, No homologable o Pendiente
+  porcentaje     Float // coincidencia de contenidos según el agente
+  informe        String   @db.NVarChar(Max) // informe completo en JSON
+  fecha          DateTime @default(now())
 }

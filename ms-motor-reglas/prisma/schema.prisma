@@ -7,7 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Ejemplo {
-  id     Int    @id @default(autoincrement())
-  nombre String
+// Reglas de homologación de la FISEI (ver docs/reglas.md).
+// El administrador puede cambiar "valor" sin tocar el código.
+model Regla {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique // RN-01, RN-02...
+  carrera     String   @default("TODAS") // SW, TI o TODAS
+  descripcion String
+  valor       Float // 0.8 = 80 %, 7 = nota mínima, 10 = años
+  activa      Boolean  @default(true)
+  version     Int      @default(1)
+  actualizada DateTime @default(now()) @updatedAt
 }

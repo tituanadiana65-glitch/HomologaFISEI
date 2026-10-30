@@ -1,0 +1,156 @@
+@startuml
+' Diagrama de clases del Sprint 1 (T15). Coincide con el código de cada microservicio.
+skinparam packageStyle rectangle
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "api-gateway (3000)" {
+  class Gateway <<proxy>> {
+    /api/catalogo -> ms-catalogo
+    /api/reglas -> ms-motor-reglas
+    /api/agente -> ms-agente-ia
+    / -> página de demo
+  }
+}
+
+package "ms-catalogo (3002) · catalogo_db" {
+  class PlanesController {
+    +importar(archivo, carrera)
+  }
+  class AsignaturasController {
+    +listar(carrera, buscar)
+    +buscar(codigo)
+    +carreras()
+  }
+  class LectorPdf <<módulo>> {
+    +leerPlan(pdf): PlanAnalitico
+    +validarPlan(plan): string[]
+    +carreraDesdeCodigo(codigo)
+  }
+  class PlanesRepository {
+    +guardar(plan, carrera)
+    +buscar(codigo)
+    +listar(carrera, texto)
+    +carreras()
+  }
+  class "EventosService" as EvC {
+    +publicar(evento, datos)
+  }
+  class Carrera {
+    codigo
+    nombre
+  }
+  class Asignatura {
+    codigo
+    nombre
+    nivel
+    creditos
+    horasTotales
+    docente
+    objetivoGeneral
+  }
+  class Unidad {
+    numero
+    horas
+    contenido
+  }
+  class Requisito {
+    tipo
+    codigo
+    nombre
+  }
+  PlanesController --> LectorPdf
+  PlanesController --> PlanesRepository
+  PlanesController --> EvC
+  AsignaturasController --> PlanesRepository
+  Carrera "1" -- "*" Asignatura
+  Asignatura "1" -- "*" Unidad
+  Asignatura "1" -- "*" Requisito
+}
+
+package "ms-motor-reglas (3004) · reglas_db" {
+  class ReglasController {
+    +evaluar(origen, destino)
+    +listar()
+  }
+  class ReglasService {
+    +creditos()  RN-02
+    +horas()  RN-03
+    +nota()  RN-04
+    +vigencia()  RN-05
+    +evaluar()
+  }
+  class ReglasRepository {
+    +config(): ConfigReglas
+    +listar()
+  }
+  class Regla {
+    codigo
+    descripcion
+    valor
+    activa
+    version
+  }
+  ReglasController --> ReglasService
+  ReglasController --> ReglasRepository
+  ReglasRepository ..> Regla
+}
+
+package "ms-agente-ia (3005) · homologacion_db" {
+  class AgenteController {
+    +comparar(pedido)
+    +homologar(pedido)
+    +listar()
+    +informe(id)
+  }
+  class HomologacionService {
+    +comparar(pedido)
+    +homologar(pedido): Informe
+  }
+  class AgenteService {
+    +comparar(aprobada, nueva, minimo)  RN-01
+    +llamarIA(pedido)
+  }
+  class ClientesService {
+    +materia(codigo)
+    +evaluar(origen, destino)
+    +minimoContenidos()
+  }
+  class Informe <<módulo>> {
+    +armarInforme(): Informe  RN-11
+  }
+  class "EventosService" as EvA {
+    +publicar(evento, datos)
+  }
+  class Homologacion {
+    codigoAprobada
+    codigoNueva
+    resultado
+    porcentaje
+    informe
+    fecha
+  }
+  AgenteController --> HomologacionService
+  HomologacionService --> AgenteService
+  HomologacionService --> ClientesService
+  HomologacionService --> Informe
+  HomologacionService --> EvA
+  HomologacionService ..> Homologacion
+}
+
+class "API de IA gratuita (Gemini / Groq / Ollama)" as IA <<externo>>
+class "RabbitMQ (exchange homologafisei)" as Rabbit <<externo>>
+
+Gateway ..> PlanesController : HTTP
+Gateway ..> AgenteController : HTTP
+Gateway ..> ReglasController : HTTP
+ClientesService ..> AsignaturasController : HTTP
+ClientesService ..> ReglasController : HTTP
+AgenteService ..> IA : HTTPS
+EvC ..> Rabbit : plan.importado
+EvA ..> Rabbit : homologacion.completada
+@enduml
