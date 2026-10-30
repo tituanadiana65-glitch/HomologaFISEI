@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// Solicitud de cambio de carrera de un estudiante (HU-04)
+model Solicitud {
+  id             Int                  @id @default(autoincrement())
+  usuarioId      Int
+  carreraOrigen  String               // TI
+  carreraDestino String               // SW
+  periodo        String               // NOVIEMBRE 2026 - MARZO 2027
+  estado         String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO
+  creada         DateTime             @default(now())
+  materias       AsignaturaAprobada[]
+}
+
+// Materia aprobada que el estudiante registra en su solicitud (HU-05)
+model AsignaturaAprobada {
+  id          Int       @id @default(autoincrement())
+  solicitudId Int
+  codigo      String    // código del catálogo, carrera de origen
+  nombre      String
+  nivel       String
+  paralelo    String
+  docente     String
+  periodo     String
+  anio        Int       // año de aprobación (RN-05)
+  nota        Float
+  matricula   Int       // 1, 2 o 3
+  resultado   String?   // Homologable, No homologable, Pendiente, Sin materia equivalente
+  codigoNueva String?
+  informe     String?   @db.NVarChar(Max)
+  solicitud   Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@unique([solicitudId, codigo])
+}
