@@ -1,3 +1,7 @@
+# HomologaFISEI · Sprint 1
+# Levantar todo:  docker compose up -d --build
+# Página de demo: http://localhost:3000
+
 x-servicio: &servicio
   restart: on-failure
   depends_on:
@@ -11,23 +15,27 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Homologa2026*"
     ports: ["1433:1433"]
+    volumes:
+      - sqlserver-datos:/var/opt/mssql # los datos no se pierden al apagar
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Homologa2026*' -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
-      retries: 10
+      retries: 12
 
   rabbitmq:
     image: rabbitmq:3-management
-    ports: ["5672:5672", "15672:15672"]
+    ports: ["5672:5672", "15672:15672"] # panel: http://localhost:15672 (guest / guest)
 
   api-gateway:
     build: ./api-gateway
+    restart: on-failure
     environment:
       PORT: "3000"
       MS_CATALOGO: http://ms-catalogo:3002
       MS_REGLAS: http://ms-motor-reglas:3004
       MS_AGENTE: http://ms-agente-ia:3005
     ports: ["3000:3000"]
+    depends_on: [ms-catalogo, ms-motor-reglas, ms-agente-ia]
 
   ms-catalogo:
     <<: *servicio
@@ -36,6 +44,7 @@ services:
       PORT: "3002"
       SERVICIO: ms-catalogo
       DATABASE_URL: "sqlserver://sqlserver:1433;database=catalogo_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     ports: ["3002:3002"]
 
   ms-motor-reglas:
@@ -54,7 +63,15 @@ services:
       PORT: "3005"
       SERVICIO: ms-agente-ia
       DATABASE_URL: "sqlserver://sqlserver:1433;database=homologacion_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      IA_PROVEEDOR: ${IA_PROVEEDOR:-gemini} # gemini, groq u ollama (ver .env.example)
+      IA_API_KEY: ${IA_API_KEY:-}
+      IA_MODELO: ${IA_MODELO:-}
+      IA_URL: ${IA_URL:-}
       MS_CATALOGO: http://ms-catalogo:3002
       MS_REGLAS: http://ms-motor-reglas:3004
     ports: ["3005:3005"]
+    extra_hosts: ["host.docker.internal:host-gateway"] # para usar Ollama instalado en la PC
+
+volumes:
+  sqlserver-datos:

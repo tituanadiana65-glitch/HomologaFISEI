@@ -1,0 +1,22 @@
+﻿HomologaFISEI - Sprint 1
+========================
+
+Lo único que hay que instalar: Docker Desktop (https://www.docker.com/products/docker-desktop/)
+
+1. Saca tu clave gratis de Gemini (no pide tarjeta):
+   - Entra a https://aistudio.google.com/apikey con tu cuenta de Google
+   - Pulsa "Create API key" y copia la clave (empieza con AIza...)
+
+2. Abre Docker Desktop y espera a que abajo diga "Engine running".
+
+3. Doble clic en INICIAR.bat
+   - Si Windows muestra "Windows protegió su PC": Más información > Ejecutar de todas formas
+   - Cuando pida la clave, pégala con clic derecho y presiona Enter
+   - La primera vez tarda entre 5 y 10 minutos. Al final se abre sola la página.
+
+4. Página del sistema: http://localhost:3000
+   Elige la materia aprobada y la materia nueva, y pulsa "Homologar".
+
+Si un resultado sale "Pendiente": Gemini estaba saturado. Espera un minuto y vuelve a homologar.
+Para apagar: cierra Docker Desktop. Para volver a encender: Docker Desktop + doble clic en INICIAR.bat.
+Más detalles: README.md

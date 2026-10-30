@@ -1,0 +1,25 @@
+@startuml
+' Diagrama de casos de uso del Sprint 1 (T14)
+left to right direction
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Arial
+actor Estudiante
+actor Administrador
+actor "Agente IA (Gemini)" as IA
+rectangle HomologaFISEI {
+  usecase "Importar plan analítico (PDF)" as UC1
+  usecase "Consultar asignaturas del catálogo" as UC2
+  usecase "Solicitar homologación interna" as UC3
+  usecase "Comparar contenidos" as UC4
+  usecase "Aplicar reglas de la FISEI" as UC5
+  usecase "Ver resultado e informe" as UC6
+}
+Administrador --> UC1
+Administrador --> UC2
+Estudiante --> UC3
+Estudiante --> UC6
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC5 : <<include>>
+UC4 --> IA
+@enduml
