@@ -1,45 +1,44 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../repository/prisma.service';
-import { validarRegistro, type Registro } from './validaciones';
+import { Registro, validarRegistro } from './validaciones';
 
-const TOKEN_SECRET = 'homologa-sprint2-secreto';
+const secreto = () => process.env.JWT_SECRETO ?? 'homologa-sprint2-secreto';
 
 @Injectable()
-export class IdentidadService {
+export class IdentidadService implements OnModuleInit {
+  private readonly log = new Logger(IdentidadService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  // Crea el administrador la primera vez
+  async onModuleInit() {
+    const correo = process.env.ADMIN_CORREO;
+    if (!correo || (await this.prisma.usuario.findUnique({ where: { correo } }))) return;
+    await this.prisma.usuario.create({
+      data: { nombre: 'Administrador', correo, rol: 'ADMIN', claveHash: await bcrypt.hash(process.env.ADMIN_CLAVE ?? 'Admin2026*', 10) },
+    });
+    this.log.log(`Administrador creado: ${correo}`);
+  }
 
   async registrar(d: Registro) {
     const error = validarRegistro(d);
     if (error) throw new BadRequestException(error);
-
     const correo = d.correo.trim().toLowerCase();
-    const existente = await this.prisma.usuario.findUnique({ where: { correo } });
-    if (existente) throw new BadRequestException('El correo ya está registrado');
-
-    const usuario = await this.prisma.usuario.create({
-      data: {
-        nombre: d.nombre.trim(),
-        correo,
-        claveHash: await bcrypt.hash(d.clave, 10),
-      },
-    });
-
-    return { token: this.crearToken(usuario.id, usuario.rol) };
+    if (await this.prisma.usuario.findUnique({ where: { correo } })) throw new BadRequestException('Ese correo ya está registrado');
+    const u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, claveHash: await bcrypt.hash(d.clave, 10) } });
+    return this.sesion(u);
   }
 
-  async entrar(d: { correo: string; clave: string }) {
-    const correo = d.correo.trim().toLowerCase();
-    const usuario = await this.prisma.usuario.findUnique({ where: { correo } });
-    if (!usuario || !(await bcrypt.compare(d.clave, usuario.claveHash))) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-
-    return { token: this.crearToken(usuario.id, usuario.rol) };
+  async entrar(d: { correo?: string; clave?: string }) {
+    const u = await this.prisma.usuario.findUnique({ where: { correo: (d.correo ?? '').trim().toLowerCase() } });
+    if (!u || !(await bcrypt.compare(d.clave ?? '', u.claveHash))) throw new UnauthorizedException('Correo o contraseña incorrectos');
+    return this.sesion(u);
   }
 
-  private crearToken(id: number, rol: string): string {
-    return jwt.sign({ sub: id, rol }, TOKEN_SECRET, { expiresIn: '8h' });
+  private sesion(u: { id: number; nombre: string; correo: string; rol: string }) {
+    const usuario = { id: u.id, nombre: u.nombre, correo: u.correo, rol: u.rol };
+    return { token: jwt.sign({ sub: u.id, correo: u.correo, rol: u.rol }, secreto(), { expiresIn: '8h' }), usuario };
   }
 }
