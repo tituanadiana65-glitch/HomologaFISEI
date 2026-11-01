@@ -4,6 +4,6 @@ import { Controller, Get } from '@nestjs/common';
 export class HealthController {
   @Get()
   check() {
-    return { ok: true, servicio: process.env.SERVICIO ?? 'ms-plantilla' };
+    return { ok: true, servicio: process.env.SERVICIO ?? 'ms-identidad' };
   }
 }
