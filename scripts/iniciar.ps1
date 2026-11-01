@@ -40,7 +40,7 @@ Paso 'Construyendo y levantando los servicios (la primera vez tarda varios minut
 docker compose up -d --build 2>&1 | ForEach-Object { "$_" }
 
 Paso 'Esperando a que respondan'
-$servicios = 'catalogo', 'reglas', 'agente'
+$servicios = 'identidad', 'catalogo', 'reglas', 'agente', 'solicitudes'
 $listos = $false
 for ($i = 0; $i -lt 60 -and -not $listos; $i++) {
   $listos = $true
@@ -69,10 +69,11 @@ else {
 foreach ($c in (Invoke-RestMethod http://localhost:3000/api/catalogo/carreras)) { Write-Host ("{0}: {1} asignaturas" -f $c.nombre, $c._count.asignaturas) }
 
 Paso 'Probando una homologación: Cálculo Integral TI -> Software'
+$sesion = Invoke-RestMethod http://localhost:3000/api/identidad/login -Method Post -ContentType 'application/json' -Body (@{ correo = 'admin@uta.edu.ec'; clave = 'Admin2026*' } | ConvertTo-Json)
+$h = @{ Authorization = "Bearer $($sesion.token)" }
 $pedido = @{ codigoAprobada = 'UTA-FISEI-TI-MP-UB-02-01'; codigoNueva = 'UTA-FISEI-SF-MP-UB-02-02'; nota = 8.5; anio = 2025 } | ConvertTo-Json
 try {
-  $r = Invoke-RestMethod http://localhost:3000/api/agente/homologar -Method Post -ContentType 'application/json' -Body $pedido -TimeoutSec 180
-  Write-Host ("Resultado: " + $r.resultado) -ForegroundColor Green
+  $r = Invoke-RestMethod http://localhost:3000/api/agente/homologar -Method Post -ContentType 'application/json' -Body $pedido -Headers $h -TimeoutSec 180
   $r.causas | ForEach-Object { Write-Host ("  {0} {1} {2}" -f $_.regla, $(if ($_.cumple) { 'OK ' } else { 'NO ' }), $_.causa) }
 } catch { Write-Host ("La homologación falló: " + $_.Exception.Message) -ForegroundColor Red; docker compose logs ms-agente-ia --tail 30 2>&1 | ForEach-Object { "$_" } }
 
