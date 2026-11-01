@@ -37,6 +37,18 @@ services:
     ports: ["3000:3000"]
     depends_on: [ms-catalogo, ms-motor-reglas, ms-agente-ia]
 
+  ms-identidad:
+    <<: *servicio
+    build: ./ms-identidad
+    environment:
+      PORT: "3001"
+      SERVICIO: ms-identidad
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=identidad_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      JWT_SECRETO: homologa-sprint2-secreto
+      ADMIN_CORREO: admin@uta.edu.ec
+      ADMIN_CLAVE: Admin2026*
+    ports: ["3001:3001"]
+
   ms-catalogo:
     <<: *servicio
     build: ./ms-catalogo
