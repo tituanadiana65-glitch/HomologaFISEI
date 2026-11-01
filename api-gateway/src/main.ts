@@ -3,17 +3,21 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { AppModule } from './app.module';
-
+import { revisarToken } from './token';
 // Rutas del API Gateway: /api/<nombre>/... se reenvía al microservicio
 export const RUTAS: Record<string, string> = {
+  identidad: process.env.MS_IDENTIDAD ?? 'http://localhost:3001',
   catalogo: process.env.MS_CATALOGO ?? 'http://localhost:3002',
   reglas: process.env.MS_REGLAS ?? 'http://localhost:3004',
   agente: process.env.MS_AGENTE ?? 'http://localhost:3005',
+  solicitudes: process.env.MS_SOLICITUDES ?? 'http://localhost:3003',
+  documentos: process.env.MS_DOCUMENTOS ?? 'http://localhost:3006',
 };
 
 async function bootstrap() {
   // bodyParser: false para que el gateway reenvíe el cuerpo tal cual (JSON y archivos PDF)
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  app.use(revisarToken); // T18: antes de los proxies
   for (const [nombre, destino] of Object.entries(RUTAS)) {
     app.use(
       `/api/${nombre}`,

@@ -31,11 +31,24 @@ services:
     restart: on-failure
     environment:
       PORT: "3000"
-      MS_CATALOGO: http://ms-catalogo:3002
-      MS_REGLAS: http://ms-motor-reglas:3004
-      MS_AGENTE: http://ms-agente-ia:3005
+      MS_IDENTIDAD: http://ms-identidad:3001
+      MS_SOLICITUDES: http://ms-solicitudes:3003
+      MS_DOCUMENTOS: http://ms-documentos:3006
+      JWT_SECRETO: homologa-sprint2-secreto
     ports: ["3000:3000"]
-    depends_on: [ms-catalogo, ms-motor-reglas, ms-agente-ia]
+    depends_on: [ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes]
+
+  ms-identidad:
+    <<: *servicio
+    build: ./ms-identidad
+    environment:
+      PORT: "3001"
+      SERVICIO: ms-identidad
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=identidad_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      JWT_SECRETO: homologa-sprint2-secreto
+      ADMIN_CORREO: admin@uta.edu.ec
+      ADMIN_CLAVE: Admin2026*
+    ports: ["3001:3001"]
 
   ms-catalogo:
     <<: *servicio
