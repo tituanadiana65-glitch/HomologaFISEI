@@ -8,6 +8,13 @@ export const CARRERAS_INICIALES = [
   { codigo: 'SW', nombre: 'Software' },
 ];
 
+// Orden de los niveles para mostrarlos como en la malla (sin tildes)
+const ORDEN_NIVELES = ['PRIMERO', 'SEGUNDO', 'TERCERO', 'CUARTO', 'QUINTO', 'SEXTO', 'SEPTIMO', 'OCTAVO', 'NOVENO', 'DECIMO'];
+const puesto = (n: string) => {
+  const i = ORDEN_NIVELES.indexOf(n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
+  return i < 0 ? 99 : i;
+};
+
 @Injectable()
 export class PlanesRepository implements OnModuleInit {
   private readonly log = new Logger(PlanesRepository.name);
@@ -64,11 +71,12 @@ export class PlanesRepository implements OnModuleInit {
     });
   }
 
-  listar(codigoCarrera?: string, texto?: string) {
+  listar(codigoCarrera?: string, texto?: string, nivel?: string) {
     return this.prisma.asignatura.findMany({
       where: {
         ...(codigoCarrera ? { carrera: { codigo: codigoCarrera } } : {}),
         ...(texto ? { nombre: { contains: texto } } : {}),
+        ...(nivel ? { nivel } : {}),
       },
       select: {
         codigo: true,
@@ -81,6 +89,15 @@ export class PlanesRepository implements OnModuleInit {
       },
       orderBy: { nombre: 'asc' },
     });
+  }
+
+  // T24 · Niveles de una carrera, sin repetir y en el orden de la malla
+  async niveles(codigoCarrera: string) {
+    const filas = await this.prisma.asignatura.findMany({
+      where: { carrera: { codigo: codigoCarrera } },
+      select: { nivel: true },
+    });
+    return [...new Set(filas.map((f) => f.nivel))].sort((a, b) => puesto(a) - puesto(b));
   }
 
   carreras() {
