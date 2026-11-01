@@ -15,6 +15,13 @@ export class ClientesService {
     return (await r.json()) as MateriaCatalogo;
   }
 
+  // Asignaturas de una carrera (T27: para buscar la materia equivalente)
+  async asignaturas(carrera: string): Promise<{ codigo: string; nombre: string }[]> {
+    const r = await fetch(`${this.catalogo}/asignaturas?carrera=${encodeURIComponent(carrera)}`).catch(() => null);
+    if (!r || !r.ok) throw new BadGatewayException('ms-catalogo no responde');
+    return (await r.json()) as { codigo: string; nombre: string }[];
+  }
+
   async evaluar(origen: object, destino: object): Promise<ResultadoReglas> {
     const r = await fetch(`${this.reglas}/evaluar`, {
       method: 'POST',

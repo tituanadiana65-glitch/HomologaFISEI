@@ -46,6 +46,29 @@ export class EventosService implements OnModuleDestroy {
     });
   }
 
+  // Escucha una clave del exchange y llama a manejar(datos) por cada mensaje.
+  async escuchar(cola: string, clave: string, manejar: (datos: any) => Promise<void>) {
+    if (!process.env.RABBITMQ_URL) return; // en las pruebas no hay RabbitMQ
+    const canal = await this.abrir();
+    if (!canal) {
+      setTimeout(() => void this.escuchar(cola, clave, manejar), 5000); // reintenta
+      return;
+    }
+    await canal.assertQueue(cola, { durable: true });
+    await canal.bindQueue(cola, EXCHANGE, clave);
+    await canal.consume(cola, async (msg) => {
+      if (!msg) return;
+      try {
+        const { datos } = JSON.parse(msg.content.toString());
+        await manejar(datos);
+        canal.ack(msg);
+      } catch (e) {
+        this.log.warn(`No se pudo procesar ${clave}: ${(e as Error).message}`);
+        canal.nack(msg, false, false);
+      }
+    });
+  }
+
   async onModuleDestroy() {
     await this.conexion?.close().catch(() => undefined);
   }
