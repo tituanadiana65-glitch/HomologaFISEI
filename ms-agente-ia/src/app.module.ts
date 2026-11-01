@@ -7,10 +7,11 @@ import { AgenteService } from './service/agente.service';
 import { ClientesService } from './service/clientes.service';
 import { HomologacionService } from './service/homologacion.service';
 import { EventosService } from './events/eventos.service';
+import { SolicitudesAgenteService } from './service/solicitudes.service';
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true })],
   controllers: [HealthController, AgenteController],
-  providers: [PrismaService, AgenteService, ClientesService, HomologacionService, EventosService],
+  providers: [PrismaService, AgenteService, ClientesService, HomologacionService, EventosService, SolicitudesAgenteService],
 })
 export class AppModule {}
