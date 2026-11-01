@@ -33,13 +33,24 @@ if (!archivos.length) {
   process.exit(1);
 }
 
+// Desde el Sprint 2 importar planes pide token de administrador
+const sesion = await fetch(`${GATEWAY}/api/identidad/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ correo: process.env.ADMIN_CORREO ?? 'admin@uta.edu.ec', clave: process.env.ADMIN_CLAVE ?? 'Admin2026*' }),
+}).then((r) => r.json());
+if (!sesion.token) {
+  console.log('No se pudo iniciar sesión como administrador: ' + (sesion.message ?? 'revisa que ms-identidad esté encendido'));
+  process.exit(1);
+}
+
 let ok = 0;
 const fallos = [];
 for (const ruta of archivos) {
   const form = new FormData();
   form.append('archivo', new Blob([readFileSync(ruta)], { type: 'application/pdf' }), basename(ruta));
   try {
-    const r = await fetch(`${GATEWAY}/api/catalogo/planes/importar`, { method: 'POST', body: form });
+    const r = await fetch(`${GATEWAY}/api/catalogo/planes/importar`, { method: 'POST', headers: { Authorization: `Bearer ${sesion.token}` }, body: form });
     const datos = await r.json();
     if (!r.ok) throw new Error(datos.message ?? r.status);
     ok++;

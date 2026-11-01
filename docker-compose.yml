@@ -31,11 +31,12 @@ services:
     restart: on-failure
     environment:
       PORT: "3000"
-      MS_CATALOGO: http://ms-catalogo:3002
-      MS_REGLAS: http://ms-motor-reglas:3004
-      MS_AGENTE: http://ms-agente-ia:3005
+      MS_IDENTIDAD: http://ms-identidad:3001
+      MS_SOLICITUDES: http://ms-solicitudes:3003
+      MS_DOCUMENTOS: http://ms-documentos:3006
+      JWT_SECRETO: homologa-sprint2-secreto
     ports: ["3000:3000"]
-    depends_on: [ms-catalogo, ms-motor-reglas, ms-agente-ia]
+    depends_on: [ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes]
 
   ms-identidad:
     <<: *servicio
