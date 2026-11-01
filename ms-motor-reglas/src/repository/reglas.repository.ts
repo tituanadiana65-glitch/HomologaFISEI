@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { ConfigReglas } from '../dto/evaluar.dto';
 import { REGLAS_INICIALES } from './reglas-iniciales';
@@ -20,6 +20,17 @@ export class ReglasRepository implements OnModuleInit {
 
   listar() {
     return this.prisma.regla.findMany({ orderBy: { codigo: 'asc' } });
+  }
+
+  // T35 · El administrador cambia el valor o activa/desactiva una regla; cada cambio sube la versión
+  async cambiar(codigo: string, d: { valor?: number; activa?: boolean }) {
+    const r = await this.prisma.regla.findUnique({ where: { codigo } });
+    if (!r) throw new NotFoundException(`No existe la regla ${codigo}`);
+    if (d.valor !== undefined && !(d.valor > 0)) throw new BadRequestException('El valor debe ser mayor a 0');
+    return this.prisma.regla.update({
+      where: { codigo },
+      data: { valor: d.valor ?? r.valor, activa: d.activa ?? r.activa, version: { increment: 1 } },
+    });
   }
 
   async config(): Promise<ConfigReglas> {
