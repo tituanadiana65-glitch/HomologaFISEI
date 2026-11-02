@@ -1,10 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../repository/prisma.service';
 import { EventosService } from '../events/eventos.service';
-import { type NuevaSolicitud, validarSolicitud } from './validaciones';
+import { type NuevaMateria, type NuevaSolicitud, validarMateria, validarSolicitud } from './validaciones';
 
 @Injectable()
 export class SolicitudesService {
+  private readonly catalogo = process.env.MS_CATALOGO || 'http://localhost:3002';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventos: EventosService,
@@ -49,5 +51,42 @@ export class SolicitudesService {
       materias: s.materias.map((m) => ({ codigo: m.codigo, nota: m.nota, anio: m.anio })),
     });
     return { id, estado: 'ENVIADA' };
+  }
+
+  // T23 · Agrega una materia aprobada; el catálogo confirma que es de la carrera de origen
+  async agregarMateria(usuarioId: number, id: number, m: NuevaMateria) {
+    const s = await this.ver(usuarioId, id);
+    if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
+    const error = validarMateria(m, s.materias.map((x) => x.codigo));
+    if (error) throw new BadRequestException(error);
+    const r = await fetch(`${this.catalogo}/asignaturas/${encodeURIComponent(m.codigo)}`).catch(() => null);
+    if (!r) throw new BadRequestException('El catálogo no responde, intenta en un momento');
+    if (r.status === 404) throw new BadRequestException('La materia no está en el catálogo');
+    if (!r.ok) throw new BadRequestException(`El catálogo respondió ${r.status}`);
+    const a = (await r.json()) as { nombre: string; carrera?: { codigo: string } };
+    if (a.carrera?.codigo !== s.carreraOrigen) throw new BadRequestException('La materia no es de tu carrera de origen');
+    return this.prisma.asignaturaAprobada.create({
+      data: {
+        solicitudId: id,
+        codigo: m.codigo,
+        nombre: a.nombre,
+        nivel: m.nivel,
+        paralelo: m.paralelo,
+        docente: m.docente,
+        periodo: m.periodo,
+        anio: m.anio,
+        nota: m.nota,
+        matricula: m.matricula,
+      },
+    });
+  }
+
+  // T23 · Quita una materia mientras la solicitud es borrador
+  async quitarMateria(usuarioId: number, id: number, codigo: string) {
+    const s = await this.ver(usuarioId, id);
+    if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
+    if (!s.materias.some((x) => x.codigo === codigo)) throw new NotFoundException('Esa materia no está en la solicitud');
+    await this.prisma.asignaturaAprobada.delete({ where: { solicitudId_codigo: { solicitudId: id, codigo } } });
+    return { quitada: codigo };
   }
 }

@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Post, UnauthorizedException } from '@nestjs/common';
 import { SolicitudesService } from '../service/solicitudes.service';
-import type { NuevaSolicitud } from '../service/validaciones';
+import type { NuevaMateria, NuevaSolicitud } from '../service/validaciones';
 
 // El API Gateway pone el usuario de la sesión en el encabezado x-usuario-id
 export function usuario(id?: string): number {
@@ -35,5 +35,17 @@ export class SolicitudesController {
   @Post(':id/enviar')
   enviar(@Headers('x-usuario-id') u: string, @Param('id', ParseIntPipe) id: number) {
     return this.servicio.enviar(usuario(u), id);
+  }
+
+  // POST /solicitudes/:id/materias  { codigo, nivel, paralelo, docente, periodo, anio, nota, matricula }
+  @Post(':id/materias')
+  agregar(@Headers('x-usuario-id') u: string, @Param('id', ParseIntPipe) id: number, @Body() m: NuevaMateria) {
+    return this.servicio.agregarMateria(usuario(u), id, m);
+  }
+
+  // DELETE /solicitudes/:id/materias/:codigo
+  @Delete(':id/materias/:codigo')
+  quitar(@Headers('x-usuario-id') u: string, @Param('id', ParseIntPipe) id: number, @Param('codigo') codigo: string) {
+    return this.servicio.quitarMateria(usuario(u), id, codigo);
   }
 }

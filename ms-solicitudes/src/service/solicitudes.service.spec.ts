@@ -10,6 +10,10 @@ function armar(solicitud?: object, abiertas = 0) {
       findUnique: jest.fn().mockResolvedValue(solicitud ?? null),
       update: jest.fn(),
     },
+    asignaturaAprobada: {
+      create: jest.fn().mockImplementation(({ data }) => ({ id: 10, ...data })),
+      delete: jest.fn(),
+    },
   };
   const eventos = { publicar: jest.fn().mockResolvedValue(true) };
   return { servicio: new SolicitudesService(prisma as any, eventos as any), prisma, eventos };
@@ -47,5 +51,43 @@ describe('SolicitudesService', () => {
       carreraDestino: 'SW',
       materias: [{ codigo: 'FIS-TI', nota: 8.5, anio: 2025 }],
     });
+  });
+});
+
+describe('SolicitudesService · materias (T23)', () => {
+  const borrador = { id: 1, usuarioId: 7, estado: 'BORRADOR', carreraOrigen: 'TI', materias: [] };
+  const materia = { codigo: 'FIS-TI', nivel: 'PRIMERO', paralelo: 'A', docente: 'Ing. Pérez', periodo: 'ABRIL 2025 - AGOSTO 2025', anio: 2025, nota: 8.5, matricula: 1 };
+  const catalogo = (status: number, cuerpo: object) =>
+    jest.spyOn(global, 'fetch').mockResolvedValue({ status, ok: status < 400, json: async () => cuerpo } as Response);
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('agrega una materia de la carrera de origen con el nombre del catálogo', async () => {
+    catalogo(200, { nombre: 'FÍSICA', carrera: { codigo: 'TI' } });
+    const { servicio } = armar(borrador);
+    await expect(servicio.agregarMateria(7, 1, materia)).resolves.toMatchObject({ codigo: 'FIS-TI', nombre: 'FÍSICA', nota: 8.5 });
+  });
+
+  it('rechaza una materia de otra carrera', async () => {
+    catalogo(200, { nombre: 'FÍSICA', carrera: { codigo: 'SW' } });
+    const { servicio } = armar(borrador);
+    await expect(servicio.agregarMateria(7, 1, materia)).rejects.toThrow(/carrera de origen/);
+  });
+
+  it('rechaza una materia que no está en el catálogo', async () => {
+    catalogo(404, { message: 'No existe' });
+    const { servicio } = armar(borrador);
+    await expect(servicio.agregarMateria(7, 1, materia)).rejects.toThrow(/no está en el catálogo/);
+  });
+
+  it('no agrega materias a una solicitud enviada', async () => {
+    const { servicio } = armar({ ...borrador, estado: 'ENVIADA' });
+    await expect(servicio.agregarMateria(7, 1, materia)).rejects.toThrow(/ya fue enviada/);
+  });
+
+  it('quita una materia registrada', async () => {
+    const { servicio, prisma } = armar({ ...borrador, materias: [{ codigo: 'FIS-TI' }] });
+    await expect(servicio.quitarMateria(7, 1, 'FIS-TI')).resolves.toEqual({ quitada: 'FIS-TI' });
+    expect(prisma.asignaturaAprobada.delete).toHaveBeenCalled();
   });
 });
