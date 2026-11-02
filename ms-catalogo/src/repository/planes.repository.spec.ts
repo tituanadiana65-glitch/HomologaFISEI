@@ -45,4 +45,18 @@ describe('PlanesRepository', () => {
     await new PlanesRepository(prisma).guardar({ ...plan, carrera: 'Telecomunicaciones' }, 'TC');
     expect(carrera.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: { codigo: 'TC', nombre: 'Telecomunicaciones' } }));
   });
+
+  it('niveles devuelve la lista sin repetidos y en orden de malla', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ nivel: 'SEGUNDO' }, { nivel: 'PRIMERO' }, { nivel: 'SEGUNDO' }]);
+    const prisma = { asignatura: { findMany } } as unknown as PrismaService;
+    expect(await new PlanesRepository(prisma).niveles('TI')).toEqual(['PRIMERO', 'SEGUNDO']);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { carrera: { codigo: 'TI' } } }));
+  });
+
+  it('listar filtra por nivel cuando se pide', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = { asignatura: { findMany } } as unknown as PrismaService;
+    await new PlanesRepository(prisma).listar('TI', undefined, 'PRIMERO');
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { carrera: { codigo: 'TI' }, nivel: 'PRIMERO' } }));
+  });
 });

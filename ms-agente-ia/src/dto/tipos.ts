@@ -50,7 +50,7 @@ export interface PedidoHomologar extends PedidoComparar {
   anio?: number;
 }
 
-export type Resultado = 'Homologable' | 'No homologable' | 'Pendiente';
+export type Resultado = 'Homologable' | 'No homologable' | 'Pendiente' | 'Sin materia equivalente';
 
 export interface Informe {
   id?: number;

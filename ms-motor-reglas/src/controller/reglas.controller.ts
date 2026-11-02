@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { ReglasService } from '../service/reglas.service';
 import { ReglasRepository } from '../repository/reglas.repository';
 import type { EvaluarDto, MateriaReglas } from '../dto/evaluar.dto';
@@ -26,5 +26,11 @@ export class ReglasController {
   @Get('reglas')
   listar() {
     return this.repo.listar();
+  }
+
+  // PUT /reglas/RN-04  { "valor": 7 }
+  @Put('reglas/:codigo')
+  cambiar(@Param('codigo') codigo: string, @Body() d: { valor?: number; activa?: boolean }) {
+    return this.repo.cambiar(codigo, d);
   }
 }
