@@ -27,8 +27,14 @@ export class IdentidadService implements OnModuleInit {
     if (error) throw new BadRequestException(error);
     const correo = d.correo.trim().toLowerCase();
     if (await this.prisma.usuario.findUnique({ where: { correo } })) throw new BadRequestException('Ese correo ya está registrado');
-    const u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, claveHash: await bcrypt.hash(d.clave, 10) } });
-    return this.sesion(u);
+        let u;
+    try {
+      u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, claveHash: await bcrypt.hash(d.clave, 10) } });
+    } catch (e) {
+      // dos registros a la vez con el mismo correo: la base de datos rechaza el segundo
+      if ((e as { code?: string }).code === 'P2002') throw new BadRequestException('Ese correo ya está registrado');
+      throw e;
+    }
   }
 
   async entrar(d: { correo?: string; clave?: string }) {

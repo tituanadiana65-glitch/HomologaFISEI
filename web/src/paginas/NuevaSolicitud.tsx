@@ -13,9 +13,10 @@ export default function NuevaSolicitud() {
 
   useEffect(() => {
     void api<Carrera[]>('/catalogo/carreras').then(setCarreras);
-    void api<Solicitud | null>('/solicitudes/mia').then((s) => {
-      if (s?.estado === 'BORRADOR') ir('/materias');
-      else if (s && s.estado !== 'RESULTADO_LISTO') ir('/resultado');
+    void api<Solicitud | Blob | null>('/solicitudes/mia').then((s) => {
+      if (!s || s instanceof Blob) return; // no tiene solicitud: se muestra el formulario
+      if (s.estado === 'BORRADOR') ir('/materias');
+      else if (s.estado !== 'RESULTADO_LISTO') ir('/resultado');
     });
   }, [ir]);
 
