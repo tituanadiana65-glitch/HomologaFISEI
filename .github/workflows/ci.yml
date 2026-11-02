@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        servicio: [api-gateway, ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes]
+        servicio: [api-gateway, ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes, ms-documentos]
     defaults:
       run:
         working-directory: ${{ matrix.servicio }}

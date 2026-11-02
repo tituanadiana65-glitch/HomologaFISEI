@@ -100,6 +100,17 @@ services:
       MS_CATALOGO: http://ms-catalogo:3002
     ports: ["3003:3003"]
 
+  ms-documentos:
+    build: ./ms-documentos
+    restart: on-failure
+    environment:
+      PORT: "3006"
+      SERVICIO: ms-documentos
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MS_SOLICITUDES: http://ms-solicitudes:3003
+    ports: ["3006:3006"]
+    depends_on: [rabbitmq]
+
   web:
     build: ./web
     ports: ["5173:80"]
