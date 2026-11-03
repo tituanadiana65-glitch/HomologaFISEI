@@ -48,4 +48,10 @@ export class SolicitudesController {
   quitar(@Headers('x-usuario-id') u: string, @Param('id', ParseIntPipe) id: number, @Param('codigo') codigo: string) {
     return this.servicio.quitarMateria(usuario(u), id, codigo);
   }
+
+  // POST /solicitudes/:id/reintentar
+  @Post(':id/reintentar')
+  reintentar(@Headers('x-usuario-id') u: string, @Param('id', ParseIntPipe) id: number) {
+    return this.servicio.reintentar(usuario(u), id);
+  }
 }

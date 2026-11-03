@@ -1,10 +1,19 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../repository/prisma.service';
 import { EventosService } from '../events/eventos.service';
 import { type NuevaMateria, type NuevaSolicitud, validarMateria, validarSolicitud } from './validaciones';
 
+// Resultado de una materia, tal como lo publica ms-agente-ia en solicitud.homologada
+export interface ResultadoMateria {
+  codigoAprobada: string;
+  codigoNueva: string | null;
+  resultado: string;
+  informe: unknown;
+}
+
 @Injectable()
-export class SolicitudesService {
+export class SolicitudesService implements OnModuleInit {
+  private readonly log = new Logger(SolicitudesService.name);
   private readonly catalogo = process.env.MS_CATALOGO || 'http://localhost:3002';
 
   constructor(
@@ -88,5 +97,37 @@ export class SolicitudesService {
     if (!s.materias.some((x) => x.codigo === codigo)) throw new NotFoundException('Esa materia no está en la solicitud');
     await this.prisma.asignaturaAprobada.delete({ where: { solicitudId_codigo: { solicitudId: id, codigo } } });
     return { quitada: codigo };
+  }
+
+  // T28 · Escucha los resultados del agente
+  onModuleInit() {
+    void this.eventos.escuchar('ms-solicitudes.resultados', 'solicitud.homologada', (d) => this.guardarResultado(d));
+  }
+
+  // T28 · Guarda el resultado de cada materia y actualiza el estado de la solicitud
+  async guardarResultado(d: { solicitudId: number; resultados: ResultadoMateria[] }) {
+    for (const r of d.resultados) {
+      await this.prisma.asignaturaAprobada.update({
+        where: { solicitudId_codigo: { solicitudId: d.solicitudId, codigo: r.codigoAprobada } },
+        data: { resultado: r.resultado, codigoNueva: r.codigoNueva, informe: r.informe ? JSON.stringify(r.informe) : null },
+      });
+    }
+    const materias = await this.prisma.asignaturaAprobada.findMany({ where: { solicitudId: d.solicitudId } });
+    const listo = materias.every((m) => m.resultado && m.resultado !== 'Pendiente');
+    await this.prisma.solicitud.update({ where: { id: d.solicitudId }, data: { estado: listo ? 'RESULTADO_LISTO' : 'ENVIADA' } });
+    this.log.log(`Solicitud ${d.solicitudId}: ${d.resultados.length} resultados guardados${listo ? ', resultado listo' : ''}`);
+  }
+
+  // T28 · Vuelve a mandar al agente solo las materias Pendiente
+  async reintentar(usuarioId: number, id: number) {
+    const s = await this.ver(usuarioId, id);
+    const pendientes = s.materias.filter((m) => m.resultado === 'Pendiente');
+    if (pendientes.length === 0) throw new BadRequestException('No hay materias pendientes');
+    await this.eventos.publicar('solicitud.enviada', {
+      solicitudId: id,
+      carreraDestino: s.carreraDestino,
+      materias: pendientes.map((m) => ({ codigo: m.codigo, nota: m.nota, anio: m.anio })),
+    });
+    return { id, reintentadas: pendientes.length };
   }
 }
