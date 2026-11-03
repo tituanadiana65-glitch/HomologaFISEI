@@ -4,8 +4,16 @@ import Pasos from '../componentes/Pasos';
 
 interface Causa { regla: string; cumple: boolean; causa: string }
 interface Informe { nueva: string; causas: Causa[]; temasFaltan: string[] }
-interface Materia { codigo: string; nombre: string; resultado: string | null; informe: string | null }
-interface Solicitud { id: number; estado: string; materias: Materia[] }
+interface Materia { codigo: string; nombre: string; codigoNueva: string | null; resultado: string | null; informe: string | null }
+interface Solicitud { id: number; estado: string; carreraOrigen: string; carreraDestino: string; materias: Materia[] }
+interface Carrera { codigo: string; nombre: string }
+
+// Texto de la columna "Se homologa por" cuando todavía no hay informe
+const equivalente = (resultado: string | null, destino: string) => {
+  if (resultado === 'Sin materia equivalente') return `No hay una materia igual en ${destino}`;
+  if (resultado === 'Pendiente') return 'Por confirmar (reintenta)';
+  return 'Buscando…';
+};
 
 // "No homologable" → "no-homologable" (para el color de la etiqueta)
 const claseDe = (texto: string) =>
@@ -16,6 +24,13 @@ export default function Resultado() {
   const [abierta, setAbierta] = useState('');
   const [version, setVersion] = useState(0); // cambia para volver a cargar
   const [error, setError] = useState('');
+  const [carreras, setCarreras] = useState<Carrera[]>([]);
+
+  // Nombres de las carreras ("Software" en vez de "SW")
+  useEffect(() => {
+    void api<Carrera[]>('/catalogo/carreras').then(setCarreras).catch(() => undefined);
+  }, []);
+  const nombreCarrera = (codigo: string) => carreras.find((c) => c.codigo === codigo)?.nombre ?? codigo;
 
   // Carga la solicitud y la vuelve a pedir cada 5 segundos mientras el agente trabaja
   useEffect(() => {
@@ -75,7 +90,8 @@ export default function Resultado() {
       <table>
         <thead>
           <tr>
-            <th>Materia</th>
+            <th>Tu materia ({nombreCarrera(s.carreraOrigen)})</th>
+            <th>Se homologa por ({nombreCarrera(s.carreraDestino)})</th>
             <th>Resultado</th>
             <th></th>
           </tr>
@@ -88,7 +104,7 @@ export default function Resultado() {
               <tr key={m.codigo}>
                 <td>
                   <strong>{m.nombre}</strong>
-                  {inf && <small className="equivale">Equivale a {inf.nueva}</small>}
+                  <small className="equivale">{m.codigo}</small>
                   {abierta === m.codigo && inf && (
                     <ul className="detalle">
                       {inf.causas.map((c) => (
@@ -102,6 +118,16 @@ export default function Resultado() {
                         </li>
                       )}
                     </ul>
+                  )}
+                </td>
+                <td>
+                  {inf ? (
+                    <>
+                      <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong>
+                      <small className="equivale">{m.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>
+                    </>
+                  ) : (
+                    <span className="sin-equivalente">{equivalente(m.resultado, nombreCarrera(s.carreraDestino))}</span>
                   )}
                 </td>
                 <td>

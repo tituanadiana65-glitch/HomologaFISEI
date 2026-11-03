@@ -116,6 +116,7 @@ td { padding: 12px 10px; border-bottom: 1px solid var(--borde); vertical-align: 
 .aviso { padding: 12px 16px; border-radius: 10px; background: #fff8e1; color: #8a5a00; margin: 0 0 16px; font-size: 14px; }
 .aviso.listo { background: #e8f5e9; color: var(--verde); }
 .equivale { display: block; color: var(--gris); font-size: 12px; margin-top: 2px; }
+.sin-equivalente { color: var(--gris); font-style: italic; font-size: 14px; }
 .etiqueta { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
 .etiqueta.homologable { background: var(--verde); }
 .etiqueta.no-homologable { background: var(--rojo); }
