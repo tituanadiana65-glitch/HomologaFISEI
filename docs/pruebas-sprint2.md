@@ -30,7 +30,7 @@ Datos de prueba: estudiante `prueba.sprint2@uta.edu.ec`, contraseña `Prueba2026
 | # | Caso | Pasos | Esperado | Obtenido | OK |
 |---|---|---|---|---|---|
 | CP-19 | Registrar dos materias | En el paso 2, agregar **Física** (PRIMERO, paralelo A, docente, periodo, año 2025, nota 8.5, matrícula 1) y **Cálculo Integral** (SEGUNDO, nota 7.5) | Las dos aparecen en la lista de materias de la solicitud | | |
-| CP-20 | Datos que no se aceptan | a) Agregar otra vez **Física**. b) Agregar una materia con nota 11. c) Pulsar **Enviar solicitud** sin ninguna materia (con otra cuenta) | a) «Esa materia ya está registrada en la solicitud». b) «La nota debe estar entre 0 y 10». c) «Registra al menos una materia antes de enviar» | | |
+| CP-20 | Datos que no se aceptan | a) Agregar otra vez **Física**. b) Agregar una materia con nota 11. c) Con otra cuenta, dejar la solicitud sin materias | a) «Esa materia ya está registrada en la solicitud». b) «La nota debe estar entre 0 y 10». c) El botón **Enviar a homologar** queda desactivado | | |
 
 Además, el formulario solo muestra las materias de la carrera de origen, así que no se puede escoger una materia de otra carrera; si alguien la envía igual, el sistema responde «La materia no es de tu carrera de origen».
 
