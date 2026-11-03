@@ -5,7 +5,8 @@ import Login from './paginas/Login';
 import NuevaSolicitud from './paginas/NuevaSolicitud'; 
 import Materias from './paginas/Materias';
 import Resultado from './paginas/Resultado';
-  import Administracion from './paginas/Administracion';
+import Administracion from './paginas/Administracion';
+import Barra from './componentes/Barra';
 
 const Privada = ({ children }: { children: ReactNode }) => (sesion() ? children : <Navigate to="/" />);
 const SoloAdmin = ({ children }: { children: ReactNode }) => (sesion()?.usuario.rol === 'ADMIN' ? children : <Navigate to="/" />);
@@ -13,6 +14,7 @@ const SoloAdmin = ({ children }: { children: ReactNode }) => (sesion()?.usuario.
 export default function App() {
   return (
     <BrowserRouter>
+      <Barra />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/solicitud" element={<Privada><NuevaSolicitud /></Privada>} />
@@ -21,5 +23,6 @@ export default function App() {
         <Route path="/admin" element={<SoloAdmin><Administracion /></SoloAdmin>} />
       </Routes>
     </BrowserRouter>
+    
   );
 }
