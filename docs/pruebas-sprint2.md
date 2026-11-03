@@ -2,7 +2,7 @@
 
 Pruebas de aceptación de las historias del Sprint 2. Se hacen en la página http://localhost:5173 con el sistema levantado (`docker compose up -d --build`), los 80 planes cargados y la clave de Gemini en el archivo `.env`.
 
-Cómo llenarlas: hacer cada caso tal como dice la columna **Pasos**, anotar en **Obtenido** lo que pasó y marcar **OK** si coincide con lo **Esperado**. Guardar una captura de cada caso en la carpeta de evidencias.
+Cómo llenarlas: hacer cada caso tal como dice la columna **Pasos**, anotar en **Obtenido** lo que pasó y marcar **OK** si coincide con lo **Esperado**. Las capturas están en la carpeta `docs/evidencias`, con el número del caso como nombre (por ejemplo `CP-13.png`).
 
 Datos de prueba: estudiante `prueba.sprint2@uta.edu.ec`, contraseña `Prueba2026*`, de **Tecnologías de la Información (TI)** a **Software**, con **Física** (primer nivel) y **Cálculo Integral** (segundo nivel).
 
@@ -13,8 +13,8 @@ Datos de prueba: estudiante `prueba.sprint2@uta.edu.ec`, contraseña `Prueba2026
 | # | Caso | Pasos | Esperado | Obtenido | OK |
 |---|---|---|---|---|---|
 | CP-12 | Crear cuenta con el correo institucional | Pestaña **Crear cuenta**, escribir nombre, `prueba.sprint2@uta.edu.ec` y una contraseña de 8 o más caracteres | Entra al sistema y pasa al paso 1 «Nueva solicitud» | | |
-| CP-13 | Crear cuenta con un correo que no es de la UTA | Pestaña **Crear cuenta** con `prueba@gmail.com` | No deja crear la cuenta y dice «Usa tu correo institucional @uta.edu.ec» | | |
-| CP-14 | Entrar con una contraseña incorrecta | Pestaña **Iniciar sesión** con el correo de CP-12 y otra contraseña | No deja entrar y dice «Correo o contraseña incorrectos» | | |
+| CP-13 | Crear cuenta con un correo que no es de la UTA | Pestaña **Crear cuenta** con `prueba@gmail.com` | No deja crear la cuenta y dice «Usa tu correo institucional @uta.edu.ec» | Con `diana@gmail.com` no deja crear la cuenta y muestra «Usa tu correo institucional @uta.edu.ec» ([captura](evidencias/CP-13.png)) | OK |
+| CP-14 | Entrar con una contraseña incorrecta | Pestaña **Iniciar sesión** con el correo de CP-12 y otra contraseña | No deja entrar y avisa que el correo o la contraseña son incorrectos | No deja entrar y muestra «Correo o contraseña incorrecta» ([captura](evidencias/CP-14.png)) | OK |
 | CP-15 | Ver una página privada sin iniciar sesión | Cerrar sesión y abrir directamente http://localhost:5173/resultado | No muestra la página y lleva al inicio de sesión | | |
 
 ### HU-04 · Crear la solicitud de cambio de carrera
