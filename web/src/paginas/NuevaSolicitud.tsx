@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import Pasos from '../componentes/Pasos';
 
 interface Carrera { codigo: string; nombre: string }
 interface Solicitud { id: number; estado: string }
@@ -36,7 +37,8 @@ export default function NuevaSolicitud() {
 
   return (
     <main>
-      <h1>Paso 1 · Nueva solicitud de cambio de carrera</h1>
+      <h1>Nueva solicitud de cambio de carrera</h1>
+      <Pasos actual={1} />
       <form onSubmit={crear}>
         <label>
           Carrera de origen{' '}
