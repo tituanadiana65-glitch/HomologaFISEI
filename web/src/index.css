@@ -79,7 +79,7 @@ td { padding: 12px 10px; border-bottom: 1px solid var(--borde); vertical-align: 
 }
 
 /* Login */
-.acceso { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; background: var(--fondo); }
+.acceso { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--fondo); }
 .acceso-info { background: linear-gradient(150deg, var(--guinda) 0%, var(--guinda-oscuro) 100%); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
 .acceso-logo { font-size: 22px; letter-spacing: 0.3px; }
 .acceso-info h1 { color: #fff; font-size: 38px; line-height: 1.15; margin: 24px 0 0; }
@@ -95,7 +95,6 @@ td { padding: 12px 10px; border-bottom: 1px solid var(--borde); vertical-align: 
 .ayuda { color: var(--gris); margin: 6px 0 24px; font-size: 14px; }
 .completo { grid-column: 1 / -1; }
 @media (max-width: 800px) {
-  .acceso { grid-template-columns: 1fr; }
   .acceso-info { padding: 32px; }
   .acceso-info h1 { font-size: 28px; }
 }

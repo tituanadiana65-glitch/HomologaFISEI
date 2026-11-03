@@ -26,17 +26,6 @@ export default function Login() {
 
   return (
     <div className="acceso">
-      <section className="acceso-info">
-        <strong className="acceso-logo">HomologaFISEI</strong>
-        <h1>Homologa tus materias en minutos</h1>
-        <p>Registra las materias que aprobaste y recibe un análisis por materia, con su explicación y el informe en PDF.</p>
-        <ul>
-          <li>✓ Revisión con las reglas de la FISEI</li>
-          <li>✓ Resultado y explicación por materia</li>
-          <li>✓ Informe en PDF listo para descargar</li>
-        </ul>
-        <small>Universidad Técnica de Ambato · FISEI</small>
-      </section>
 
       <div className="acceso-form">
         <div className="pestanas">
