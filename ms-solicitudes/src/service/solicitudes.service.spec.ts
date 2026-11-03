@@ -13,6 +13,8 @@ function armar(solicitud?: object, abiertas = 0) {
     asignaturaAprobada: {
       create: jest.fn().mockImplementation(({ data }) => ({ id: 10, ...data })),
       delete: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
   const eventos = { publicar: jest.fn().mockResolvedValue(true) };
@@ -89,5 +91,47 @@ describe('SolicitudesService · materias (T23)', () => {
     const { servicio, prisma } = armar({ ...borrador, materias: [{ codigo: 'FIS-TI' }] });
     await expect(servicio.quitarMateria(7, 1, 'FIS-TI')).resolves.toEqual({ quitada: 'FIS-TI' });
     expect(prisma.asignaturaAprobada.delete).toHaveBeenCalled();
+  });
+});
+
+describe('SolicitudesService · resultado del agente (T28)', () => {
+  const resultados = [
+    { codigoAprobada: 'FIS-TI', codigoNueva: 'FIS-SW', resultado: 'Homologable', informe: { resultado: 'Homologable' } },
+    { codigoAprobada: 'CAL-TI', codigoNueva: 'CAL-SW', resultado: 'No homologable', informe: { resultado: 'No homologable' } },
+  ];
+
+  it('guarda cada resultado y deja la solicitud en RESULTADO_LISTO', async () => {
+    const { servicio, prisma } = armar();
+    prisma.asignaturaAprobada.findMany.mockResolvedValue([{ resultado: 'Homologable' }, { resultado: 'No homologable' }]);
+    await servicio.guardarResultado({ solicitudId: 1, resultados });
+    expect(prisma.asignaturaAprobada.update).toHaveBeenCalledTimes(2);
+    expect(prisma.asignaturaAprobada.update).toHaveBeenCalledWith({
+      where: { solicitudId_codigo: { solicitudId: 1, codigo: 'FIS-TI' } },
+      data: { resultado: 'Homologable', codigoNueva: 'FIS-SW', informe: JSON.stringify({ resultado: 'Homologable' }) },
+    });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'RESULTADO_LISTO' } });
+  });
+
+  it('con una materia Pendiente la solicitud sigue ENVIADA', async () => {
+    const { servicio, prisma } = armar();
+    prisma.asignaturaAprobada.findMany.mockResolvedValue([{ resultado: 'Homologable' }, { resultado: 'Pendiente' }]);
+    await servicio.guardarResultado({ solicitudId: 1, resultados });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'ENVIADA' } });
+  });
+
+  it('reintenta solo las materias Pendiente', async () => {
+    const { servicio, eventos } = armar({
+      id: 1, usuarioId: 7, estado: 'ENVIADA', carreraDestino: 'SW',
+      materias: [{ codigo: 'FIS-TI', nota: 8.5, anio: 2025, resultado: 'Homologable' }, { codigo: 'CAL-TI', nota: 8, anio: 2025, resultado: 'Pendiente' }],
+    });
+    await expect(servicio.reintentar(7, 1)).resolves.toEqual({ id: 1, reintentadas: 1 });
+    expect(eventos.publicar).toHaveBeenCalledWith('solicitud.enviada', {
+      solicitudId: 1, carreraDestino: 'SW', materias: [{ codigo: 'CAL-TI', nota: 8, anio: 2025 }],
+    });
+  });
+
+  it('no reintenta si no hay pendientes', async () => {
+    const { servicio } = armar({ id: 1, usuarioId: 7, estado: 'RESULTADO_LISTO', materias: [{ codigo: 'FIS-TI', resultado: 'Homologable' }] });
+    await expect(servicio.reintentar(7, 1)).rejects.toThrow(/No hay materias pendientes/);
   });
 });
