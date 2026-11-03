@@ -39,7 +39,7 @@ services:
       MS_DOCUMENTOS: http://ms-documentos:3006
       JWT_SECRETO: homologa-sprint2-secreto
     ports: ["3000:3000"]
-    depends_on: [ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes]
+    depends_on: [ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes, ms-documentos]
 
   ms-identidad:
     <<: *servicio

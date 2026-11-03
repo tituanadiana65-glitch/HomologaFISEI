@@ -37,7 +37,16 @@ export class SolicitudesAgenteService implements OnModuleInit {
   }
 
   async homologarSolicitud(d: SolicitudEnviada) {
-    const destino = await this.clientes.asignaturas(d.carreraDestino);
+        let destino: { codigo: string; nombre: string }[];
+    try {
+      destino = await this.clientes.asignaturas(d.carreraDestino);
+    } catch (e) {
+      // sin catálogo no se puede buscar equivalentes: todas quedan pendientes, pero la solicitud no se pierde
+      this.log.warn(`Solicitud ${d.solicitudId}: ${(e as Error).message}`);
+      const pendientes: ResultadoMateria[] = d.materias.map((m) => ({ codigoAprobada: m.codigo, codigoNueva: null, resultado: 'Pendiente', informe: null }));
+      await this.eventos.publicar('solicitud.homologada', { solicitudId: d.solicitudId, resultados: pendientes });
+      return;
+    }
     const resultados: ResultadoMateria[] = [];
     for (const m of d.materias) {
       try {

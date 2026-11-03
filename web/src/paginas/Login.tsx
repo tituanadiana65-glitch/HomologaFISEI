@@ -13,7 +13,7 @@ export default function Login() {
     try {
       const s = await api<Sesion>(`/identidad/${modo}`, { method: 'POST', body: JSON.stringify(datos) });
       guardarSesion(s);
-      ir('/solicitud');
+      ir(s.usuario.rol === 'ADMIN' ? '/admin' : '/solicitud');
     } catch (err) {
       setError((err as Error).message);
     }

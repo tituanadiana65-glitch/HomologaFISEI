@@ -18,12 +18,16 @@ async function bootstrap() {
   // bodyParser: false para que el gateway reenvíe el cuerpo tal cual (JSON y archivos PDF)
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
   app.use(revisarToken); // T18: antes de los proxies
-  for (const [nombre, destino] of Object.entries(RUTAS)) {
+    for (const [nombre, destino] of Object.entries(RUTAS)) {
+    // ms-solicitudes tiene sus rutas bajo /solicitudes: se lo devolvemos
+    const pathRewrite =
+      nombre === 'solicitudes' ? (ruta: string) => `/solicitudes${ruta === '/' ? '' : ruta}` : undefined;
     app.use(
       `/api/${nombre}`,
       createProxyMiddleware({
         target: destino,
         changeOrigin: true,
+        pathRewrite,
         proxyTimeout: 120_000, // el agente de IA puede tardar varios segundos
         on: {
           error: (_err, _req, res) => {
