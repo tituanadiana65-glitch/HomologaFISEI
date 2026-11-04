@@ -38,14 +38,30 @@ Además, el formulario solo muestra las materias de la carrera de origen, así q
 
 Casos CP-21 a CP-26: resultado de cada materia y descarga del informe en PDF.
 
+### HU-08 · Homologar la solicitud
+
 | # | Caso | Pasos | Esperado | Obtenido | OK |
 |---|---|---|---|---|---|
-| CP-21 | | | | | |
-| CP-22 | | | | | |
-| CP-23 | | | | | |
-| CP-24 | | | | | |
-| CP-25 | | | | | |
-| CP-26 | | | | | |
+| CP-21 | Resultado de Física y Cálculo Integral | Con una cuenta nueva, solicitud de **TI** a **Software** con **Física** (PRIMERO, nota 8.5, año 2025) y **Cálculo Integral** (SEGUNDO, nota 8.5, año 2025), y pulsar **Enviar a homologar** | Física **Homologable**; Cálculo Integral **No homologable** por créditos 2 de 3 = 66,66 %, cada una con su explicación en **Ver detalle** | Física **Homologable**. Cálculo Integral **No homologable**: RN-01 cumple (contenidos 88 %), RN-02 no cumple (créditos 2 de 3 = 66,66 %), RN-03 no cumple (horas 96 de 144 = 66,66 %), RN-04 y RN-05 cumplen; muestra los temas que faltan ([captura](evidencias/CP-21.png), [detalle](evidencias/CP-21-detalle.png)) | OK |
+| CP-22 | Materia sin equivalente | Con otra cuenta, solicitud de **TI** a **Software** con **Fundamentos de Programación** (nota 9, año 2025) y enviar | **Sin materia equivalente** | **Sin materia equivalente** ([captura](evidencias/CP-22.png)) | OK |
+| CP-23 | Sin clave de Gemini y reintento | Dejar `IA_API_KEY` vacía en `.env` y reiniciar `ms-agente-ia`; enviar una solicitud con **Física**. Luego poner la clave, reiniciar `ms-agente-ia` y pulsar **Reintentar las pendientes** | Primero **Pendiente**; tras reintentar, el resultado real | Sin la clave, Física queda **Pendiente** con el botón **Reintentar las pendientes** ([captura](evidencias/CP-23-pendiente.png)). Con la clave y el reintento pasa a **Homologable** | OK |
+| CP-24 | La solicitud termina | Esperar a que todas las materias de CP-21 tengan resultado | La solicitud pasa a `RESULTADO_LISTO` | Aparece «Tu resultado está listo. Puedes descargar el informe en PDF», los tres pasos en verde y el botón del PDF se activa ([captura](evidencias/CP-21.png)) | OK |
+
+### HU-20 · Informe en PDF
+
+| # | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|
+| CP-25 | Descargar el informe | En el resultado de una solicitud lista, pulsar **Descargar informe en PDF** | El PDF trae los datos, las carreras, la fecha, cada materia con sus reglas y la nota del Consejo Directivo | El PDF trae estudiante, N.º de solicitud, fecha, carreras, periodo, resumen por resultado, cada materia con su resultado, reglas (Cumple / No cumple) y temas que faltan, y la nota del Consejo Directivo | OK |
+| CP-26 | Informe de otra cuenta | Con otra cuenta, pedir `GET /api/documentos/informes/2003` (solicitud de otra estudiante) desde la consola del navegador | Respuesta **403** | **403**: «Esta solicitud no es tuya» | OK |
+
+Además, ms-documentos responde **400** «El resultado todavía no está listo» si la solicitud sigue en borrador, y **404** si no existe.
+
+### Primera vez y correcciones
+
+- **CP-21** falló la primera vez: la página respondía «Cannot POST /» al crear la solicitud porque el gateway quitaba el prefijo `/solicitudes`. Se corrigió con `pathRewrite` en `api-gateway/src/main.ts`.
+- **CP-24** falló la primera vez: las materias se quedaban en «En revisión» porque ms-solicitudes no recibía `solicitud.homologada`. Se corrigió con T28.
+- **CP-23** se quedó la primera vez en «En revisión»: ms-agente-ia había perdido la conexión con RabbitMQ. Se resolvió reiniciando los servicios (`docker compose down` y `docker compose up -d --build`).
+- **CP-22, CP-25 y CP-26** pasaron a la primera.
 
 ## Pruebas automáticas
 
@@ -56,3 +72,5 @@ Se corren solas en GitHub cada vez que se sube un cambio (la integración contin
 | ms-identidad | 11 | Correo @uta.edu.ec, largo de la contraseña, contraseña guardada protegida, inicio de sesión correcto e incorrecto |
 | ms-solicitudes | 26 | Crear y ver la solicitud, carreras distintas, una sola solicitud abierta, agregar y quitar materias, enviar, guardar el resultado y reintentar las pendientes |
 | api-gateway | 9 | Las páginas privadas piden iniciar sesión y las de administración solo las ve el administrador |
+| ms-documentos | 3 | El servicio responde; el PDF se genera con y sin reglas y temas que faltan |
+| web | — | El sitio compila sin errores (`npm run build`) |
