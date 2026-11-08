@@ -30,6 +30,39 @@ describe('SolicitudesService', () => {
     await expect(servicio.crear(7, datos)).resolves.toMatchObject({ usuarioId: 7, estado: 'BORRADOR' });
   });
 
+  it('guarda los datos de una solicitud de otra universidad (T37)', async () => {
+    const { servicio, prisma } = armar(undefined, 0);
+    await servicio.crear(7, {
+      tipo: 'EXTERNO',
+      universidadOrigen: ' Universidad Central del Ecuador ',
+      carreraOrigen: 'Ingeniería Informática',
+      carreraDestino: 'SW',
+      periodo: 'NOVIEMBRE 2026 - MARZO 2027',
+      periodosAprobados: 2,
+      documentosLegalizados: true,
+      mallaId: 3,
+      recordId: 4,
+    });
+    expect(prisma.solicitud.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tipo: 'EXTERNO',
+        universidadOrigen: 'Universidad Central del Ecuador',
+        periodosAprobados: 2,
+        documentosLegalizados: true,
+        mallaId: 3,
+        recordId: 4,
+      }),
+    });
+  });
+
+  it('una solicitud de la UTA no guarda datos de otra universidad', async () => {
+    const { servicio, prisma } = armar(undefined, 0);
+    await servicio.crear(7, { ...datos, universidadOrigen: 'X', mallaId: 3 } as never);
+    expect(prisma.solicitud.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ tipo: 'INTERNO', universidadOrigen: null, mallaId: null }),
+    });
+  });
+
   it('no deja crear una segunda solicitud abierta', async () => {
     const { servicio } = armar(undefined, 1);
     await expect(servicio.crear(7, datos)).rejects.toThrow(BadRequestException);

@@ -21,13 +21,26 @@ export class SolicitudesService implements OnModuleInit {
     private readonly eventos: EventosService,
   ) {}
 
-  // T20 · Crea la solicitud si el estudiante no tiene otra abierta
+  // T20 · Crea la solicitud si el estudiante no tiene otra abierta (T37: también de otra universidad)
   async crear(usuarioId: number, d: NuevaSolicitud) {
     const abiertas = await this.prisma.solicitud.count({ where: { usuarioId, estado: { not: 'RESULTADO_LISTO' } } });
     const error = validarSolicitud(d, abiertas);
     if (error) throw new BadRequestException(error);
+    const externa = d.tipo === 'EXTERNO';
     return this.prisma.solicitud.create({
-      data: { usuarioId, carreraOrigen: d.carreraOrigen, carreraDestino: d.carreraDestino, periodo: d.periodo },
+      data: {
+        usuarioId,
+        tipo: externa ? 'EXTERNO' : 'INTERNO',
+        carreraOrigen: d.carreraOrigen.trim(),
+        carreraDestino: d.carreraDestino,
+        periodo: d.periodo,
+        // T37 · Datos de otra universidad (en una solicitud de la UTA quedan vacíos)
+        universidadOrigen: externa ? d.universidadOrigen!.trim() : null,
+        periodosAprobados: externa ? d.periodosAprobados! : null,
+        documentosLegalizados: externa && d.documentosLegalizados === true,
+        mallaId: externa ? (d.mallaId ?? null) : null,
+        recordId: externa ? (d.recordId ?? null) : null,
+      },
     });
   }
 
