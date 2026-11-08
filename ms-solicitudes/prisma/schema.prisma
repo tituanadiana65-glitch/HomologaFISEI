@@ -7,16 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Solicitud de cambio de carrera de un estudiante (HU-04)
+// Solicitud de cambio de carrera de un estudiante (HU-04; otra universidad: HU-16)
 model Solicitud {
-  id             Int                  @id @default(autoincrement())
-  usuarioId      Int
-  carreraOrigen  String               // TI
-  carreraDestino String               // SW
-  periodo        String               // NOVIEMBRE 2026 - MARZO 2027
-  estado         String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO
-  creada         DateTime             @default(now())
-  materias       AsignaturaAprobada[]
+  id                    Int                  @id @default(autoincrement())
+  usuarioId             Int
+  tipo                  String               @default("INTERNO") // INTERNO (UTA) o EXTERNO (otra universidad)
+  carreraOrigen         String               // INTERNO: código (TI). EXTERNO: nombre escrito por el estudiante
+  carreraDestino        String               // SW
+  periodo               String               // NOVIEMBRE 2026 - MARZO 2027
+  estado                String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO
+  creada                DateTime             @default(now())
+  // Solo para EXTERNO (T37)
+  universidadOrigen     String?
+  periodosAprobados     Int?                 // RN-08: al menos 2
+  documentosLegalizados Boolean              @default(false) // RN-08
+  mallaId               Int?                 // id del PDF en ms-documentos
+  recordId              Int?                 // id del PDF en ms-documentos
+  requisitos            String?              @db.NVarChar(Max) // resultado de RN-08 en JSON (T45)
+  materias              AsignaturaAprobada[]
 }
 
 // Materia aprobada que el estudiante registra en su solicitud (HU-05)

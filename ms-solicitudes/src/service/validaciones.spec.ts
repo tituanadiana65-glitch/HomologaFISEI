@@ -18,6 +18,49 @@ describe('validarSolicitud', () => {
   it('rechaza una segunda solicitud abierta', () => {
     expect(validarSolicitud(datos, 1)).toMatch(/abierta/);
   });
+
+  it('sin tipo, la solicitud es de la UTA (como en el Sprint 2)', () => {
+    expect(validarSolicitud({ ...datos, tipo: undefined }, 0)).toBeNull();
+  });
+
+  it('rechaza un tipo que no existe', () => {
+    expect(validarSolicitud({ ...datos, tipo: 'OTRO' as never }, 0)).toMatch(/tipo/);
+  });
+});
+
+// T37 · Solicitud de un estudiante de otra universidad (HU-16)
+describe('validarSolicitud de otra universidad', () => {
+  const externa = {
+    tipo: 'EXTERNO' as const,
+    universidadOrigen: 'Universidad Central del Ecuador',
+    carreraOrigen: 'Ingeniería Informática',
+    carreraDestino: 'SW',
+    periodo: 'NOVIEMBRE 2026 - MARZO 2027',
+    periodosAprobados: 2,
+  };
+
+  it('acepta una solicitud completa', () => {
+    expect(validarSolicitud(externa, 0)).toBeNull();
+  });
+
+  it('pide la universidad de origen', () => {
+    expect(validarSolicitud({ ...externa, universidadOrigen: '  ' }, 0)).toMatch(/universidad/);
+  });
+
+  it('pide los periodos aprobados entre 1 y 12', () => {
+    expect(validarSolicitud({ ...externa, periodosAprobados: undefined }, 0)).toMatch(/periodos/);
+    expect(validarSolicitud({ ...externa, periodosAprobados: 0 }, 0)).toMatch(/periodos/);
+    expect(validarSolicitud({ ...externa, periodosAprobados: 13 }, 0)).toMatch(/periodos/);
+    expect(validarSolicitud({ ...externa, periodosAprobados: 1.5 }, 0)).toMatch(/periodos/);
+  });
+
+  it('no compara origen y destino: la carrera de origen es de otra universidad', () => {
+    expect(validarSolicitud({ ...externa, carreraOrigen: 'SW' }, 0)).toBeNull();
+  });
+
+  it('tampoco deja tener dos solicitudes abiertas', () => {
+    expect(validarSolicitud(externa, 1)).toMatch(/abierta/);
+  });
 });
 
 

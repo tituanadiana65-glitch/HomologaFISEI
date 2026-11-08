@@ -1,16 +1,33 @@
-// Reglas de negocio de la solicitud (HU-04). Funciones puras: se prueban sin base de datos.
+// Reglas de negocio de la solicitud (HU-04 y HU-16). Funciones puras: se prueban sin base de datos.
+export type TipoSolicitud = 'INTERNO' | 'EXTERNO';
+
 export interface NuevaSolicitud {
+  tipo?: TipoSolicitud; // sin tipo = INTERNO, como en el Sprint 2
   carreraOrigen: string;
   carreraDestino: string;
   periodo: string;
+  // Solo para EXTERNO (estudiante de otra universidad)
+  universidadOrigen?: string;
+  periodosAprobados?: number;
+  documentosLegalizados?: boolean;
+  mallaId?: number;
+  recordId?: number;
 }
 
 // Devuelve el motivo del rechazo, o null si la solicitud es válida.
 export function validarSolicitud(d: Partial<NuevaSolicitud> | undefined, abiertas: number): string | null {
-  if (!d?.carreraOrigen || !d.carreraDestino || !d.periodo) {
+  const tipo = d?.tipo ?? 'INTERNO';
+  if (tipo !== 'INTERNO' && tipo !== 'EXTERNO') return 'El tipo de solicitud debe ser INTERNO o EXTERNO';
+  if (!d?.carreraOrigen?.trim() || !d.carreraDestino || !d.periodo) {
     return 'Elige la carrera de origen, la de destino y el periodo';
   }
-  if (d.carreraOrigen === d.carreraDestino) return 'La carrera de destino debe ser distinta a la de origen';
+  if (tipo === 'EXTERNO') {
+    if (!d.universidadOrigen?.trim()) return 'Escribe la universidad de la que vienes';
+    const p = d.periodosAprobados;
+    if (typeof p !== 'number' || !Number.isInteger(p) || p < 1 || p > 12) return 'Indica cuántos periodos aprobaste (de 1 a 12)';
+  } else if (d.carreraOrigen === d.carreraDestino) {
+    return 'La carrera de destino debe ser distinta a la de origen';
+  }
   if (abiertas > 0) return 'Ya tienes una solicitud abierta';
   return null;
 }
