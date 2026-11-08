@@ -82,12 +82,30 @@ export default function Resultado() {
   return (
     <main>
       <h1>Resultado de tu solicitud</h1>
+      <p className="ayuda">Este es un análisis previo. La decisión oficial la toma el Consejo Directivo de la Facultad.</p>
       <Pasos actual={listo ? 4 : 3} />
 
       {!listo && <p className="aviso">⏳ El agente está revisando tus materias. Esta página se actualiza sola.</p>}
       {listo && <p className="aviso listo">✓ Tu resultado está listo. Puedes descargar el informe en PDF.</p>}
 
-      <table>
+      <div className="conteo">
+        {[
+          ['Homologable', 'homologable'],
+          ['No homologable', 'no-homologable'],
+          ['Pendiente', 'pendiente'],
+          ['Sin materia equivalente', 'sin-materia-equivalente'],
+        ].map(([texto, clase]) => {
+          const n = s.materias.filter((m) => m.resultado === texto).length;
+          return n > 0 ? (
+            <div key={clase} className={`conteo-item ${clase}`}>
+              <strong>{n}</strong>
+              <span>{texto}</span>
+            </div>
+          ) : null;
+        })}
+      </div>
+
+      <table className="tabla-resultado">
         <thead>
           <tr>
             <th>Tu materia ({nombreCarrera(s.carreraOrigen)})</th>

@@ -28,6 +28,13 @@ export default function Login() {
     <div className="acceso">
 
       <div className="acceso-form">
+        <div className="acceso-marca">
+          <span className="logo">H</span>
+          <div>
+            <strong>HomologaFISEI</strong>
+            <small>Universidad Técnica de Ambato · FISEI</small>
+          </div>
+        </div>
         <div className="pestanas">
           <button type="button" className={modo === 'login' ? 'activa' : ''} onClick={() => cambiarModo('login')}>
             Iniciar sesión
@@ -63,6 +70,7 @@ export default function Login() {
           {error && <p role="alert">{error}</p>}
           <button type="submit">{modo === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
         </form>
+        <p className="acceso-pie">Análisis previo de homologación. La decisión oficial la toma el Consejo Directivo de la Facultad.</p>
       </div>
     </div>
   );
