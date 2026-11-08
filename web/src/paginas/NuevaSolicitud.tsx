@@ -38,6 +38,7 @@ export default function NuevaSolicitud() {
   return (
     <main>
       <h1>Nueva solicitud de cambio de carrera</h1>
+      <p className="ayuda">Indica de qué carrera vienes, a cuál te cambias y el periodo en que harás el trámite.</p>
       <Pasos actual={1} />
       <form onSubmit={crear}>
         <label>

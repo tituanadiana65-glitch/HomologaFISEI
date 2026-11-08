@@ -91,6 +91,7 @@ export default function Materias() {
   return (
     <main>
       <h1>Tus materias aprobadas</h1>
+      <p className="ayuda">Registra una por una las materias que aprobaste. Cuando termines, envíalas a homologar.</p>
       <Pasos actual={2} />
 
       {s && (
@@ -111,6 +112,7 @@ export default function Materias() {
         </div>
       )}
 
+      <h2>Agregar una materia</h2>
       <form className="doble" onSubmit={agregar}>
         <label>
           Nivel
@@ -168,14 +170,21 @@ export default function Materias() {
       <ul className="lista">
         {s?.materias.map((x) => (
           <li key={x.codigo}>
-            <span>{x.nombre} · {x.nivel} · nota {x.nota}</span>
+            <span>
+              <strong>{x.nombre}</strong>
+              <small>
+                {x.nivel} · nota {x.nota}
+              </small>
+            </span>
             <button onClick={() => void quitar(x.codigo)}>Quitar</button>
           </li>
         ))}
       </ul>
-      <button onClick={() => void enviar()} disabled={!s?.materias.length}>
-        Enviar a homologar
-      </button>
+      <div className="acciones final">
+        <button onClick={() => void enviar()} disabled={!s?.materias.length}>
+          Enviar a homologar →
+        </button>
+      </div>
     </main>
   );
 }
