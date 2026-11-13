@@ -87,3 +87,37 @@ export function validarMateria(m: Partial<NuevaMateria> | undefined, yaRegistrad
   if (yaRegistradas.includes(m.codigo)) return 'Esa materia ya está registrada en la solicitud';
   return null;
 }
+
+// T45 · RN-08: requisitos para cambiarse desde otra universidad (Instructivo de cambios de carrera, sección E)
+export interface Requisitos {
+  cumple: boolean;
+  causas: { requisito: string; cumple: boolean; causa: string }[];
+}
+
+export function revisarRequisitos(
+  s: { periodosAprobados?: number | null; documentosLegalizados?: boolean | null },
+  materias: { resultado?: string | null }[],
+): Requisitos {
+  const periodos = s.periodosAprobados ?? 0;
+  const homologables = materias.filter((m) => m.resultado === 'Homologable').length;
+  const legalizados = s.documentosLegalizados === true;
+  const plural = (n: number, una: string, varias: string) => `${n} ${n === 1 ? una : varias}`;
+  const causas = [
+    {
+      requisito: 'Periodos aprobados',
+      cumple: periodos >= 2,
+      causa: `Tiene ${plural(periodos, 'periodo aprobado', 'periodos aprobados')} (mínimo 2)`,
+    },
+    {
+      requisito: 'Materias homologables',
+      cumple: homologables >= 2,
+      causa: `Tiene ${plural(homologables, 'materia homologable', 'materias homologables')} (mínimo 2)`,
+    },
+    {
+      requisito: 'Documentos legalizados',
+      cumple: legalizados,
+      causa: legalizados ? 'Indicó que su malla y su récord están legalizados' : 'Falta legalizar la malla y el récord académico',
+    },
+  ];
+  return { cumple: causas.every((c) => c.cumple), causas };
+}

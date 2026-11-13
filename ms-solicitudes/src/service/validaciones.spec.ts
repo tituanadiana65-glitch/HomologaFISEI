@@ -1,4 +1,4 @@
-import { validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
+import { revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
 
 const datos = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
 
@@ -138,5 +138,39 @@ describe('validarMateriaExterna', () => {
 
   it('no deja registrar dos veces la misma materia', () => {
     expect(validarMateriaExterna({ ...calculo, nombre: 'CALCULO  II' }, ['EXT-CALCULO-II'], 2026)).toMatch(/ya está registrada/);
+  });
+});
+
+// T45 · RN-08: requisitos de otra universidad
+describe('revisarRequisitos (RN-08)', () => {
+  const dos = [{ resultado: 'Homologable' }, { resultado: 'Homologable' }, { resultado: 'No homologable' }];
+  const ok = { periodosAprobados: 2, documentosLegalizados: true };
+
+  it('cumple con 2 periodos, 2 materias homologables y documentos legalizados', () => {
+    const r = revisarRequisitos(ok, dos);
+    expect(r.cumple).toBe(true);
+    expect(r.causas.map((c) => c.causa)).toEqual([
+      'Tiene 2 periodos aprobados (mínimo 2)',
+      'Tiene 2 materias homologables (mínimo 2)',
+      'Indicó que su malla y su récord están legalizados',
+    ]);
+  });
+
+  it('no cumple con 1 periodo aprobado', () => {
+    const r = revisarRequisitos({ ...ok, periodosAprobados: 1 }, dos);
+    expect(r.cumple).toBe(false);
+    expect(r.causas[0]).toEqual({ requisito: 'Periodos aprobados', cumple: false, causa: 'Tiene 1 periodo aprobado (mínimo 2)' });
+  });
+
+  it('no cumple con menos de 2 materias homologables', () => {
+    const r = revisarRequisitos(ok, [{ resultado: 'Homologable' }, { resultado: 'Sin materia equivalente' }]);
+    expect(r.cumple).toBe(false);
+    expect(r.causas[1].causa).toBe('Tiene 1 materia homologable (mínimo 2)');
+  });
+
+  it('no cumple sin documentos legalizados', () => {
+    const r = revisarRequisitos({ ...ok, documentosLegalizados: false }, dos);
+    expect(r.cumple).toBe(false);
+    expect(r.causas[2].causa).toBe('Falta legalizar la malla y el récord académico');
   });
 });
