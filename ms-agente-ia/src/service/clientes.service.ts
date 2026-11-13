@@ -1,11 +1,12 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
-import type { MateriaCatalogo, ResultadoReglas } from '../dto/tipos';
+import type { MateriaCatalogo, MateriaTexto, ResultadoReglas } from '../dto/tipos';
 
 // Llamadas HTTP a los otros microservicios (direcciones desde docker-compose.yml).
 @Injectable()
 export class ClientesService {
   private readonly catalogo = process.env.MS_CATALOGO || 'http://localhost:3002';
   private readonly reglas = process.env.MS_REGLAS || 'http://localhost:3004';
+  private readonly documentos = process.env.MS_DOCUMENTOS || 'http://localhost:3006';
 
   async materia(codigo: string): Promise<MateriaCatalogo> {
     const r = await fetch(`${this.catalogo}/asignaturas/${encodeURIComponent(codigo)}`).catch(() => null);
@@ -20,6 +21,21 @@ export class ClientesService {
     const r = await fetch(`${this.catalogo}/asignaturas?carrera=${encodeURIComponent(carrera)}`).catch(() => null);
     if (!r || !r.ok) throw new BadGatewayException('ms-catalogo no responde');
     return (await r.json()) as { codigo: string; nombre: string }[];
+  }
+
+  // T43 · Materias de una carrera con sus unidades (para elegir la más parecida a un sílabo)
+  async candidatas(carrera: string): Promise<MateriaTexto[]> {
+    const lista = await this.asignaturas(carrera);
+    return Promise.all(lista.map((a) => this.materia(a.codigo)));
+  }
+
+  // T43 · Texto del sílabo guardado en ms-documentos (ruta acordada con Paola, T39)
+  async textoSilabo(id: number): Promise<string> {
+    const r = await fetch(`${this.documentos}/documentos/archivos/${id}/texto`).catch(() => null);
+    if (!r) throw new BadGatewayException('ms-documentos no responde');
+    if (r.status === 404) throw new NotFoundException(`No existe el sílabo ${id}`);
+    if (!r.ok) throw new BadGatewayException(`ms-documentos respondió ${r.status}`);
+    return ((await r.json()) as { texto: string }).texto;
   }
 
   async evaluar(origen: object, destino: object): Promise<ResultadoReglas> {

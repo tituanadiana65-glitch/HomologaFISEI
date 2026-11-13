@@ -83,11 +83,14 @@ export async function leerPlan(buffer: Buffer): Promise<PlanAnalitico> {
   return interpretar(datos.text);
 }
 
-// Siglas del código del plan -> código de carrera en catalogo_db.
-const SIGLAS: Record<string, string> = { TI: 'TI', SF: 'SW', SW: 'SW' };
+// Siglas del plan que se guardan con otro código de carrera (SF = Software -> SW).
+const SIGLAS: Record<string, string> = { SF: 'SW' };
 
+// T51 · La carrera sale de la sigla del código del plan (UTA-FISEI-RO-...). Las siglas que no están
+// en la lista (RO, IN...) se devuelven tal cual, así una carrera nueva se crea sola al importar.
 export function carreraDesdeCodigo(codigo: string): string | undefined {
-  return SIGLAS[codigo.split('-')[2] ?? ''];
+  const sigla = codigo.split('-')[2] ?? '';
+  return SIGLAS[sigla] ?? (sigla || undefined);
 }
 
 // Devuelve lo que falta para considerar el archivo un plan analítico válido.

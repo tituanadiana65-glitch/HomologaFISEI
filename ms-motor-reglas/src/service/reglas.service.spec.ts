@@ -54,4 +54,23 @@ describe('ReglasService', () => {
   it('sin nota ni año solo evalúa créditos y horas', () => {
     expect(s.evaluar({ creditos: 3, horas: 144 }, destino, config).reglas.map((r) => r.regla)).toEqual(['RN-02', 'RN-03']);
   });
+
+  // ---------- T46 · datos de otra universidad (los escribe el estudiante) ----------
+  it('T46: 4 créditos y 160 horas de otra universidad frente a 3 y 144 cumplen', () => {
+    const r = s.evaluar({ creditos: 4, horas: 160, nota: 8, anio: 2025 }, destino, config, 2026);
+    expect(r.homologable).toBe(true);
+    expect(r.reglas.find((x) => x.regla === 'RN-02')?.causa).toBe('Créditos 4 de 3 = 133,33 % (mínimo 80 %)');
+    expect(r.reglas.find((x) => x.regla === 'RN-03')?.causa).toBe('Horas 160 de 144 = 111,11 % (mínimo 80 %)');
+  });
+
+  it('T46: 3 créditos de otra universidad frente a 4 (75 %) NO cumple', () => {
+    const r = s.evaluar({ creditos: 3, horas: 160, nota: 8, anio: 2025 }, { creditos: 4, horas: 144 }, config, 2026);
+    expect(r.homologable).toBe(false);
+    expect(r.reglas.filter((x) => !x.cumple).map((x) => x.regla)).toEqual(['RN-02']);
+  });
+
+  it('T46: la nota 16 sobre 20 ya convertida a 8 cumple RN-04, y 13 sobre 20 (6,5) no', () => {
+    expect(s.nota(m({ nota: 8 }), config)?.cumple).toBe(true);
+    expect(s.nota(m({ nota: 6.5 }), config)?.cumple).toBe(false);
+  });
 });

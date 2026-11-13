@@ -80,12 +80,13 @@ services:
       SERVICIO: ms-agente-ia
       DATABASE_URL: "sqlserver://sqlserver:1433;database=homologacion_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-      IA_PROVEEDOR: ${IA_PROVEEDOR:-gemini} # gemini, groq u ollama (ver .env.example)
+      IA_PROVEEDOR: ${IA_PROVEEDOR:-gemini} # gemini, groq, ollama o claude (ver .env.example)
       IA_API_KEY: ${IA_API_KEY:-}
       IA_MODELO: ${IA_MODELO:-}
       IA_URL: ${IA_URL:-}
       MS_CATALOGO: http://ms-catalogo:3002
       MS_REGLAS: http://ms-motor-reglas:3004
+      MS_DOCUMENTOS: http://ms-documentos:3006 # T43: el agente lee el texto de los sílabos
     ports: ["3005:3005"]
     extra_hosts: ["host.docker.internal:host-gateway"] # para usar Ollama instalado en la PC
 

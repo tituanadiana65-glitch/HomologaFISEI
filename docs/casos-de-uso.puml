@@ -1,25 +1,48 @@
 @startuml
-' Diagrama de casos de uso del Sprint 1 (T14)
+' Casos de uso de los Sprints 1 a 3 (T14, actualizado en T56)
 left to right direction
 skinparam monochrome true
 skinparam shadowing false
 skinparam defaultFontName Arial
 actor Estudiante
+actor "Estudiante de otra\nuniversidad" as Externo
 actor Administrador
-actor "Agente IA (Gemini)" as IA
+actor "Agente IA\n(Gemini, Groq, Ollama o Claude)" as IA
 rectangle HomologaFISEI {
+  usecase "Registrarse e iniciar sesión" as UC0
   usecase "Importar plan analítico (PDF)" as UC1
+  usecase "Crear carrera nueva" as UC1b
+  usecase "Cambiar las reglas" as UC1c
   usecase "Consultar asignaturas del catálogo" as UC2
   usecase "Solicitar homologación interna" as UC3
+  usecase "Solicitar homologación\ndesde otra universidad" as UC3b
+  usecase "Subir malla, récord y sílabos (PDF)" as UC3c
   usecase "Comparar contenidos" as UC4
+  usecase "Buscar la materia más parecida\npor sus temas" as UC4b
   usecase "Aplicar reglas de la FISEI" as UC5
   usecase "Ver resultado e informe" as UC6
+  usecase "Descargar informe en PDF" as UC7
+  usecase "Reintentar materias pendientes" as UC8
 }
-Administrador --> UC1
-Administrador --> UC2
+Estudiante --> UC0
 Estudiante --> UC3
 Estudiante --> UC6
+Estudiante --> UC7
+Estudiante --> UC8
+Externo --> UC0
+Externo --> UC3b
+Externo --> UC6
+Administrador --> UC1
+Administrador --> UC1b
+Administrador --> UC1c
+Administrador --> UC2
+UC1 ..> UC1b : <<extend>>
 UC3 ..> UC4 : <<include>>
 UC3 ..> UC5 : <<include>>
+UC3b ..> UC3c : <<include>>
+UC3b ..> UC4b : <<include>>
+UC3b ..> UC4 : <<include>>
+UC3b ..> UC5 : <<include>>
 UC4 --> IA
+UC4b --> IA
 @enduml

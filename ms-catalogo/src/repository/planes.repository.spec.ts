@@ -46,6 +46,20 @@ describe('PlanesRepository', () => {
     expect(carrera.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: { codigo: 'TC', nombre: 'Telecomunicaciones' } }));
   });
 
+  it('T51: crearCarrera guarda una carrera nueva', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 3, codigo: 'RO', nombre: 'Robótica' });
+    const prisma = { carrera: { findUnique: jest.fn().mockResolvedValue(null), create } } as unknown as PrismaService;
+    expect(await new PlanesRepository(prisma).crearCarrera('RO', 'Robótica')).toEqual({ id: 3, codigo: 'RO', nombre: 'Robótica' });
+    expect(create).toHaveBeenCalledWith({ data: { codigo: 'RO', nombre: 'Robótica' } });
+  });
+
+  it('T51: crearCarrera devuelve null si el código ya existe', async () => {
+    const create = jest.fn();
+    const prisma = { carrera: { findUnique: jest.fn().mockResolvedValue({ id: 1, codigo: 'TI' }), create } } as unknown as PrismaService;
+    expect(await new PlanesRepository(prisma).crearCarrera('TI', 'Otra')).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('niveles devuelve la lista sin repetidos y en orden de malla', async () => {
     const findMany = jest.fn().mockResolvedValue([{ nivel: 'SEGUNDO' }, { nivel: 'PRIMERO' }, { nivel: 'SEGUNDO' }]);
     const prisma = { asignatura: { findMany } } as unknown as PrismaService;
