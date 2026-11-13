@@ -1,7 +1,51 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../repository/prisma.service';
 import { EventosService } from '../events/eventos.service';
-import { type NuevaMateria, type NuevaSolicitud, validarMateria, validarSolicitud } from './validaciones';
+import {
+  type NuevaMateria,
+  type NuevaMateriaExterna,
+  type NuevaSolicitud,
+  validarMateria,
+  validarMateriaExterna,
+  validarSolicitud,
+} from './validaciones';
+import { codigoExterno, convertirNota } from './notas';
+
+// Datos mínimos de una materia guardada que van en el mensaje al agente
+interface MateriaGuardada {
+  codigo: string;
+  nombre: string;
+  nota: number;
+  anio: number;
+  creditos?: number | null;
+  horas?: number | null;
+  notaOriginal?: number | null;
+  escala?: number | null;
+  silaboId?: number | null;
+}
+
+// Mensaje solicitud.enviada. INTERNO: igual que en el Sprint 2. EXTERNO: lleva tipo y los datos de cada materia (T38).
+export function mensajeEnviada(s: { tipo?: string; carreraDestino: string }, solicitudId: number, materias: MateriaGuardada[]) {
+  if (s.tipo !== 'EXTERNO') {
+    return { solicitudId, carreraDestino: s.carreraDestino, materias: materias.map((m) => ({ codigo: m.codigo, nota: m.nota, anio: m.anio })) };
+  }
+  return {
+    solicitudId,
+    tipo: 'EXTERNO',
+    carreraDestino: s.carreraDestino,
+    materias: materias.map((m) => ({
+      codigo: m.codigo,
+      nombre: m.nombre,
+      creditos: m.creditos,
+      horas: m.horas,
+      nota: m.nota,
+      notaOriginal: m.notaOriginal,
+      escala: m.escala,
+      anio: m.anio,
+      silaboId: m.silaboId ?? null,
+    })),
+  };
+}
 
 // Resultado de una materia, tal como lo publica ms-agente-ia en solicitud.homologada
 export interface ResultadoMateria {
@@ -67,11 +111,7 @@ export class SolicitudesService implements OnModuleInit {
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
     if (s.materias.length === 0) throw new BadRequestException('Registra al menos una materia antes de enviar');
     await this.prisma.solicitud.update({ where: { id }, data: { estado: 'ENVIADA' } });
-    await this.eventos.publicar('solicitud.enviada', {
-      solicitudId: id,
-      carreraDestino: s.carreraDestino,
-      materias: s.materias.map((m) => ({ codigo: m.codigo, nota: m.nota, anio: m.anio })),
-    });
+    await this.eventos.publicar('solicitud.enviada', mensajeEnviada(s, id, s.materias));
     return { id, estado: 'ENVIADA' };
   }
 
@@ -79,6 +119,7 @@ export class SolicitudesService implements OnModuleInit {
   async agregarMateria(usuarioId: number, id: number, m: NuevaMateria) {
     const s = await this.ver(usuarioId, id);
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
+    if (s.tipo === 'EXTERNO') throw new BadRequestException('Tu solicitud es de otra universidad: registra la materia con su nombre, créditos y horas');
     const error = validarMateria(m, s.materias.map((x) => x.codigo));
     if (error) throw new BadRequestException(error);
     const r = await fetch(`${this.catalogo}/asignaturas/${encodeURIComponent(m.codigo)}`).catch(() => null);
@@ -99,6 +140,34 @@ export class SolicitudesService implements OnModuleInit {
         anio: m.anio,
         nota: m.nota,
         matricula: m.matricula,
+      },
+    });
+  }
+
+  // T38 + T41 · Agrega una materia de otra universidad; guarda la nota original y la convertida a la escala sobre 10
+  async agregarMateriaExterna(usuarioId: number, id: number, m: NuevaMateriaExterna) {
+    const s = await this.ver(usuarioId, id);
+    if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
+    if (s.tipo !== 'EXTERNO') throw new BadRequestException('Esta solicitud es de la UTA: elige la materia del catálogo');
+    const error = validarMateriaExterna(m, s.materias.map((x) => x.codigo));
+    if (error) throw new BadRequestException(error);
+    return this.prisma.asignaturaAprobada.create({
+      data: {
+        solicitudId: id,
+        codigo: codigoExterno(m.nombre),
+        nombre: m.nombre.trim(),
+        nivel: '-',
+        paralelo: '-',
+        docente: '-',
+        periodo: '-',
+        anio: m.anio,
+        nota: convertirNota(m.nota, m.escala),
+        notaOriginal: m.nota,
+        escala: m.escala,
+        matricula: 1,
+        creditos: m.creditos,
+        horas: m.horas,
+        silaboId: m.silaboId ?? null,
       },
     });
   }
@@ -136,11 +205,7 @@ export class SolicitudesService implements OnModuleInit {
     const s = await this.ver(usuarioId, id);
     const pendientes = s.materias.filter((m) => m.resultado === 'Pendiente');
     if (pendientes.length === 0) throw new BadRequestException('No hay materias pendientes');
-    await this.eventos.publicar('solicitud.enviada', {
-      solicitudId: id,
-      carreraDestino: s.carreraDestino,
-      materias: pendientes.map((m) => ({ codigo: m.codigo, nota: m.nota, anio: m.anio })),
-    });
+    await this.eventos.publicar('solicitud.enviada', mensajeEnviada(s, id, pendientes));
     return { id, reintentadas: pendientes.length };
   }
 }
