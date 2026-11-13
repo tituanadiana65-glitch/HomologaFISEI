@@ -43,6 +43,12 @@ model AsignaturaAprobada {
   resultado   String?   // Homologable, No homologable, Pendiente, Sin materia equivalente
   codigoNueva String?
   informe     String?   @db.NVarChar(Max)
+  // Solo para materias de otra universidad (T38 y T41)
+  creditos     Int?
+  horas        Int?
+  notaOriginal Float?    // la nota como la puso su universidad (16); en nota queda la convertida (8)
+  escala       Int?      // 10, 20 o 100
+  silaboId     Int?      // id del sílabo en ms-documentos
   solicitud   Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
 
   @@unique([solicitudId, codigo])

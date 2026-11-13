@@ -168,3 +168,44 @@ describe('SolicitudesService · resultado del agente (T28)', () => {
     await expect(servicio.reintentar(7, 1)).rejects.toThrow(/No hay materias pendientes/);
   });
 });
+
+// T38 + T41 · Materias de otra universidad
+describe('SolicitudesService · otra universidad (T38)', () => {
+  const externa = { id: 2, usuarioId: 7, estado: 'BORRADOR', tipo: 'EXTERNO', carreraDestino: 'SW', materias: [] as object[] };
+  const calculo = { nombre: 'Cálculo II', creditos: 4, horas: 160, nota: 16, escala: 20, anio: 2025, silaboId: 7 };
+
+  it('guarda la materia con la nota convertida y la original', async () => {
+    const { servicio, prisma } = armar(externa);
+    await servicio.agregarMateriaExterna(7, 2, calculo);
+    expect(prisma.asignaturaAprobada.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        codigo: 'EXT-CALCULO-II', nombre: 'Cálculo II', nota: 8, notaOriginal: 16, escala: 20,
+        creditos: 4, horas: 160, silaboId: 7, nivel: '-', paralelo: '-', docente: '-',
+      }),
+    });
+  });
+
+  it('rechaza una materia externa en una solicitud de la UTA', async () => {
+    const { servicio } = armar({ ...externa, tipo: 'INTERNO' });
+    await expect(servicio.agregarMateriaExterna(7, 2, calculo)).rejects.toThrow(/es de la UTA/);
+  });
+
+  it('rechaza una materia del catálogo en una solicitud de otra universidad', async () => {
+    const { servicio } = armar(externa);
+    await expect(servicio.agregarMateria(7, 2, { codigo: 'FIS-TI' } as never)).rejects.toThrow(/otra universidad/);
+  });
+
+  it('explica por qué rechaza datos inválidos', async () => {
+    const { servicio } = armar(externa);
+    await expect(servicio.agregarMateriaExterna(7, 2, { ...calculo, nota: 25 })).rejects.toThrow(/entre 0 y 20/);
+  });
+
+  it('al enviar publica el tipo y los datos de cada materia', async () => {
+    const guardada = { codigo: 'EXT-CALCULO-II', nombre: 'Cálculo II', creditos: 4, horas: 160, nota: 8, notaOriginal: 16, escala: 20, anio: 2025, silaboId: 7 };
+    const { servicio, eventos } = armar({ ...externa, materias: [guardada] });
+    await servicio.enviar(7, 2);
+    expect(eventos.publicar).toHaveBeenCalledWith('solicitud.enviada', {
+      solicitudId: 2, tipo: 'EXTERNO', carreraDestino: 'SW', materias: [guardada],
+    });
+  });
+});

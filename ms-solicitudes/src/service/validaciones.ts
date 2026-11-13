@@ -1,3 +1,5 @@
+import { ESCALAS, codigoExterno } from './notas';
+
 // Reglas de negocio de la solicitud (HU-04 y HU-16). Funciones puras: se prueban sin base de datos.
 export type TipoSolicitud = 'INTERNO' | 'EXTERNO';
 
@@ -42,6 +44,36 @@ export interface NuevaMateria {
   anio: number;
   nota: number;
   matricula: number;
+}
+
+// T38 · Materia de otra universidad (HU-16)
+export interface NuevaMateriaExterna {
+  nombre: string;
+  creditos: number;
+  horas: number;
+  nota: number; // como la puso su universidad
+  escala: number; // 10, 20 o 100
+  anio: number;
+  silaboId?: number;
+}
+
+const entero = (n: unknown) => typeof n === 'number' && Number.isInteger(n);
+
+// Devuelve el motivo del rechazo, o null si la materia es válida. yaRegistradas: códigos EXT- de la solicitud.
+export function validarMateriaExterna(
+  m: Partial<NuevaMateriaExterna> | undefined,
+  yaRegistradas: string[],
+  anioActual = new Date().getFullYear(),
+): string | null {
+  if (!m?.nombre?.trim()) return 'Escribe el nombre de la materia';
+  if (!entero(m.creditos) || m.creditos! <= 0 || m.creditos! > 20) return 'Los créditos deben ser un número entero entre 1 y 20';
+  if (!entero(m.horas) || m.horas! <= 0 || m.horas! > 1000) return 'Las horas deben ser un número entero entre 1 y 1000';
+  if (!ESCALAS.includes(m.escala as never)) return 'La nota debe ser sobre 10, sobre 20 o sobre 100';
+  if (typeof m.nota !== 'number' || m.nota < 0 || m.nota > m.escala!) return `La nota debe estar entre 0 y ${m.escala}`;
+  if (!entero(m.anio) || m.anio! < 1990 || m.anio! > anioActual) return 'Revisa el año de aprobación';
+  if (m.silaboId !== undefined && m.silaboId !== null && (!entero(m.silaboId) || m.silaboId <= 0)) return 'El sílabo no es válido; vuelve a subirlo';
+  if (yaRegistradas.includes(codigoExterno(m.nombre))) return 'Esa materia ya está registrada en la solicitud';
+  return null;
 }
 
 // Devuelve el motivo del rechazo, o null si la materia es válida.

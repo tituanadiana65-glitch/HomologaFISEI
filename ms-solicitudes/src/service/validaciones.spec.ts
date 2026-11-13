@@ -1,4 +1,4 @@
-import { validarMateria, validarSolicitud } from './validaciones';
+import { validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
 
 const datos = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
 
@@ -98,5 +98,45 @@ describe('validarMateria', () => {
 
   it('rechaza una materia repetida', () => {
     expect(validarMateria(fisica, ['FIS-TI'], 2026)).toMatch(/ya está/);
+  });
+});
+
+// T38 · Materia de otra universidad
+describe('validarMateriaExterna', () => {
+  const calculo = { nombre: 'Cálculo II', creditos: 4, horas: 160, nota: 16, escala: 20, anio: 2025, silaboId: 7 };
+
+  it('acepta una materia completa', () => {
+    expect(validarMateriaExterna(calculo, [], 2026)).toBeNull();
+  });
+
+  it('acepta una materia sin sílabo (se compara solo con lo que hay)', () => {
+    expect(validarMateriaExterna({ ...calculo, silaboId: undefined }, [], 2026)).toBeNull();
+  });
+
+  it('pide el nombre', () => {
+    expect(validarMateriaExterna({ ...calculo, nombre: ' ' }, [], 2026)).toMatch(/nombre/);
+  });
+
+  it('rechaza créditos u horas que no son enteros positivos', () => {
+    expect(validarMateriaExterna({ ...calculo, creditos: 0 }, [], 2026)).toMatch(/créditos/);
+    expect(validarMateriaExterna({ ...calculo, creditos: 2.5 }, [], 2026)).toMatch(/créditos/);
+    expect(validarMateriaExterna({ ...calculo, horas: -10 }, [], 2026)).toMatch(/horas/);
+  });
+
+  it('solo acepta notas sobre 10, 20 o 100', () => {
+    expect(validarMateriaExterna({ ...calculo, escala: 5 }, [], 2026)).toMatch(/sobre 10, sobre 20 o sobre 100/);
+  });
+
+  it('rechaza una nota mayor que su escala', () => {
+    expect(validarMateriaExterna({ ...calculo, nota: 21 }, [], 2026)).toMatch(/entre 0 y 20/);
+    expect(validarMateriaExterna({ ...calculo, nota: 85, escala: 100 }, [], 2026)).toBeNull();
+  });
+
+  it('revisa el año', () => {
+    expect(validarMateriaExterna({ ...calculo, anio: 2027 }, [], 2026)).toMatch(/año/);
+  });
+
+  it('no deja registrar dos veces la misma materia', () => {
+    expect(validarMateriaExterna({ ...calculo, nombre: 'CALCULO  II' }, ['EXT-CALCULO-II'], 2026)).toMatch(/ya está registrada/);
   });
 });
