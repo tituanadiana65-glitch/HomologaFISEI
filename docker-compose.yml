@@ -110,10 +110,14 @@ services:
       MS_SOLICITUDES: http://ms-solicitudes:3003
     ports: ["3006:3006"]
     depends_on: [rabbitmq]
+    volumes:
+      - documentos-archivos:/datos/archivos # los PDF subidos no se pierden al apagar
 
   web:
     build: ./web
     ports: ["5173:80"]
     depends_on: [api-gateway]
+
 volumes:
   sqlserver-datos:
+  documentos-archivos:
