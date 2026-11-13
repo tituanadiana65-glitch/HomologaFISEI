@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import SubirPdf from '../componentes/SubirPdf';
+import { numero } from '../notas';
 
 interface Carrera { codigo: string; nombre: string }
 interface Asignatura { codigo: string; nombre: string; docente: string }
@@ -13,6 +14,8 @@ interface Materia {
   nota: number;
   creditos?: number | null;
   horas?: number | null;
+  notaOriginal?: number | null;
+  escala?: number | null;
 }
 interface Solicitud {
   id: number;
@@ -238,10 +241,21 @@ export default function Materias() {
           <li key={x.codigo}>
             <span>
               <strong>{x.nombre}</strong>
-              <small>
-                {externo ? `${x.creditos} créditos · ${x.horas} h · nota ${x.nota}` : `${x.nivel} · nota ${x.nota}`}
-              </small>
+              <small>{externo ? `${x.creditos} créditos · ${x.horas} h` : `${x.nivel} · nota ${x.nota}`}</small>
             </span>
+            {externo && x.notaOriginal != null && (
+              <span className="notas">
+                <span>
+                  <small>Nota original</small>
+                  <b>{numero(x.notaOriginal)} / {x.escala}</b>
+                </span>
+                <span className="flecha">→</span>
+                <span>
+                  <small>Nota UTA</small>
+                  <b>{numero(x.nota, 1)} / 10</b>
+                </span>
+              </span>
+            )}
             <button onClick={() => void quitar(x.codigo)}>Quitar</button>
           </li>
         ))}
