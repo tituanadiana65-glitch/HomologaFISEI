@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
+import { notaConvertida } from '../notas';
 
 interface Causa { regla: string; cumple: boolean; causa: string }
 interface Informe { nueva: string; causas: Causa[]; temasFaltan: string[] }
-interface Materia { codigo: string; nombre: string; codigoNueva: string | null; resultado: string | null; informe: string | null }
+interface Materia { codigo: string; nombre: string; codigoNueva: string | null; resultado: string | null; informe: string | null; nota: number; notaOriginal?: number | null; escala?: number | null }
 interface Solicitud { id: number; estado: string; carreraOrigen: string; carreraDestino: string; materias: Materia[] }
 interface Carrera { codigo: string; nombre: string }
 
@@ -123,6 +124,7 @@ export default function Resultado() {
                 <td>
                   <strong>{m.nombre}</strong>
                   <small className="equivale">{m.codigo}</small>
+                  {notaConvertida(m) && <small className="nota-convertida">Nota: {notaConvertida(m)}</small>}
                   {abierta === m.codigo && inf && (
                     <ul className="detalle">
                       {inf.causas.map((c) => (
