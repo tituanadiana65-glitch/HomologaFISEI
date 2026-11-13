@@ -45,6 +45,16 @@ describe('lector de planes analíticos', () => {
     expect(carreraDesdeCodigo('UTA-FISEI-SF-MP-UB-02-02')).toBe('SW');
   });
 
+  it('T51: una sigla desconocida (Robótica) se devuelve tal cual', () => {
+    expect(carreraDesdeCodigo('UTA-FISEI-RO-MP-UB-02-01')).toBe('RO');
+    expect(carreraDesdeCodigo('UTA-FISEI-IN-MP-UB-02-01')).toBe('IN');
+  });
+
+  it('T51: un código sin sigla no deduce carrera', () => {
+    expect(carreraDesdeCodigo('')).toBeUndefined();
+    expect(carreraDesdeCodigo('ABC')).toBeUndefined();
+  });
+
   it('rechaza un archivo que no es un plan analítico', () => {
     expect(validarPlan({})).toEqual(['código', 'créditos', 'horas', 'unidades']);
   });

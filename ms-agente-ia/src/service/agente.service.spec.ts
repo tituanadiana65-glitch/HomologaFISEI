@@ -1,4 +1,4 @@
-import { AgenteService, armarPedido, leerRespuesta, proveedorActual } from './agente.service';
+import { AgenteService, armarPedido, armarPedidoParecida, armarPedidoSilabo, leerParecida, leerRespuesta, proveedorActual, recortar } from './agente.service';
 import type { MateriaTexto } from '../dto/tipos';
 
 const fisicaTI: MateriaTexto = { codigo: 'TI-FIS', nombre: 'Física', unidades: [{ numero: 1, contenido: 'Leyes de Newton' }] };
@@ -137,5 +137,131 @@ describe('AgenteService', () => {
     expect(espia).toHaveBeenCalledTimes(1);
     espia.mockRestore();
     process.env = original;
+  });
+
+  // ---------- T43 · materia más parecida ----------
+  const candidatas: MateriaTexto[] = [
+    { codigo: 'SW-CI', nombre: 'CÁLCULO INTEGRAL', unidades: [{ numero: 1, contenido: 'Integral indefinida y técnicas de integración' }] },
+    { codigo: 'SW-FIS', nombre: 'FÍSICA', unidades: [{ numero: 1, contenido: 'Leyes de Newton' }] },
+  ];
+
+  it('T43: arma la lista de candidatas con código, nombre y temas', () => {
+    const p = armarPedidoParecida('Integrales dobles', candidatas);
+    expect(p).toContain('SÍLABO:\nIntegrales dobles');
+    expect(p).toContain('SW-CI | CÁLCULO INTEGRAL | Integral indefinida y técnicas de integración');
+    expect(p).toContain('SW-FIS | FÍSICA | Leyes de Newton');
+  });
+
+  it('T43: recorta un sílabo muy largo', () => {
+    expect(recortar('a'.repeat(20_000))).toHaveLength(12_001);
+    expect(recortar('corto')).toBe('corto');
+  });
+
+  it('T43: lee { codigo, parecido }', () => {
+    expect(leerParecida('{"codigo":"SW-CI","parecido":85}', candidatas)).toEqual({ codigo: 'SW-CI', parecido: 85 });
+    expect(leerParecida('Claro:\n```json\n{"codigo":"SW-CI","parecido":120}\n```', candidatas).parecido).toBe(100);
+  });
+
+  it('T43: rechaza un código que la IA inventó o un JSON roto', () => {
+    expect(() => leerParecida('{"codigo":"XX","parecido":90}', candidatas)).toThrow('no está en la lista');
+    expect(() => leerParecida('no es json', candidatas)).toThrow('JSON válido');
+    expect(() => leerParecida('{"codigo":"SW-CI"}', candidatas)).toThrow('parecido');
+  });
+
+  it('T43: elige bien (Cálculo II -> Cálculo Integral)', async () => {
+    jest.spyOn(s, 'llamarIA').mockResolvedValue('{"codigo":"SW-CI","parecido":82}');
+    expect(await s.elegirParecida('Cálculo II: integrales', candidatas)).toEqual({ codigo: 'SW-CI', parecido: 82 });
+  });
+
+  it('T43: con parecido menor a 50 devuelve null (sin equivalente)', async () => {
+    jest.spyOn(s, 'llamarIA').mockResolvedValue('{"codigo":"SW-FIS","parecido":30}');
+    expect(await s.elegirParecida('Literatura', candidatas)).toBeNull();
+  });
+
+  it('T43: si la IA falla, lanza el error', async () => {
+    jest.spyOn(s, 'llamarIA').mockRejectedValue(new Error('sin conexión'));
+    await expect(s.elegirParecida('x', candidatas)).rejects.toThrow('sin conexión');
+  });
+
+  // ---------- proveedor Claude ----------
+  it('Claude: se elige con IA_PROVEEDOR=claude', () => {
+    expect(proveedorActual({ IA_PROVEEDOR: 'claude', IA_API_KEY: 'sk-ant-x' })).toMatchObject({
+      nombre: 'Claude (Anthropic)', modelo: 'claude-sonnet-5-5', formato: 'anthropic', clave: 'sk-ant-x',
+    });
+  });
+
+  it('Claude: llama a /v1/messages con x-api-key y lee el texto', async () => {
+    process.env.IA_PROVEEDOR = 'claude';
+    process.env.IA_API_KEY = 'sk-ant-prueba';
+    const espia = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ content: [{ type: 'text', text: '{"porcentaje":90}' }] }), { status: 200 }),
+    );
+    expect(await new AgenteService().llamarIA('hola', 'eres un agente')).toBe('{"porcentaje":90}');
+    const [url, opciones] = espia.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.anthropic.com/v1/messages');
+    const h = opciones.headers as Record<string, string>;
+    expect(h['x-api-key']).toBe('sk-ant-prueba');
+    expect(h['anthropic-version']).toBe('2023-06-01');
+    expect(JSON.parse(opciones.body as string)).toMatchObject({
+      model: 'claude-sonnet-5-5', system: 'eres un agente', messages: [{ role: 'user', content: 'hola' }],
+    });
+  });
+
+  it('Claude: con clave inválida (401) no reintenta', async () => {
+    process.env.IA_PROVEEDOR = 'claude';
+    process.env.IA_API_KEY = 'mala';
+    const espia = jest.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(new Response('{}', { status: 401 })));
+    await expect(new AgenteService().llamarIA('hola')).rejects.toThrow('no es válida');
+    expect(espia).toHaveBeenCalledTimes(1);
+  });
+
+  it('Claude: si está saturado (529) reintenta y luego usa el modelo de respaldo', async () => {
+    process.env.IA_PROVEEDOR = 'claude';
+    process.env.IA_API_KEY = 'x';
+    const saturado = () => new Response(JSON.stringify({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } }), { status: 529 });
+    const espia = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(saturado())
+      .mockResolvedValueOnce(saturado())
+      .mockResolvedValueOnce(saturado())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'ok' }] }), { status: 200 }));
+    const c = new AgenteService();
+    c.esperar = () => Promise.resolve();
+    expect(await c.llamarIA('hola')).toBe('ok');
+    const modelos = espia.mock.calls.map((x) => (JSON.parse((x[1] as RequestInit).body as string) as { model: string }).model);
+    expect(modelos).toEqual(['claude-sonnet-5-5', 'claude-sonnet-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']);
+  });
+
+  // ---------- T44 · sílabo frente al plan analítico ----------
+  const calculoSW: MateriaTexto = { codigo: 'SW-CI', nombre: 'CÁLCULO INTEGRAL', unidades: [{ numero: 1, contenido: 'Integral indefinida' }, { numero: 2, contenido: 'Integral definida' }] };
+
+  it('T44: el pedido lleva el sílabo y las unidades de la materia nueva', () => {
+    const p = armarPedidoSilabo('Integrales y series', calculoSW);
+    expect(p).toContain('MATERIA APROBADA (sílabo de otra universidad):\nIntegrales y series');
+    expect(p).toContain('MATERIA NUEVA:\nCÁLCULO INTEGRAL (SW-CI)');
+    expect(p).toContain('Unidad 2: Integral definida');
+  });
+
+  it('T44: un sílabo muy largo se recorta a 12 000 caracteres', () => {
+    const p = armarPedidoSilabo('x'.repeat(50_000), calculoSW);
+    expect(p.length).toBeLessThan(13_000);
+  });
+
+  it('T44: compara con IA simulada y devuelve porcentaje, coinciden, faltan y explicación', async () => {
+    jest.spyOn(s, 'llamarIA').mockResolvedValue('{"porcentaje":78,"coinciden":["Integral indefinida"],"faltan":["Integral definida"],"explicacion":"Falta un tema."}');
+    const r = await s.compararConSilabo('Integrales y series', calculoSW);
+    expect(r).toMatchObject({ disponible: true, cumple: false, porcentaje: 78, faltan: ['Integral definida'] });
+  });
+
+  it('T44: usa el mínimo configurado en RN-01', async () => {
+    jest.spyOn(s, 'llamarIA').mockResolvedValue('{"porcentaje":75}');
+    expect((await s.compararConSilabo('x', calculoSW, 70)).cumple).toBe(true);
+  });
+
+  it('T44: si la IA falla, avisa que falta el análisis', async () => {
+    jest.spyOn(s, 'llamarIA').mockRejectedValue(new Error('sin conexión'));
+    const r = await s.compararConSilabo('x', calculoSW);
+    expect(r.disponible).toBe(false);
+    expect(r.explicacion).toContain('falta el análisis de contenidos');
   });
 });

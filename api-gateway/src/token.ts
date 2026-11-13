@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken';
 const PUBLICAS = ['/api/identidad/registro', '/api/identidad/login'];
 const SOLO_ADMIN = [
   { metodo: 'POST', ruta: '/api/catalogo/planes' },
+  { metodo: 'POST', ruta: '/api/catalogo/carreras' }, // T51
   { metodo: 'PUT', ruta: '/api/reglas/reglas' },
   { metodo: 'POST', ruta: '/api/reglas/reglas' },
 ];

@@ -23,6 +23,12 @@ describe('revisarToken', () => {
   it('estudiante no puede importar planes: 403', () => {
     expect(llamar('POST', '/api/catalogo/planes/importar', estudiante).res.status).toHaveBeenCalledWith(403);
   });
+  it('T51: estudiante no puede crear carreras: 403', () => {
+    expect(llamar('POST', '/api/catalogo/carreras', estudiante).res.status).toHaveBeenCalledWith(403);
+  });
+  it('T51: administrador sí puede crear carreras', () => {
+    expect(llamar('POST', '/api/catalogo/carreras', admin).next).toHaveBeenCalled();
+  });
   it('administrador sí puede importar planes', () => {
     expect(llamar('POST', '/api/catalogo/planes/importar', admin).next).toHaveBeenCalled();
   });

@@ -1,5 +1,5 @@
 @startuml
-' Diagrama de clases del Sprint 1 (T15). Coincide con el código de cada microservicio.
+' Diagrama de clases de los Sprints 1 a 3 (T15, actualizado en T56). Coincide con el código de cada microservicio.
 skinparam packageStyle rectangle
 skinparam monochrome true
 skinparam shadowing false
@@ -10,10 +10,13 @@ left to right direction
 
 package "api-gateway (3000)" {
   class Gateway <<proxy>> {
+    /api/identidad -> ms-identidad
     /api/catalogo -> ms-catalogo
     /api/reglas -> ms-motor-reglas
     /api/agente -> ms-agente-ia
-    / -> página de demo
+    /api/solicitudes -> ms-solicitudes
+    /api/documentos -> ms-documentos
+    revisa el token y el rol (SOLO_ADMIN)
   }
 }
 
@@ -25,17 +28,19 @@ package "ms-catalogo (3002) · catalogo_db" {
     +listar(carrera, buscar)
     +buscar(codigo)
     +carreras()
+    +crearCarrera(codigo, nombre)  T51
   }
   class LectorPdf <<módulo>> {
     +leerPlan(pdf): PlanAnalitico
     +validarPlan(plan): string[]
-    +carreraDesdeCodigo(codigo)
+    +carreraDesdeCodigo(codigo)  T51
   }
   class PlanesRepository {
     +guardar(plan, carrera)
     +buscar(codigo)
     +listar(carrera, texto)
     +carreras()
+    +crearCarrera(codigo, nombre)  T51
   }
   class "EventosService" as EvC {
     +publicar(evento, datos)
@@ -103,25 +108,38 @@ package "ms-motor-reglas (3004) · reglas_db" {
 package "ms-agente-ia (3005) · homologacion_db" {
   class AgenteController {
     +comparar(pedido)
+    +compararSilabo(pedido)  T44
     +homologar(pedido)
     +listar()
     +informe(id)
   }
   class HomologacionService {
     +comparar(pedido)
+    +compararSilabo(pedido)  T44
     +homologar(pedido): Informe
+    +homologarExterna(pedido): Informe  T46
   }
   class AgenteService {
     +comparar(aprobada, nueva, minimo)  RN-01
-    +llamarIA(pedido)
+    +compararConSilabo(silabo, nueva, minimo)  T44
+    +elegirParecida(silabo, candidatas)  T43
+    +llamarIA(pedido, sistema)
+  }
+  class SolicitudesAgenteService {
+    +homologarSolicitud(mensaje)
+    +buscarMateriaParecida(materia)  T43
   }
   class ClientesService {
     +materia(codigo)
+    +asignaturas(carrera)
+    +candidatas(carrera)  T43
+    +textoSilabo(id)  T43
     +evaluar(origen, destino)
     +minimoContenidos()
   }
   class Informe <<módulo>> {
     +armarInforme(): Informe  RN-11
+    parecido, notaOriginal, escala  T48
   }
   class "EventosService" as EvA {
     +publicar(evento, datos)
@@ -135,6 +153,9 @@ package "ms-agente-ia (3005) · homologacion_db" {
     fecha
   }
   AgenteController --> HomologacionService
+  SolicitudesAgenteService --> HomologacionService
+  SolicitudesAgenteService --> AgenteService
+  SolicitudesAgenteService --> ClientesService
   HomologacionService --> AgenteService
   HomologacionService --> ClientesService
   HomologacionService --> Informe
@@ -142,7 +163,73 @@ package "ms-agente-ia (3005) · homologacion_db" {
   HomologacionService ..> Homologacion
 }
 
-class "API de IA gratuita (Gemini / Groq / Ollama)" as IA <<externo>>
+package "ms-identidad (3001) · identidad_db" {
+  class IdentidadController {
+    +registro(datos)
+    +login(correo, clave)
+  }
+  class IdentidadService {
+    +registrar(datos)
+    +entrar(correo, clave): token
+  }
+  class Usuario {
+    nombre
+    correo
+    claveHash
+    rol
+  }
+  IdentidadController --> IdentidadService
+  IdentidadService ..> Usuario
+}
+
+package "ms-solicitudes (3003) · solicitudes_db" {
+  class SolicitudesController {
+    +crear()
+    +mia()
+    +ver(id)
+    +enviar(id)
+    +agregarMateria(id)
+    +quitarMateria(id, codigo)
+    +reintentar(id)
+  }
+  class SolicitudesService {
+    +guardarResultado(mensaje)
+  }
+  class Solicitud {
+    carreraOrigen
+    carreraDestino
+    estado
+    tipo  T37
+    universidadOrigen  T37
+  }
+  class AsignaturaAprobada {
+    codigo
+    nota
+    anio
+    resultado
+    informe
+    creditos, horas, silaboId  T38
+  }
+  SolicitudesController --> SolicitudesService
+  SolicitudesService ..> Solicitud
+  Solicitud "1" -- "*" AsignaturaAprobada
+}
+
+package "ms-documentos (3006)" {
+  class InformesController {
+    +descargar(id): PDF
+  }
+  class ArchivosController <<Sprint 3>> {
+    +subir(archivo, tipo)  T39
+    +texto(id)  T39
+  }
+  class InformePdf <<módulo>> {
+    +crearPdf(solicitud, correo)
+  }
+  InformesController --> InformePdf
+}
+
+class "API de IA (Gemini / Groq / Ollama / Claude)" as IA <<externo>>
 class "RabbitMQ (exchange homologafisei)" as Rabbit <<externo>>
 
 Gateway ..> PlanesController : HTTP
@@ -153,4 +240,15 @@ ClientesService ..> ReglasController : HTTP
 AgenteService ..> IA : HTTPS
 EvC ..> Rabbit : plan.importado
 EvA ..> Rabbit : homologacion.completada
+SolicitudesService ..> Rabbit : solicitud.enviada
+Rabbit ..> SolicitudesAgenteService : solicitud.enviada
+SolicitudesAgenteService ..> Rabbit : solicitud.homologada
+Rabbit ..> SolicitudesService : solicitud.homologada
+Gateway ..> IdentidadController : HTTP
+Gateway ..> SolicitudesController : HTTP
+Gateway ..> InformesController : HTTP
+Gateway ..> ArchivosController : HTTP
+SolicitudesService ..> AsignaturasController : HTTP
+InformesController ..> SolicitudesController : HTTP
+ClientesService ..> ArchivosController : HTTP (texto del sílabo)
 @enduml

@@ -12,6 +12,12 @@ export class AgenteController {
     return this.servicio.comparar(p);
   }
 
+  // T44 · { silabo, codigoNueva } -> porcentaje de contenidos del sílabo frente al plan de la FISEI
+  @Post('comparar-silabo')
+  compararSilabo(@Body() p: { silabo: string; codigoNueva: string }) {
+    return this.servicio.compararSilabo(p);
+  }
+
   // T12 · { codigoAprobada, codigoNueva, nota, anio } -> resultado e informe
   @Post('homologar')
   homologar(@Body() p: PedidoHomologar) {

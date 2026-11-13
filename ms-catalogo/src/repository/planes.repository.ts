@@ -64,6 +64,13 @@ export class PlanesRepository implements OnModuleInit {
     });
   }
 
+  // T51 · Crea una carrera a mano (solo administrador). Devuelve null si el código ya existe.
+  async crearCarrera(codigo: string, nombre: string) {
+    const existe = await this.prisma.carrera.findUnique({ where: { codigo } });
+    if (existe) return null;
+    return this.prisma.carrera.create({ data: { codigo, nombre } });
+  }
+
   buscar(codigo: string) {
     return this.prisma.asignatura.findUnique({
       where: { codigo },

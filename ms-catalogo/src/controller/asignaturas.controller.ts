@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, Post, Query } from '@nestjs/common';
 import { PlanesRepository } from '../repository/planes.repository';
 
 @Controller()
@@ -28,5 +28,17 @@ export class AsignaturasController {
   @Get('carreras')
   carreras() {
     return this.repo.carreras();
+  }
+
+  // T51 · POST /carreras { codigo, nombre }  (el api-gateway solo deja pasar al administrador)
+  @Post('carreras')
+  async crearCarrera(@Body() body: { codigo?: string; nombre?: string }) {
+    const codigo = (body?.codigo ?? '').trim().toUpperCase();
+    const nombre = (body?.nombre ?? '').trim();
+    if (!/^[A-Z]{2,10}$/.test(codigo)) throw new BadRequestException('El código debe tener de 2 a 10 letras, por ejemplo RO');
+    if (nombre.length < 3) throw new BadRequestException('Escribe el nombre de la carrera');
+    const creada = await this.repo.crearCarrera(codigo, nombre);
+    if (!creada) throw new ConflictException(`La carrera ${codigo} ya existe`);
+    return creada;
   }
 }

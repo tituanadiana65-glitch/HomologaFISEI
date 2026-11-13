@@ -26,6 +26,8 @@ export default function Administracion() {
   const [reglas, setReglas] = useState<Regla[]>([]);
   const [valores, setValores] = useState<Record<string, string>>({});
   const [archivos, setArchivos] = useState<FileList | null>(null);
+  const [nuevoCodigo, setNuevoCodigo] = useState('');
+  const [nuevoNombre, setNuevoNombre] = useState('');
   const [subiendo, setSubiendo] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
@@ -48,6 +50,23 @@ export default function Administracion() {
   const avisar = (texto: string, esError = false) => {
     setMensaje(esError ? '' : texto);
     setError(esError ? texto : '');
+  };
+
+  // T51 · Crea una carrera a mano (código y nombre)
+  const crearCarrera = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const c = await api<Carrera>('/catalogo/carreras', {
+        method: 'POST',
+        body: JSON.stringify({ codigo: nuevoCodigo, nombre: nuevoNombre }),
+      });
+      setNuevoCodigo('');
+      setNuevoNombre('');
+      await cargarCarreras();
+      avisar(`Se creó la carrera ${c.codigo} · ${c.nombre}`);
+    } catch (err) {
+      avisar((err as Error).message, true);
+    }
   };
 
   // Sube uno o varios planes analíticos en PDF; la carrera sale del código del plan
@@ -120,6 +139,19 @@ export default function Administracion() {
               )}
             </tbody>
           </table>
+
+          <form onSubmit={crearCarrera}>
+            <h3>Nueva carrera</h3>
+            <label>
+              Código (2 a 10 letras)
+              <input value={nuevoCodigo} maxLength={10} placeholder="RO" onChange={(e) => setNuevoCodigo(e.target.value.toUpperCase())} />
+            </label>
+            <label>
+              Nombre
+              <input value={nuevoNombre} placeholder="Robótica" onChange={(e) => setNuevoNombre(e.target.value)} />
+            </label>
+            <button type="submit">Crear carrera</button>
+          </form>
 
           <form onSubmit={importar}>
             <label>

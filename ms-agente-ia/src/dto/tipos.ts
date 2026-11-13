@@ -50,6 +50,21 @@ export interface PedidoHomologar extends PedidoComparar {
   anio?: number;
 }
 
+// T46 · Materia de otra universidad: sus datos vienen del mensaje solicitud.enviada, no del catálogo
+export interface PedidoExterno {
+  codigoAprobada: string; // EXT-CALCULO-II
+  nombre: string;
+  silabo: string; // texto del sílabo
+  codigoNueva: string; // materia de la FISEI elegida en T43
+  creditos: number;
+  horas: number;
+  nota: number; // ya convertida sobre 10
+  anio: number;
+  parecido?: number; // 0 a 100, de T43
+  notaOriginal?: number; // 16
+  escala?: number; // 20
+}
+
 export type Resultado = 'Homologable' | 'No homologable' | 'Pendiente' | 'Sin materia equivalente';
 
 export interface Informe {
@@ -62,5 +77,9 @@ export interface Informe {
   temasCoinciden: string[];
   temasFaltan: string[];
   prerrequisitosNueva: string[];
+  // T48 · solo materias de otra universidad
+  parecido?: number;
+  notaOriginal?: number;
+  escala?: number;
   fecha?: string;
 }
