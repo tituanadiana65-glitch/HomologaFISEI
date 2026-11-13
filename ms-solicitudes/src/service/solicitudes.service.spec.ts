@@ -152,6 +152,24 @@ describe('SolicitudesService · resultado del agente (T28)', () => {
     expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'ENVIADA' } });
   });
 
+  it('una solicitud de otra universidad guarda la revisión de RN-08 al terminar (T45)', async () => {
+    const { servicio, prisma } = armar({ id: 1, tipo: 'EXTERNO', periodosAprobados: 1, documentosLegalizados: true });
+    prisma.asignaturaAprobada.findMany.mockResolvedValue([{ resultado: 'Homologable' }, { resultado: 'Homologable' }]);
+    await servicio.guardarResultado({ solicitudId: 1, resultados });
+    const llamada = prisma.solicitud.update.mock.calls[0][0];
+    expect(llamada.data.estado).toBe('RESULTADO_LISTO');
+    const requisitos = JSON.parse(llamada.data.requisitos);
+    expect(requisitos.cumple).toBe(false);
+    expect(requisitos.causas[0].causa).toBe('Tiene 1 periodo aprobado (mínimo 2)');
+  });
+
+  it('con materias Pendiente todavía no revisa RN-08', async () => {
+    const { servicio, prisma } = armar({ id: 1, tipo: 'EXTERNO', periodosAprobados: 2, documentosLegalizados: true });
+    prisma.asignaturaAprobada.findMany.mockResolvedValue([{ resultado: 'Homologable' }, { resultado: 'Pendiente' }]);
+    await servicio.guardarResultado({ solicitudId: 1, resultados });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'ENVIADA' } });
+  });
+
   it('reintenta solo las materias Pendiente', async () => {
     const { servicio, eventos } = armar({
       id: 1, usuarioId: 7, estado: 'ENVIADA', carreraDestino: 'SW',

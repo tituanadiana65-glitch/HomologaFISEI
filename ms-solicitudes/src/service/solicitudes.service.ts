@@ -6,6 +6,7 @@ import {
   type NuevaMateriaExterna,
   type NuevaSolicitud,
   validarMateria,
+  revisarRequisitos,
   validarMateriaExterna,
   validarSolicitud,
 } from './validaciones';
@@ -196,7 +197,15 @@ export class SolicitudesService implements OnModuleInit {
     }
     const materias = await this.prisma.asignaturaAprobada.findMany({ where: { solicitudId: d.solicitudId } });
     const listo = materias.every((m) => m.resultado && m.resultado !== 'Pendiente');
-    await this.prisma.solicitud.update({ where: { id: d.solicitudId }, data: { estado: listo ? 'RESULTADO_LISTO' : 'ENVIADA' } });
+    const estado = listo ? 'RESULTADO_LISTO' : 'ENVIADA';
+    // T45 · Con todo evaluado, una solicitud de otra universidad guarda también su revisión de RN-08
+    const s = listo ? await this.prisma.solicitud.findUnique({ where: { id: d.solicitudId } }) : null;
+    if (s?.tipo === 'EXTERNO') {
+      const requisitos = revisarRequisitos(s, materias);
+      await this.prisma.solicitud.update({ where: { id: d.solicitudId }, data: { estado, requisitos: JSON.stringify(requisitos) } });
+    } else {
+      await this.prisma.solicitud.update({ where: { id: d.solicitudId }, data: { estado } });
+    }
     this.log.log(`Solicitud ${d.solicitudId}: ${d.resultados.length} resultados guardados${listo ? ', resultado listo' : ''}`);
   }
 
