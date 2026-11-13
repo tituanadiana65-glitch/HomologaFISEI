@@ -212,3 +212,18 @@ main.admin { max-width: 1100px; }
 tr.apagada td { opacity: 0.55; }
 main.admin > .aviso:last-child { margin: 24px 0 0; }
 @media (max-width: 820px) { .admin-columnas { grid-template-columns: 1fr; } }
+
+/* T40 · Solicitud de otra universidad */
+.opciones-tipo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.opciones-tipo label { flex-direction: row; align-items: flex-start; gap: 10px; padding: 14px 16px; border: 2px solid var(--borde); border-radius: 10px; cursor: pointer; color: var(--texto); font-size: 15px; }
+.opciones-tipo label.activa { border-color: var(--guinda); background: var(--guinda-claro); }
+.opciones-tipo small { display: block; font-weight: 400; font-size: 12px; color: var(--gris); margin-top: 2px; }
+.casilla { flex-direction: row !important; align-items: center; gap: 8px; grid-column: 1 / -1; color: var(--texto); }
+.casilla input { width: 18px; height: 18px; }
+input[type='file'] { padding: 8px; background: var(--fondo); }
+.subida { font-weight: 400; font-size: 12px; }
+.subida.ok { color: var(--verde); }
+.subida.error { color: var(--rojo); }
+.subida.subiendo { color: var(--gris); }
+.completo { grid-column: 1 / -1; }
+@media (max-width: 640px) { .opciones-tipo { grid-template-columns: 1fr; } }
