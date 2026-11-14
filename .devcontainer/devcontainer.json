@@ -1,0 +1,16 @@
+{
+  "name": "HomologaFISEI - servidor de prueba",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
+  },
+  "hostRequirements": { "cpus": 4, "memory": "16gb" },
+  "forwardPorts": [5173, 3000, 15672],
+  "portsAttributes": {
+    "5173": { "label": "HomologaFISEI (web)", "onAutoForward": "notify" },
+    "3000": { "label": "API Gateway", "onAutoForward": "silent" },
+    "15672": { "label": "RabbitMQ", "onAutoForward": "silent" }
+  },
+  "postStartCommand": "docker compose up --build -d"
+}
