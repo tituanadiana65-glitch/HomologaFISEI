@@ -50,8 +50,12 @@ Las pruebas se hicieron contra la página http://localhost:5173 y su API (`/api/
 | # | Caso | Qué pasó | Quién lo corrige | Estado |
 |---|---|---|---|---|
 | E-1 | CP-24, S1-3 a S1-5 | El agente de IA es muy lento: la solicitud 3004 (3 materias) tardó unos 5 minutos en pasar a RESULTADO_LISTO, y una llamada a `/api/agente/homologar` no respondió en 35 segundos. En RabbitMQ la cola `ms-agente-ia.solicitudes` tenía 1 consumidor y 1 mensaje en proceso, así que no estaba caído sino esperando a Gemini (el agente espera hasta 90 s por consulta y reintenta con 2 s y 5 s). Para la revisión conviene probar la clave de Gemini antes y avisar que puede tardar | Emmanuel (agente) | Abierto |
-| E-2 | S1-3 | Al homologar desde la página (puerto 5173), `/api/agente/homologar` responde **504 Gateway Time-out** justo a los 60 s. El nginx de `web` corta a los 60 s (valor por defecto de `proxy_read_timeout`), pero el gateway espera hasta 120 s y el agente hasta 90 s. Arreglo: en `web/nginx.conf`, dentro de `location /api/`, agregar `proxy_read_timeout 180s;` y reconstruir `web` | Paola (T21, nginx) | Abierto |
+| E-2 | S1-3 | Al homologar desde la página (puerto 5173), `/api/agente/homologar` responde **504 Gateway Time-out** justo a los 60 s. El nginx de `web` corta a los 60 s (valor por defecto de `proxy_read_timeout`), pero el gateway espera hasta 120 s y el agente hasta 90 s. Arreglo: en `web/nginx.conf`, dentro de `location /api/`, agregar `proxy_read_timeout 180s;` y reconstruir `web` | Paola (T21, nginx) | Corregido en T53 |
 
 ## En el servidor de prueba (T53)
 
-Pendiente: se repiten los casos CP-12 a CP-26 cuando el servidor esté listo.
+Servidor: GitHub Codespaces (máquina de 4 núcleos), configurado en `.devcontainer/devcontainer.json`. Al encender el Codespace se ejecuta `docker compose up --build -d` y la página queda publicada en el puerto 5173 (visibilidad pública).
+
+Dirección: PENDIENTE_URL
+
+Pendiente: se repiten los casos CP-12 a CP-26 en esa dirección.
