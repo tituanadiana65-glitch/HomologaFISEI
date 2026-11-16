@@ -31,7 +31,7 @@ export class ClientesService {
 
   // T43 · Texto del sílabo guardado en ms-documentos (ruta acordada con Paola, T39)
   async textoSilabo(id: number): Promise<string> {
-    const r = await fetch(`${this.documentos}/documentos/archivos/${id}/texto`).catch(() => null);
+    const r = await fetch(`${this.documentos}/archivos/${id}/texto`).catch(() => null);
     if (!r) throw new BadGatewayException('ms-documentos no responde');
     if (r.status === 404) throw new NotFoundException(`No existe el sílabo ${id}`);
     if (!r.ok) throw new BadGatewayException(`ms-documentos respondió ${r.status}`);
