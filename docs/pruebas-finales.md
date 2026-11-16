@@ -54,8 +54,41 @@ Las pruebas se hicieron contra la página http://localhost:5173 y su API (`/api/
 
 ## En el servidor de prueba (T53)
 
-Servidor: GitHub Codespaces (máquina de 4 núcleos), configurado en `.devcontainer/devcontainer.json`. Al encender el Codespace se ejecuta `docker compose up --build -d` y la página queda publicada en el puerto 5173 (visibilidad pública).
+Servidor: GitHub Codespaces (máquina de 4 núcleos), configurado en `.devcontainer/devcontainer.json` con la imagen `universal:2`. Al encender el Codespace se ejecuta `docker compose up --build -d`. La página se publica en el puerto 5173 con visibilidad pública: https://potential-memory-g546xvq6x9j26xq-5173.app.github.dev (solo funciona mientras el Codespace está encendido).
 
-Dirección: PENDIENTE_URL
+Fecha: 15/11/2026. Cuentas `srv1.t53@uta.edu.ec` y `srv2.t53@uta.edu.ec`. Base de datos nueva: solicitud 1.
 
-Pendiente: se repiten los casos CP-12 a CP-26 en esa dirección.
+| Caso | Resultado en el servidor | ¿OK? |
+|---|---|---|
+| S1-9 | `node scripts/cargar-planes.mjs`: **Cargados: 80 · Con error: 0** | OK |
+| CP-12 | **201**, token y rol ESTUDIANTE | OK |
+| CP-13 | **400**: «Usa tu correo institucional @uta.edu.ec» | OK |
+| CP-14 | **401**: «Correo o contraseña incorrectos» | OK |
+| CP-15 | **401** sin token: «Inicia sesión para continuar» | OK |
+| CP-16 | **201**, solicitud 1 en BORRADOR | OK |
+| CP-17 | **400**: «La carrera de destino debe ser distinta a la de origen» | OK |
+| CP-18 | **400**: «Ya tienes una solicitud abierta» | OK |
+| CP-19 | Física, Cálculo Integral y Fundamentos de Programación registradas (**201**) | OK |
+| CP-20 | a) **400** «Esa materia ya está registrada en la solicitud». b) **400** «La nota debe estar entre 0 y 10». c) **400** «Registra al menos una materia antes de enviar» | OK |
+| CP-21 | Física **Homologable** (contenidos 100 %); Cálculo Integral **No homologable** | OK |
+| CP-22 | Fundamentos de Programación: **Sin materia equivalente** | OK |
+| CP-23 | Las materias quedaron **Pendiente** mientras el agente no tenía clave ni base de datos (ver E-3 y E-4); `POST /api/solicitudes/1/reintentar` respondió **201** («reintentadas: 3») y la solicitud pasó a RESULTADO_LISTO con los resultados reales | OK |
+| CP-24 | **RESULTADO_LISTO** | OK |
+| CP-25 | **200**, `application/pdf`, 5823 bytes, empieza con `%PDF-` | OK |
+| CP-26 | Con `srv2.t53`: **403** «Esta solicitud no es tuya» | OK |
+| S1-3 (E-2) | `POST /api/agente/homologar` por la página: **504 a los 100 s**. El arreglo de nginx funcionó (antes cortaba a los 60 s), pero el reenvío de puertos de Codespaces corta a unos 100 s. Queda abierto con E-1 | Ver E-1 |
+
+### Errores encontrados en el servidor
+
+| N.º | Caso | Error | Quién lo arregla | Estado |
+|---|---|---|---|---|
+| E-3 | Arranque | Al encender o reiniciar el Codespace, `ms-agente-ia`, `ms-catalogo` y `ms-solicitudes` arrancan antes de que SQL Server esté listo («P1001: Can't reach database server at sqlserver:1433») y quedan en *Restarting*. Solución temporal: `docker compose restart ms-catalogo ms-solicitudes ms-agente-ia`. El `docker-compose.yml` ya tiene `depends_on` con `service_healthy`, pero al reiniciar el Codespace Docker vuelve a encender los contenedores por su política de reinicio sin esperar a SQL Server. Arreglo propuesto: que el `postStartCommand` del devcontainer, después de `docker compose up`, espere a SQL Server y reinicie esos tres servicios | Paola (docker-compose) | Abierto |
+| E-4 | Configuración | El secreto `IA_API_KEY` del repositorio no llegó al Codespace. Se usó un `.env` creado dentro del Codespace (no se sube a GitHub). Revisar que el secreto esté en **Settings → Secrets and variables → Codespaces** con el nombre exacto | Diana (dueña del repositorio) | Abierto |
+| E-5 | Agente | Gemini respondió «This model is currently experiencing high demand»; el agente reintentó y terminó bien, pero la solicitud tardó varios minutos. Relacionado con E-1 | Emmanuel (agente) | Abierto |
+
+### Pasos cada vez que se enciende el Codespace
+
+1. Esperar a que termine `docker compose up --build -d` y revisar `docker compose ps`.
+2. Si algún servicio está en *Restarting*: `docker compose restart ms-catalogo ms-solicitudes ms-agente-ia` (E-3).
+3. En la pestaña **Puertos**, poner el 5173 en **Public** (vuelve a privado al reiniciar).
+4. Detener el Codespace al terminar para no gastar las horas gratis.
