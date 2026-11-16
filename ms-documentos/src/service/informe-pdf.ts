@@ -7,14 +7,25 @@ export interface MateriaInforme {
   resultado: string | null;
   codigoNueva: string | null;
   informe: string | null;
+  notaOriginal?: number | null; // T50 · solo EXTERNO: nota como la puso su universidad
+  escala?: number | null; // 10, 20 o 100
 }
 
 export interface SolicitudInforme {
   id: number;
+  tipo?: 'INTERNO' | 'EXTERNO';
+  universidadOrigen?: string | null;
   carreraOrigen: string;
   carreraDestino: string;
   periodo: string;
+  requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
   materias: MateriaInforme[];
+}
+
+// T50 · Requisitos de RN-08 que guarda ms-solicitudes
+export interface Requisitos {
+  cumple: boolean;
+  causas: { requisito: string; cumple: boolean; causa: string }[];
 }
 
 interface Causa {
@@ -26,6 +37,7 @@ interface Informe {
   nueva?: string;
   causas?: Causa[];
   temasFaltan?: string[];
+  parecido?: number; // T50 · solo EXTERNO
 }
 
 const GUINDA = '#8b1c2c';
@@ -39,6 +51,25 @@ const COLORES: Record<string, string> = {
 };
 const colorDe = (resultado: string | null) =>
   COLORES[resultado ?? ''] ?? '#9e9e9e';
+
+const decimal = (n: number) => n.toFixed(1).replace('.', ',');
+
+// T50 · "Nota 16 / 20 (8,0 / 10 en la UTA)" para otra universidad; "Nota 8.5" para la UTA
+export function textoNota(m: MateriaInforme): string {
+  if (m.notaOriginal != null && m.escala && m.escala !== 10)
+    return `Nota ${m.notaOriginal} / ${m.escala} (${decimal(m.nota)} / 10 en la UTA)`;
+  return `Nota ${m.nota}`;
+}
+
+// T50 · Lee la revisión de RN-08; null si no es EXTERNO o todavía no hay revisión
+export function leerRequisitos(s: SolicitudInforme): Requisitos | null {
+  if (s.tipo !== 'EXTERNO' || !s.requisitos) return null;
+  try {
+    return JSON.parse(s.requisitos) as Requisitos;
+  } catch {
+    return null;
+  }
+}
 
 export function crearPdf(
   s: SolicitudInforme,
@@ -87,11 +118,21 @@ export function crearPdf(
         .fontSize(10)
         .text(valor, x, y + 11, { width: 140 });
     };
-    doc.roundedRect(izq, 115, ancho, 80, 6).fill(FONDO);
+    // T50 · el nombre de otra universidad ocupa más líneas: la casilla crece y todo baja
+    const extra = s.tipo === 'EXTERNO' ? 16 : 0;
+    doc.roundedRect(izq, 115, ancho, 80 + extra, 6).fill(FONDO);
     dato('Estudiante', estudiante, izq + 15, 127);
     dato('Solicitud', `N.º ${s.id}`, izq + 185, 127);
     dato('Fecha', new Date().toLocaleDateString('es-EC'), izq + 340, 127);
-    dato('Carrera de origen', s.carreraOrigen, izq + 15, 160);
+    const externo = s.tipo === 'EXTERNO';
+    dato(
+      externo ? 'Universidad de origen' : 'Carrera de origen',
+      externo
+        ? `${s.universidadOrigen ?? 'Otra universidad'} · ${s.carreraOrigen}`
+        : s.carreraOrigen,
+      izq + 15,
+      160,
+    );
     dato('Carrera de destino', s.carreraDestino, izq + 185, 160);
     dato('Periodo', s.periodo, izq + 340, 160);
 
@@ -100,32 +141,73 @@ export function crearPdf(
       .fillColor(GUINDA)
       .font('Helvetica-Bold')
       .fontSize(13)
-      .text('Resumen', izq, 215);
+      .text('Resumen', izq, 215 + extra);
     const anchoCaja = (ancho - 30) / 4;
     Object.keys(COLORES).forEach((tipo, i) => {
       const x = izq + i * (anchoCaja + 10);
       const total = s.materias.filter((m) => m.resultado === tipo).length;
-      doc.roundedRect(x, 237, anchoCaja, 54, 6).fill(FONDO);
-      doc.rect(x, 237, 4, 54).fill(COLORES[tipo]);
+      doc.roundedRect(x, 237 + extra, anchoCaja, 54, 6).fill(FONDO);
+      doc.rect(x, 237 + extra, 4, 54).fill(COLORES[tipo]);
       doc
         .fillColor(COLORES[tipo])
         .font('Helvetica-Bold')
         .fontSize(20)
-        .text(String(total), x + 14, 244);
+        .text(String(total), x + 14, 244 + extra);
       doc
         .fillColor(GRIS)
         .font('Helvetica')
         .fontSize(8)
-        .text(tipo, x + 14, 270, { width: anchoCaja - 20 });
+        .text(tipo, x + 14, 270 + extra, { width: anchoCaja - 20 });
     });
+
+    // T50 · Requisitos para cambiarse desde otra universidad (RN-08)
+    let yDetalle = 312 + extra;
+    const requisitos = leerRequisitos(s);
+    if (requisitos) {
+      const colorReq = requisitos.cumple
+        ? COLORES.Homologable
+        : COLORES['No homologable'];
+      const alto = 34 + requisitos.causas.length * 15;
+      doc.roundedRect(izq, 308 + extra, ancho, alto, 6).fill(FONDO);
+      doc.rect(izq, 308 + extra, 4, alto).fill(colorReq);
+      doc
+        .fillColor(colorReq)
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .text(
+          requisitos.cumple
+            ? 'Cumple los requisitos para cambiarse desde otra universidad (RN-08)'
+            : 'No cumple los requisitos para cambiarse desde otra universidad (RN-08)',
+          izq + 15,
+          318 + extra,
+          { width: ancho - 30 },
+        );
+      requisitos.causas.forEach((c, i) => {
+        const y = 336 + extra + i * 15;
+        doc
+          .circle(izq + 19, y + 4, 2.5)
+          .fill(c.cumple ? COLORES.Homologable : COLORES['No homologable']);
+        doc
+          .fillColor('#333333')
+          .font('Helvetica-Bold')
+          .fontSize(9)
+          .text(`${c.requisito}: `, izq + 27, y, {
+            continued: true,
+            width: ancho - 40,
+          })
+          .font('Helvetica')
+          .text(`${c.cumple ? 'Cumple' : 'No cumple'} · ${c.causa}`);
+      });
+      yDetalle = 308 + extra + alto + 20;
+    }
 
     // Detalle por materia
     doc
       .fillColor(GUINDA)
       .font('Helvetica-Bold')
       .fontSize(13)
-      .text('Detalle por materia', izq, 312);
-    doc.y = 338;
+      .text('Detalle por materia', izq, yDetalle);
+    doc.y = yDetalle + 26;
 
     for (const m of s.materias) {
       const inf = m.informe ? (JSON.parse(m.informe) as Informe) : null;
@@ -160,7 +242,7 @@ export function crearPdf(
         .font('Helvetica')
         .fontSize(9)
         .text(
-          `Nota ${m.nota}${inf?.nueva ? `   ·   Equivale a ${inf.nueva}` : ''}`,
+          `${textoNota(m)}${inf?.parecido !== undefined ? `   ·   Parecido ${inf.parecido} %` : ''}${inf?.nueva ? `   ·   Equivale a ${inf.nueva}` : ''}`,
           izq + 14,
           doc.y + 2,
           { width: ancho - 14 },
