@@ -738,8 +738,12 @@ tbody tr:hover td {
 .materia-de-fila + .materia-de-fila {
   margin-top: 6px;
 }
+/* "También cubre": la misma materia aprobada, un poco hacia adentro */
 tr.tambien td {
-  border-top-style: dashed;
+  background: #fafbfc;
+}
+tr.tambien td:first-child {
+  padding-left: 26px;
 }
 .sin-equivalente {
   color: var(--gris);
