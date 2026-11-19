@@ -46,9 +46,18 @@ describe('revisarToken', () => {
   it('deja pasar el OPTIONS del navegador (CORS)', () => {
     expect(llamar('OPTIONS', '/api/solicitudes/mia').next).toHaveBeenCalled();
   });
+  it('pasa el nombre del estudiante codificado (con tildes y ñ) para el informe', () => {
+    const conNombre = jwt.sign({ sub: 5, correo: 'ana@uta.edu.ec', nombre: 'Ana Tituaña', rol: 'ESTUDIANTE' }, secreto);
+    const { req } = llamar('GET', '/api/documentos/informes/1', conNombre);
+    expect(decodeURIComponent(req.headers['x-usuario-nombre'])).toBe('Ana Tituaña');
+  });
+  it('un token viejo sin nombre no pone el encabezado', () => {
+    expect(llamar('GET', '/api/solicitudes/mia', estudiante).req.headers['x-usuario-nombre']).toBeUndefined();
+  });
   it('borra los encabezados x-usuario que mande el cliente', () => {
-    const req: any = { method: 'GET', originalUrl: '/api/catalogo/carreras', headers: { 'x-usuario-rol': 'ADMIN' } };
+    const req: any = { method: 'GET', originalUrl: '/api/catalogo/carreras', headers: { 'x-usuario-rol': 'ADMIN', 'x-usuario-nombre': 'Falso' } };
     revisarToken(req, { status: jest.fn().mockReturnThis(), json: jest.fn() } as any, jest.fn());
     expect(req.headers['x-usuario-rol']).toBeUndefined();
+    expect(req.headers['x-usuario-nombre']).toBeUndefined();
   });
 });

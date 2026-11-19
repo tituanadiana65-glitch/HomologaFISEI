@@ -210,10 +210,17 @@ export class SolicitudesService implements OnModuleInit {
   }
 
   // T28 · Vuelve a mandar al agente solo las materias Pendiente
+  // Las pendientes pasan a "en revisión" (resultado vacío) antes de mandarlas: si se pulsa otra vez
+  // mientras el agente trabaja ya no hay pendientes y no se lanza una segunda revisión al mismo tiempo
   async reintentar(usuarioId: number, id: number) {
     const s = await this.ver(usuarioId, id);
     const pendientes = s.materias.filter((m) => m.resultado === 'Pendiente');
-    if (pendientes.length === 0) throw new BadRequestException('No hay materias pendientes');
+    if (pendientes.length === 0) throw new BadRequestException('No hay materias pendientes: el agente ya las está revisando');
+    const tomadas = await this.prisma.asignaturaAprobada.updateMany({
+      where: { solicitudId: id, codigo: { in: pendientes.map((m) => m.codigo) }, resultado: 'Pendiente' },
+      data: { resultado: null },
+    });
+    if (tomadas.count === 0) throw new BadRequestException('No hay materias pendientes: el agente ya las está revisando');
     await this.eventos.publicar('solicitud.enviada', mensajeEnviada(s, id, pendientes));
     return { id, reintentadas: pendientes.length };
   }

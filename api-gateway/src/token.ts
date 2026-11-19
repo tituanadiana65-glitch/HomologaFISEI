@@ -13,7 +13,7 @@ const responder = (res: Response, estado: number, message: string) => res.status
 
 // Revisa el token y pasa a los servicios quién es el usuario
 export function revisarToken(req: Request, res: Response, next: NextFunction) {
-  for (const h of ['x-usuario-id', 'x-usuario-rol', 'x-usuario-correo']) delete req.headers[h]; // nadie los puede inventar
+  for (const h of ['x-usuario-id', 'x-usuario-rol', 'x-usuario-correo', 'x-usuario-nombre']) delete req.headers[h]; // nadie los puede inventar
   if (req.method === 'OPTIONS') return next(); // el navegador pregunta (CORS) antes de enviar el token
   const url = req.originalUrl.split('?')[0].replace(/(.)\/+$/, '$1');
   const consultaCatalogo = req.method === 'GET' && url.startsWith('/api/catalogo/');
@@ -26,6 +26,8 @@ export function revisarToken(req: Request, res: Response, next: NextFunction) {
     req.headers['x-usuario-id'] = String(datos.sub);
     req.headers['x-usuario-rol'] = String(datos.rol);
     req.headers['x-usuario-correo'] = String(datos.correo);
+    // El nombre puede tener tildes y ñ: va codificado para que viaje bien en el encabezado (lo usa el informe PDF)
+    if (datos.nombre) req.headers['x-usuario-nombre'] = encodeURIComponent(String(datos.nombre));
     next();
   } catch {
     responder(res, 401, 'Inicia sesión para continuar');

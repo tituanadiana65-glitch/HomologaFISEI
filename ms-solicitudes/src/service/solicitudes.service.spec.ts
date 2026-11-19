@@ -14,6 +14,7 @@ function armar(solicitud?: object, abiertas = 0) {
       create: jest.fn().mockImplementation(({ data }) => ({ id: 10, ...data })),
       delete: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findMany: jest.fn().mockResolvedValue([]),
     },
   };
@@ -179,6 +180,28 @@ describe('SolicitudesService · resultado del agente (T28)', () => {
     expect(eventos.publicar).toHaveBeenCalledWith('solicitud.enviada', {
       solicitudId: 1, carreraDestino: 'SW', materias: [{ codigo: 'CAL-TI', nota: 8, anio: 2025 }],
     });
+  });
+
+  it('al reintentar marca las pendientes como en revisión', async () => {
+    const { servicio, prisma } = armar({
+      id: 1, usuarioId: 7, estado: 'ENVIADA', carreraDestino: 'SW',
+      materias: [{ codigo: 'CAL-TI', nota: 8, anio: 2025, resultado: 'Pendiente' }],
+    });
+    await servicio.reintentar(7, 1);
+    expect(prisma.asignaturaAprobada.updateMany).toHaveBeenCalledWith({
+      where: { solicitudId: 1, codigo: { in: ['CAL-TI'] }, resultado: 'Pendiente' },
+      data: { resultado: null },
+    });
+  });
+
+  it('no lanza una segunda revisión si otro clic ya tomó las pendientes', async () => {
+    const { servicio, prisma, eventos } = armar({
+      id: 1, usuarioId: 7, estado: 'ENVIADA', carreraDestino: 'SW',
+      materias: [{ codigo: 'CAL-TI', nota: 8, anio: 2025, resultado: 'Pendiente' }],
+    });
+    prisma.asignaturaAprobada.updateMany.mockResolvedValue({ count: 0 });
+    await expect(servicio.reintentar(7, 1)).rejects.toThrow(/ya las está revisando/);
+    expect(eventos.publicar).not.toHaveBeenCalled();
   });
 
   it('no reintenta si no hay pendientes', async () => {

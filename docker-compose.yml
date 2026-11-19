@@ -109,6 +109,7 @@ services:
       SERVICIO: ms-documentos
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       MS_SOLICITUDES: http://ms-solicitudes:3003
+      MS_CATALOGO: http://ms-catalogo:3002 # nombres de las carreras en el informe PDF
     ports: ["3006:3006"]
     depends_on: [rabbitmq]
     volumes:

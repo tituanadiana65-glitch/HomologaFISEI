@@ -64,6 +64,7 @@ export default function Resultado() {
   const [version, setVersion] = useState(0); // cambia para volver a cargar
   const [error, setError] = useState('');
   const [carreras, setCarreras] = useState<Carrera[]>([]);
+  const [reintentando, setReintentando] = useState(false); // evita lanzar dos revisiones con dos clics
 
   // Nombres de las carreras ("Software" en vez de "SW")
   useEffect(() => {
@@ -89,11 +90,16 @@ export default function Resultado() {
   }, [version]);
 
   const reintentar = async () => {
+    if (reintentando) return;
+    setReintentando(true);
+    setError('');
     try {
       await api(`/solicitudes/${s!.id}/reintentar`, { method: 'POST' });
       setVersion(v => v + 1);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setReintentando(false);
     }
   };
 
@@ -233,8 +239,8 @@ export default function Resultado() {
 
       <div className="acciones">
         {hayPendientes && (
-          <button className="pequeno" onClick={() => void reintentar()}>
-            Reintentar las pendientes
+          <button className="pequeno" onClick={() => void reintentar()} disabled={reintentando}>
+            {reintentando ? 'Enviando…' : 'Reintentar las pendientes'}
           </button>
         )}
         <button onClick={() => void descargar()} disabled={!listo}>

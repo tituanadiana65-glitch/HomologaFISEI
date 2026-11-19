@@ -29,6 +29,7 @@ describe('IdentidadService', () => {
     const r = await s.registrar({ nombre: 'Ana', correo: 'ana@uta.edu.ec', clave: 'Clave2026*' });
     expect(r.usuario).toEqual({ id: 1, nombre: 'Ana', correo: 'ana@uta.edu.ec', rol: 'ESTUDIANTE' });
     expect((jwt.verify(r.token, 'homologa-sprint2-secreto') as jwt.JwtPayload).correo).toBe('ana@uta.edu.ec');
+    expect((jwt.verify(r.token, 'homologa-sprint2-secreto') as jwt.JwtPayload).nombre).toBe('Ana'); // para el informe PDF
   });
 
   it('rechaza un correo repetido', async () => {
