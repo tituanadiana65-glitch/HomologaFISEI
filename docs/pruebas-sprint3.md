@@ -1,0 +1,28 @@
+# Pruebas del Sprint 3 · estudiante de otra universidad (T47)
+
+Pruebas de aceptación de HU-16, HU-24, HU-17 y HU-28. Se hicieron en la página http://localhost:5173 de la computadora de Diana, con el sistema actualizado a main (Sprint 3 completo) y la clave de Gemini en `.env`. Fecha: 19/11/2026. Responsable: Diana Tituaña.
+
+Datos: cuenta de prueba `ext1.t47@uta.edu.ec`, solicitud **3002**, de la *Universidad Central del Ecuador · Ingeniería en Computación* a **Software**, 2 periodos aprobados, documentos legalizados. Como sílabos se usaron planes analíticos de TI (tienen texto que se puede leer): el de Cálculo Integral para «Cálculo II» y el de Física para «Física General».
+
+| # | HU | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|---|
+| CP-27 | HU-16 | Solicitud de otra universidad | Elegir «Vengo de otra universidad», escribir universidad y carrera, 2 periodos, marcar legalizados y crear | Se crea como solicitud de otra universidad y pasa al paso 2 | Solicitud 3002, tipo EXTERNO, periodos 2, legalizados sí; la página pasa a «Tus materias aprobadas» | OK |
+| CP-28 | HU-16 | Subir malla y récord en PDF | Subir dos PDF con texto | Los acepta y lee su texto | «✓ … 7.617 caracteres leídos» y «✓ … 10.416 caracteres leídos»; la solicitud guarda los dos documentos | OK |
+| CP-29 | HU-16 / HU-24 | Registrar materias con sílabo y nota en otra escala | Cálculo II (4 cr, 160 h, 16 sobre 20, 2025, sílabo) y Física General (3 cr, 144 h, 85 sobre 100, 2024, sílabo) | Quedan registradas con la nota original y la convertida | «16 / 20 → 8,0 / 10» y «85 / 100 → 8,5 / 10» ([captura](evidencias/CP-29-materias.jpg)) | OK |
+| CP-30 | HU-24 | Nota mayor que su escala | Nota 25 sobre 20 | La rechaza y explica | «La nota debe estar entre 0 y 20» | OK |
+| CP-31 | HU-16 | Materia repetida con otra forma de escribirla | Registrar «CÁLCULO  II» (tildes y doble espacio) | La rechaza | **400** «Esa materia ya está registrada en la solicitud» | OK |
+| CP-32 | HU-17 | Materia con otro nombre: buscar la más parecida por temas | Enviar a homologar «Física General» | Encuentra FÍSICA de Software por sus temas | **FÍSICA (UTA-FISEI-SF-MP-UB-01-01)**, parecido **98 %**, contenidos 100 %, **Homologable** | OK |
+| CP-33 | HU-17 / HU-28 | Reglas con los datos de otra universidad | Enviar a homologar «Cálculo II» | Se evalúan RN-01 a RN-05 con el sílabo y los datos escritos | **CÁLCULO INTEGRAL, Homologable**: RN-01 contenidos 90 %, RN-02 créditos 4 de 3 = 133,33 %, RN-03 horas 160 de 144 = 111,11 %, RN-04 «16/20 equivale a 8,0/10 (mínimo 7)», RN-05 aprobada hace 1 año. Temas que faltan: integral por cambio de variables; aplicaciones de ecuaciones diferenciales | OK |
+| CP-34 | HU-17 | Requisitos de otra universidad (RN-08) | Al terminar la evaluación | Aviso de RN-08 con la causa de cada requisito | «✓ Cumples los requisitos para cambiarte desde otra universidad (RN-08)»: 2 periodos, 2 materias homologables, documentos legalizados ([captura](evidencias/CP-34-rn08.jpg)) | OK |
+| CP-35 | HU-17 | Materia sin sílabo | «Contabilidad General» registrada sin sílabo | Sin materia equivalente o un aviso, sin trabar la solicitud | **Error E-6** (ver abajo): quedaba *Pendiente* para siempre. Después del arreglo: **Sin materia equivalente** y la solicitud pasa a «Resultado listo»; además, el sistema ya no deja registrar una materia sin sílabo | OK (tras el arreglo) |
+| CP-36 | HU-28 | Informe en PDF de otra universidad | Descargar el informe | PDF con universidad de origen, resumen, RN-08 y detalle por materia | **200**, `application/pdf`, 6.210 bytes, 2 páginas: universidad de origen, resumen (2 homologables, 1 sin equivalente), RN-08 cumple y detalle por materia ([captura](evidencias/CP-36-pdf.jpg)) | OK |
+
+**Resultado: 10 de 10 casos OK**, uno de ellos después de corregir el error E-6.
+
+## Errores encontrados
+
+| N.º | Caso | Qué pasó | Arreglo | Estado |
+|---|---|---|---|---|
+| E-6 | CP-35 | Una materia de otra universidad sin sílabo quedaba **Pendiente** para siempre. Reintentar no la arreglaba, así que la solicitud nunca pasaba a «Resultado listo», no se revisaba RN-08 y no se podía descargar el PDF | El sílabo pasa a ser obligatorio al registrar la materia; si igual llega sin sílabo, el agente la marca «Sin materia equivalente». El manual de usuario lo aclara | Corregido |
+| E-7 | CP-32, CP-33 | Cada clic en **«Reintentar las pendientes»** lanza otra revisión completa en paralelo; llegaron a correr 5 a la vez y saturaron a Gemini, por eso la evaluación tardó unos 15 minutos | Propuesto: desactivar el botón mientras haya una revisión en curso | Abierto (en la demo, pulsarlo una sola vez y esperar) |
+| E-8 | CP-36 | El PDF muestra el correo del estudiante en lugar de su nombre, y la carrera de destino como «SW» en lugar de «Software» | Mostrar el nombre del estudiante y el de la carrera | Abierto (menor) |

@@ -146,10 +146,12 @@ describe('SolicitudesAgenteService', () => {
       });
     });
 
-    it('si la materia no trae sílabo queda Pendiente', async () => {
-      const { s, publicar } = armar({ elegirParecida: jest.fn() });
+    it('si la materia no trae sílabo sale sin materia equivalente (no Pendiente, para que la solicitud termine)', async () => {
+      const elegirParecida = jest.fn();
+      const { s, publicar } = armar({ elegirParecida });
       await enviar(s, [{ ...calculoII, silaboId: undefined }]);
-      expect(publicar).toHaveBeenCalledWith('solicitud.homologada', { solicitudId: 12, resultados: [expect.objectContaining({ resultado: 'Pendiente' })] });
+      expect(elegirParecida).not.toHaveBeenCalled();
+      expect(publicar).toHaveBeenCalledWith('solicitud.homologada', { solicitudId: 12, resultados: [expect.objectContaining({ resultado: 'Sin materia equivalente' })] });
     });
 
     it('pide las candidatas al catálogo una sola vez aunque haya varias materias', async () => {
