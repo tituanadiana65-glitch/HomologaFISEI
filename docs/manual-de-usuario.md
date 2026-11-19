@@ -95,7 +95,7 @@ Por cada materia:
 2. Escribe sus **Créditos** y sus **Horas**.
 3. Escribe tu **Nota** y elige sobre cuánto es (**Sobre**: 10, 20 o 100). El sistema la convierte a la escala de la UTA: por ejemplo, 16 sobre 20 equivale a 8,0 sobre 10.
 4. Escribe el **Año de aprobación**.
-5. Sube el **Sílabo de la materia (PDF)**.
+5. Sube el **Sílabo de la materia (PDF)**. Es obligatorio: sin él no se pueden comparar los temas.
 6. Pulsa **Agregar materia**.
 
 En la lista verás la nota original y la convertida. Cuando estén todas, pulsa **Enviar a homologar**.

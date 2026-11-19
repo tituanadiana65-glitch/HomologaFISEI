@@ -102,7 +102,11 @@ export class SolicitudesAgenteService implements OnModuleInit {
   }
 
   private async materiaExterna(m: MateriaEnviada, destino: { codigo: string; nombre: string }[], candidatas: () => Promise<MateriaTexto[]>): Promise<ResultadoMateria> {
-    if (!m.silaboId) throw new Error(`La materia ${m.codigo} no trae sílabo para compararla`);
+    // Sin sílabo no hay con qué comparar. No se deja Pendiente: reintentar nunca lo arreglaría y la solicitud no terminaría.
+    if (!m.silaboId) {
+      this.log.warn(`La materia ${m.codigo} no trae sílabo: se marca sin materia equivalente`);
+      return { codigoAprobada: m.codigo, codigoNueva: null, resultado: 'Sin materia equivalente', informe: null };
+    }
     const silabo = await this.clientes.textoSilabo(m.silaboId);
     const parecida = await this.buscarMateriaParecida(m, silabo, destino, candidatas);
     if (!parecida) return { codigoAprobada: m.codigo, codigoNueva: null, resultado: 'Sin materia equivalente', informe: null };
