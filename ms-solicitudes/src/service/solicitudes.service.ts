@@ -54,6 +54,8 @@ export interface ResultadoMateria {
   codigoNueva: string | null;
   resultado: string;
   informe: unknown;
+  juntoCon?: string[]; // HU-26
+  adicionales?: { codigoNueva: string; resultado: string; informe: unknown }[]; // HU-29
 }
 
 @Injectable()
@@ -192,7 +194,13 @@ export class SolicitudesService implements OnModuleInit {
     for (const r of d.resultados) {
       await this.prisma.asignaturaAprobada.update({
         where: { solicitudId_codigo: { solicitudId: d.solicitudId, codigo: r.codigoAprobada } },
-        data: { resultado: r.resultado, codigoNueva: r.codigoNueva, informe: r.informe ? JSON.stringify(r.informe) : null },
+        data: {
+          resultado: r.resultado,
+          codigoNueva: r.codigoNueva,
+          informe: r.informe ? JSON.stringify(r.informe) : null,
+          juntoCon: r.juntoCon?.length ? r.juntoCon.join(',') : null,
+          adicionales: r.adicionales?.length ? JSON.stringify(r.adicionales) : null,
+        },
       });
     }
     const materias = await this.prisma.asignaturaAprobada.findMany({ where: { solicitudId: d.solicitudId } });

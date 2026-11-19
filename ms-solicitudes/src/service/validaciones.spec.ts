@@ -1,4 +1,4 @@
-import { revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
+import { materiasHomologables, revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
 
 const datos = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
 
@@ -173,5 +173,34 @@ describe('revisarRequisitos (RN-08)', () => {
     const r = revisarRequisitos({ ...ok, documentosLegalizados: false }, dos);
     expect(r.cumple).toBe(false);
     expect(r.causas[2].causa).toBe('Falta legalizar la malla y el récord académico');
+  });
+});
+
+// HU-26 y HU-29 · RN-08 cuenta materias de la nueva carrera
+describe('materiasHomologables', () => {
+  it('dos materias aprobadas juntas cuentan como una', () => {
+    expect(materiasHomologables([
+      { resultado: 'Homologable', codigoNueva: 'SW-F' },
+      { resultado: 'Homologable', codigoNueva: 'SW-F' },
+    ])).toBe(1);
+  });
+
+  it('una materia que cubre dos nuevas cuenta como dos (solo las homologables)', () => {
+    const adicionales = JSON.stringify([
+      { codigoNueva: 'SW-CI', resultado: 'Homologable' },
+      { codigoNueva: 'SW-AL', resultado: 'No homologable' },
+    ]);
+    expect(materiasHomologables([{ resultado: 'Homologable', codigoNueva: 'SW-CD', adicionales }])).toBe(2);
+  });
+
+  it('con eso cumple RN-08 aunque haya registrado una sola materia', () => {
+    const adicionales = JSON.stringify([{ codigoNueva: 'SW-CI', resultado: 'Homologable' }]);
+    const r = revisarRequisitos({ periodosAprobados: 2, documentosLegalizados: true }, [{ resultado: 'Homologable', codigoNueva: 'SW-CD', adicionales }]);
+    expect(r.cumple).toBe(true);
+    expect(r.causas[1].causa).toBe('Tiene 2 materias homologables (mínimo 2)');
+  });
+
+  it('un JSON dañado en adicionales no rompe la cuenta', () => {
+    expect(materiasHomologables([{ resultado: 'Homologable', codigoNueva: 'X', adicionales: '{no' }])).toBe(1);
   });
 });

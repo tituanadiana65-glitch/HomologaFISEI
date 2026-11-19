@@ -23,8 +23,9 @@ Reglas:
 - Compara por temas, no solo por el nombre de la materia.
 - "parecido" es un número de 0 a 100 que indica qué tanto se parecen los temas.
 - Si ninguna se parece, devuelve la más cercana con un "parecido" bajo.
+- Si el sílabo cubre además, casi por completo, otras candidatas (por ejemplo, un sílabo de "Cálculo" que cubre Cálculo Diferencial y Cálculo Integral), agrégalas en "otras". Si no, deja "otras" vacía.
 Responde SOLO con un objeto JSON, sin texto antes ni después:
-{"codigo": "código exacto de la candidata elegida", "parecido": número de 0 a 100}`;
+{"codigo": "código exacto de la candidata elegida", "parecido": número de 0 a 100, "otras": [{"codigo": "código", "parecido": número de 0 a 100}]}`;
 
 // El sílabo se recorta para no pasar el límite gratuito de la IA (T44)
 export const MAX_SILABO = 12_000;
@@ -32,6 +33,15 @@ export const recortar = (t: string, max = MAX_SILABO) => (t.length > max ? `${t.
 
 // Porcentaje mínimo de parecido para aceptar la materia elegida (T43)
 export const PARECIDO_MINIMO = 50;
+// HU-29 · Para evaluar también otras materias que cubre el mismo sílabo se pide más parecido (máximo 2 más)
+export const PARECIDO_OTRAS = 70;
+export const MAX_OTRAS = 2;
+
+export interface Parecida {
+  codigo: string;
+  parecido: number;
+  otras?: { codigo: string; parecido: number }[]; // HU-29
+}
 
 const texto = (m: MateriaTexto) =>
   [
@@ -61,10 +71,11 @@ export function armarPedidoParecida(silabo: string, candidatas: MateriaTexto[]):
 }
 
 // T43 · Lee { codigo, parecido }. Si la IA inventa un código que no está en la lista, falla (queda Pendiente).
-export function leerParecida(respuesta: string, candidatas: { codigo: string }[]): { codigo: string; parecido: number } {
-  let json: { codigo?: unknown; parecido?: unknown };
+// HU-29 · "otras": se quedan solo las que están en la lista, no repiten la elegida y tienen al menos 70 de parecido.
+export function leerParecida(respuesta: string, candidatas: { codigo: string }[]): Parecida {
+  let json: { codigo?: unknown; parecido?: unknown; otras?: unknown };
   try {
-    json = JSON.parse(limpiarJson(respuesta)) as { codigo?: unknown; parecido?: unknown };
+    json = JSON.parse(limpiarJson(respuesta)) as { codigo?: unknown; parecido?: unknown; otras?: unknown };
   } catch {
     throw new Error('la IA no devolvió un JSON válido');
   }
@@ -72,7 +83,12 @@ export function leerParecida(respuesta: string, candidatas: { codigo: string }[]
   const parecido = Number(json.parecido);
   if (!candidatas.some((c) => c.codigo === codigo)) throw new Error('la IA eligió una materia que no está en la lista');
   if (Number.isNaN(parecido)) throw new Error('la respuesta no trae parecido');
-  return { codigo, parecido: Math.max(0, Math.min(100, parecido)) };
+  const limitar = (n: number) => Math.max(0, Math.min(100, n));
+  const otras = (Array.isArray(json.otras) ? (json.otras as { codigo?: unknown; parecido?: unknown }[]) : [])
+    .map((o) => ({ codigo: typeof o?.codigo === 'string' ? o.codigo : '', parecido: limitar(Number(o?.parecido)) }))
+    .filter((o, i, lista) => o.codigo !== codigo && candidatas.some((c) => c.codigo === o.codigo) && o.parecido >= PARECIDO_OTRAS && lista.findIndex((x) => x.codigo === o.codigo) === i)
+    .slice(0, MAX_OTRAS);
+  return { codigo, parecido: limitar(parecido), ...(otras.length ? { otras } : {}) };
 }
 
 // Deja el JSON listo para leer: quita ```json ... ``` y arregla barras invertidas sueltas
@@ -260,7 +276,7 @@ export class AgenteService {
 
   // T43 · Elige la materia de la FISEI más parecida al sílabo. Devuelve null si el parecido es menor a 50.
   // Si la IA falla, lanza el error (la solicitud deja esa materia en "Pendiente").
-  async elegirParecida(silabo: string, candidatas: MateriaTexto[], minimo = PARECIDO_MINIMO) {
+  async elegirParecida(silabo: string, candidatas: MateriaTexto[], minimo = PARECIDO_MINIMO): Promise<Parecida | null> {
     const r = leerParecida(await this.llamarIA(armarPedidoParecida(silabo, candidatas), SISTEMA_PARECIDA), candidatas);
     return r.parecido < minimo ? null : r;
   }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import { notaConvertida } from '../notas';
+import { armarFilas } from '../filas';
 
 interface Causa {
   regla: string;
@@ -13,6 +14,8 @@ interface Informe {
   causas: Causa[];
   temasFaltan: string[];
   parecido?: number;
+  juntas?: string[]; // HU-26
+  aviso?: string; // HU-26 · falta registrar la otra parte
 }
 interface Materia {
   codigo: string;
@@ -23,6 +26,8 @@ interface Materia {
   nota: number;
   notaOriginal?: number | null;
   escala?: number | null;
+  juntoCon?: string | null; // HU-26
+  adicionales?: string | null; // HU-29
 }
 interface Solicitud {
   id: number;
@@ -125,6 +130,8 @@ export default function Resultado() {
 
   const listo = s.estado === 'RESULTADO_LISTO';
   const hayPendientes = s.materias.some(m => m.resultado === 'Pendiente');
+  // HU-26 y HU-29 · una fila por cada materia nueva evaluada
+  const filas = armarFilas(s.materias);
   // T49 · Solicitud de otra universidad: columna "Parecido" y aviso de RN-08
   const externo = s.tipo === 'EXTERNO';
   const requisitos = externo && s.requisitos ? (JSON.parse(s.requisitos) as Requisitos) : null;
@@ -163,7 +170,7 @@ export default function Resultado() {
           ['Pendiente', 'pendiente'],
           ['Sin materia equivalente', 'sin-materia-equivalente'],
         ].map(([texto, clase]) => {
-          const n = s.materias.filter(m => m.resultado === texto).length;
+          const n = filas.filter(f => f.resultado === texto).length;
           return n > 0 ? (
             <div key={clase} className={`conteo-item ${clase}`}>
               <strong>{n}</strong>
@@ -184,16 +191,26 @@ export default function Resultado() {
           </tr>
         </thead>
         <tbody>
-          {s.materias.map(m => {
-            const inf = m.informe ? (JSON.parse(m.informe) as Informe) : null;
-            const resultado = m.resultado ?? 'En revisión';
+          {filas.map(f => {
+            const inf = f.informe ? (JSON.parse(f.informe) as Informe) : null;
+            const resultado = f.resultado ?? 'En revisión';
+            const juntas = f.materias.length > 1;
             return (
-              <tr key={m.codigo}>
+              <tr key={f.clave} className={f.tambien ? 'tambien' : undefined}>
                 <td>
-                  <strong>{m.nombre}</strong>
-                  <small className="equivale">{m.codigo}</small>
-                  {notaConvertida(m) && <small className="nota-convertida">Nota: {notaConvertida(m)}</small>}
-                  {abierta === m.codigo && inf && (
+                  {f.tambien && <small className="etiqueta-fila">También cubre</small>}
+                  {juntas && <small className="etiqueta-fila">Evaluadas juntas</small>}
+                  {f.materias.map((m, i) => (
+                    <div key={m.codigo} className="materia-de-fila">
+                      <strong>
+                        {i > 0 && '+ '}
+                        {m.nombre}
+                      </strong>
+                      <small className="equivale">{m.codigo}</small>
+                      {notaConvertida(m) && <small className="nota-convertida">Nota: {notaConvertida(m)}</small>}
+                    </div>
+                  ))}
+                  {abierta === f.clave && inf && (
                     <ul className="detalle">
                       {inf.causas.map(c => (
                         <li key={c.regla} className={c.cumple ? 'cumple' : 'no-cumple'}>
@@ -205,6 +222,11 @@ export default function Resultado() {
                           <b>Temas que faltan:</b> {inf.temasFaltan.join(', ')}
                         </li>
                       )}
+                      {inf.aviso && (
+                        <li className="faltan">
+                          <b>Ojo:</b> {inf.aviso}
+                        </li>
+                      )}
                     </ul>
                   )}
                 </td>
@@ -212,10 +234,10 @@ export default function Resultado() {
                   {inf ? (
                     <>
                       <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong>
-                      <small className="equivale">{m.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>
+                      <small className="equivale">{f.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>
                     </>
                   ) : (
-                    <span className="sin-equivalente">{equivalente(m.resultado, nombreCarrera(s.carreraDestino))}</span>
+                    <span className="sin-equivalente">{equivalente(f.resultado, nombreCarrera(s.carreraDestino))}</span>
                   )}
                 </td>
                 {externo && <td className="parecido">{inf?.parecido !== undefined ? `${inf.parecido} %` : '—'}</td>}
@@ -224,8 +246,8 @@ export default function Resultado() {
                 </td>
                 <td>
                   {inf && (
-                    <button className="pequeno" onClick={() => setAbierta(abierta === m.codigo ? '' : m.codigo)}>
-                      {abierta === m.codigo ? 'Ocultar' : 'Ver detalle'}
+                    <button className="pequeno" onClick={() => setAbierta(abierta === f.clave ? '' : f.clave)}>
+                      {abierta === f.clave ? 'Ocultar' : 'Ver detalle'}
                     </button>
                   )}
                 </td>

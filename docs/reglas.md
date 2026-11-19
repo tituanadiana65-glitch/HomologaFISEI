@@ -72,6 +72,10 @@ Dos materias aprobadas pueden sumar sus contenidos, créditos y horas para cubri
 
 *Ejemplo:* dos materias de 2 créditos cada una (4 en total) frente a una nueva de 4 créditos: 4 / 4 = 100 % en créditos. Si juntas cubren el 85 % de los contenidos, cumple.
 
+**Cómo lo aplica el sistema (HU-26):** el agente junta las materias aprobadas que apuntan a la misma materia nueva sin llamarse igual. Lo detecta por el nombre («Física I» y «Física II» → «Física») o, en otra universidad, por los temas del sílabo. Compara los temas de todas juntas (RN-01), suma créditos (RN-02) y horas (RN-03), usa el promedio de las notas según sus créditos (RN-04) y la fecha de la más antigua (RN-05). En RN-08 las materias juntas cuentan como una sola materia homologable.
+
+**Caso contrario (HU-29):** una materia aprobada puede cubrir dos o más materias nuevas («Física» → «Física I» y «Física II», o un sílabo de «Cálculo» que cubre Cálculo Diferencial y Cálculo Integral). Se evalúan las reglas con cada materia nueva por separado y en RN-08 cuenta cada una que se homologue. Las que salen por el nombre se muestran siempre; las que la IA encuentra por temas (parecido de al menos 70) se muestran solo si se homologan.
+
 ### RN-11 · Explicación del resultado
 Cada resultado lista cada regla evaluada, si se cumplió y por qué.
 

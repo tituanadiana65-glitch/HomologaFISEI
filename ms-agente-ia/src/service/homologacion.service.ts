@@ -4,7 +4,24 @@ import { ClientesService } from './clientes.service';
 import { armarInforme } from './informe';
 import { PrismaService } from '../repository/prisma.service';
 import { EventosService } from '../events/eventos.service';
-import type { Informe, MateriaCatalogo, PedidoComparar, PedidoExterno, PedidoHomologar } from '../dto/tipos';
+import type { Informe, MateriaCatalogo, ParteJunta, PedidoComparar, PedidoExterno, PedidoHomologar, PedidoJuntas } from '../dto/tipos';
+
+const coma = (n: number) => n.toFixed(1).replace('.', ',');
+
+// HU-26 · Nota de varias materias: promedio según sus créditos (sobre 10, con 2 decimales)
+export function promedioPorCreditos(partes: { nota: number; creditos: number }[]): number {
+  const creditos = partes.reduce((s, p) => s + p.creditos, 0);
+  const suma = partes.reduce((s, p) => s + p.nota * p.creditos, 0);
+  return Math.round((creditos > 0 ? suma / creditos : partes.reduce((s, p) => s + p.nota, 0) / partes.length) * 100) / 100;
+}
+
+// HU-26 · Junta los sílabos de las partes, cada uno con su título, sin pasar el largo que acepta la IA
+export function juntarSilabos(partes: { nombre: string; silabo?: string }[], max = 12_000): string {
+  const porParte = Math.floor(max / partes.length) - 40;
+  return partes.map((p) => `--- ${p.nombre} ---\n${(p.silabo ?? '').slice(0, porParte)}`).join('\n\n');
+}
+
+const notaDe = (p: ParteJunta) => (p.notaOriginal !== undefined && p.escala && p.escala !== 10 ? `${p.notaOriginal}/${p.escala}` : coma(p.nota));
 
 @Injectable()
 export class HomologacionService {
@@ -73,6 +90,39 @@ export class HomologacionService {
     ]);
     const externo = { parecido: p.parecido, notaOriginal: p.notaOriginal, escala: p.escala, nota: p.nota };
     return this.guardar(p, armarInforme(aprobada, nueva, contenidos, reglas, minimo, externo));
+  }
+
+  // HU-26 (RN-10) · Varias materias aprobadas juntas frente a una materia nueva:
+  // temas de todas juntas (RN-01), créditos y horas sumados, nota promedio según créditos y año de la más antigua.
+  async homologarJuntas(p: PedidoJuntas): Promise<Informe> {
+    if (!p?.codigoNueva || !p?.partes || p.partes.length < 2) throw new BadRequestException('Envía codigoNueva y al menos dos materias');
+    const [nueva, minimo] = await Promise.all([this.clientes.materia(p.codigoNueva), this.clientes.minimoContenidos()]);
+    const nombre = p.partes.map((x) => x.nombre).join(' + ');
+    const codigo = p.partes.map((x) => x.codigo).join(' + ');
+    const creditos = p.partes.reduce((s, x) => s + x.creditos, 0);
+    const horas = p.partes.reduce((s, x) => s + x.horas, 0);
+    const nota = promedioPorCreditos(p.partes);
+    const anio = Math.min(...p.partes.map((x) => x.anio));
+    const externa = p.partes.some((x) => x.silabo !== undefined);
+    // Las unidades de todas las partes, una tras otra (UTA)
+    const unidades = p.partes.flatMap((x) => (x.unidades ?? []).map((u) => ({ ...u, contenido: `${x.nombre}: ${u.contenido}` }))).map((u, i) => ({ ...u, numero: i + 1 }));
+    const aprobada: MateriaCatalogo = { codigo, nombre, creditos, horasTotales: horas, unidades };
+    const [contenidos, reglas] = await Promise.all([
+      externa ? this.agente.compararConSilabo(juntarSilabos(p.partes), nueva, minimo) : this.agente.comparar(aprobada, nueva, minimo),
+      this.clientes.evaluar({ creditos, horas, nota, anio }, { creditos: nueva.creditos, horas: nueva.horasTotales }),
+    ]);
+    const informe = armarInforme(aprobada, nueva, contenidos, reglas, minimo, p.parecido !== undefined ? { parecido: p.parecido } : undefined);
+    const detalle = p.partes.map((x) => `${x.nombre} ${notaDe(x)}`).join(' y ');
+    informe.causas = informe.causas.map((c) => {
+      if (c.regla === 'RN-01') return { ...c, causa: `Temas de ${nombre} juntas. ${c.causa}` };
+      if (c.regla === 'RN-02') return { ...c, causa: `Créditos sumados de las ${p.partes.length} materias. ${c.causa}` };
+      if (c.regla === 'RN-03') return { ...c, causa: `Horas sumadas de las ${p.partes.length} materias. ${c.causa}` };
+      if (c.regla === 'RN-04') return { ...c, causa: c.causa.replace(/^Nota [\d.,]+/, `Promedio ${coma(nota)}/10 según créditos (${detalle})`) };
+      if (c.regla === 'RN-05') return { ...c, causa: `Se toma la más antigua (${anio}). ${c.causa}` };
+      return c;
+    });
+    informe.juntas = p.partes.map((x) => x.nombre);
+    return this.guardar({ codigoAprobada: codigo, codigoNueva: p.codigoNueva, nota, anio }, informe);
   }
 
   // Guarda el informe, publica el evento y devuelve el informe con su id y fecha

@@ -9,6 +9,39 @@ export interface MateriaInforme {
   informe: string | null;
   notaOriginal?: number | null; // T50 · solo EXTERNO: nota como la puso su universidad
   escala?: number | null; // 10, 20 o 100
+  juntoCon?: string | null; // HU-26 · códigos de las materias evaluadas junto con esta
+  adicionales?: string | null; // HU-29 · otras materias nuevas que también cubre (JSON)
+}
+
+// HU-26 y HU-29 · Una fila del informe por cada materia nueva evaluada
+export interface FilaInforme {
+  materias: MateriaInforme[];
+  resultado: string | null;
+  informe: string | null;
+  tambien: boolean;
+}
+
+export function armarFilas(materias: MateriaInforme[]): FilaInforme[] {
+  const filas: FilaInforme[] = [];
+  const usadas = new Set<string>();
+  for (const m of materias) {
+    if (usadas.has(m.codigo)) continue;
+    const otras = (m.juntoCon ?? '').split(',').filter(Boolean);
+    const grupo = [m, ...materias.filter((x) => x !== m && otras.includes(x.codigo))];
+    grupo.forEach((x) => usadas.add(x.codigo));
+    filas.push({ materias: grupo, resultado: m.resultado, informe: m.informe, tambien: false });
+    let extra: { resultado?: string; informe?: unknown }[] = [];
+    try {
+      const lista = m.adicionales ? (JSON.parse(m.adicionales) as unknown) : [];
+      extra = Array.isArray(lista) ? (lista as typeof extra) : [];
+    } catch {
+      extra = [];
+    }
+    for (const a of extra) {
+      filas.push({ materias: [m], resultado: a.resultado ?? null, informe: a.informe ? JSON.stringify(a.informe) : null, tambien: true });
+    }
+  }
+  return filas;
 }
 
 export interface SolicitudInforme {
@@ -38,6 +71,8 @@ interface Informe {
   causas?: Causa[];
   temasFaltan?: string[];
   parecido?: number; // T50 · solo EXTERNO
+  juntas?: string[]; // HU-26
+  aviso?: string; // HU-26
 }
 
 const GUINDA = '#8b1c2c';
@@ -173,9 +208,10 @@ export function crearPdf(
       .fontSize(13)
       .text('Resumen', izq, 215 + extra);
     const anchoCaja = (ancho - 30) / 4;
+    const filas = armarFilas(s.materias);
     Object.keys(COLORES).forEach((tipo, i) => {
       const x = izq + i * (anchoCaja + 10);
-      const total = s.materias.filter((m) => m.resultado === tipo).length;
+      const total = filas.filter((f) => f.resultado === tipo).length;
       doc.roundedRect(x, 237 + extra, anchoCaja, 54, 6).fill(FONDO);
       doc.rect(x, 237 + extra, 4, 54).fill(COLORES[tipo]);
       doc
@@ -239,12 +275,15 @@ export function crearPdf(
       .text('Detalle por materia', izq, yDetalle);
     doc.y = yDetalle + 26;
 
-    for (const m of s.materias) {
-      const inf = m.informe ? (JSON.parse(m.informe) as Informe) : null;
+    for (const f of filas) {
+      const inf = f.informe ? (JSON.parse(f.informe) as Informe) : null;
       if (doc.y > doc.page.height - 170) doc.addPage();
       const inicio = doc.y;
-      const color = colorDe(m.resultado);
-      const resultado = m.resultado ?? 'En revisión';
+      const color = colorDe(f.resultado);
+      const resultado = f.resultado ?? 'En revisión';
+      // HU-26: "Física I + Física II" · HU-29: "También cubre · Física"
+      const nombre = `${f.tambien ? 'También cubre · ' : ''}${f.materias.map((m) => m.nombre).join(' + ')}`;
+      const notas = f.materias.map((m) => (f.materias.length > 1 ? `${m.nombre}: ${textoNota(m)}` : textoNota(m))).join('   ·   ');
 
       // Etiqueta de color con el resultado (a la derecha)
       doc.font('Helvetica-Bold').fontSize(8);
@@ -264,7 +303,7 @@ export function crearPdf(
         .fillColor('#111111')
         .font('Helvetica-Bold')
         .fontSize(11)
-        .text(m.nombre, izq + 14, inicio + 2, {
+        .text(nombre, izq + 14, inicio + 2, {
           width: ancho - anchoEtiqueta - 24,
         });
       doc
@@ -272,7 +311,7 @@ export function crearPdf(
         .font('Helvetica')
         .fontSize(9)
         .text(
-          `${textoNota(m)}${inf?.parecido !== undefined ? `   ·   Parecido ${inf.parecido} %` : ''}${inf?.nueva ? `   ·   Equivale a ${inf.nueva}` : ''}`,
+          `${f.materias.length > 1 ? 'Evaluadas juntas   ·   ' : ''}${notas}${inf?.parecido !== undefined ? `   ·   Parecido ${inf.parecido} %` : ''}${inf?.nueva ? `   ·   Equivale a ${inf.nueva}` : ''}`,
           izq + 14,
           doc.y + 2,
           { width: ancho - 14 },
@@ -308,6 +347,17 @@ export function crearPdf(
           .fillColor('#333333')
           .font('Helvetica')
           .text(inf.temasFaltan.join(', '));
+      }
+
+      if (inf?.aviso) {
+        doc
+          .fillColor(COLORES.Pendiente)
+          .font('Helvetica-Bold')
+          .fontSize(9)
+          .text('Ojo: ', izq + 14, doc.y + 4, { continued: true, width: ancho - 14 })
+          .fillColor('#333333')
+          .font('Helvetica')
+          .text(inf.aviso);
       }
 
       // Barra lateral del color del resultado y línea separadora

@@ -81,5 +81,29 @@ export interface Informe {
   parecido?: number;
   notaOriginal?: number;
   escala?: number;
+  // HU-26 · materias aprobadas que se evaluaron juntas para cubrir la materia nueva
+  juntas?: string[];
+  // HU-26 · aviso cuando una materia es parte de otra (por ejemplo, falta registrar Física II)
+  aviso?: string;
   fecha?: string;
+}
+
+// HU-26 · Una de las materias aprobadas que se evalúan juntas
+export interface ParteJunta {
+  codigo: string;
+  nombre: string;
+  creditos: number;
+  horas: number;
+  nota: number; // sobre 10
+  anio: number;
+  notaOriginal?: number;
+  escala?: number;
+  silabo?: string; // otra universidad: texto del sílabo
+  unidades?: UnidadTexto[]; // UTA: unidades del plan analítico
+}
+
+export interface PedidoJuntas {
+  partes: ParteJunta[];
+  codigoNueva: string;
+  parecido?: number; // solo otra universidad
 }
