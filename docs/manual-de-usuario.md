@@ -80,7 +80,7 @@ Los PDF deben tener texto que se pueda copiar. Un documento escaneado como image
 ### Paso 1 · Crear la solicitud
 
 1. Elige **Vengo de otra universidad**.
-2. Escribe tu **Universidad de origen** y tu **Carrera de origen**.
+2. Escribe tu **Universidad de origen** y elige tu **Carrera de origen** de la lista. Si no está, elige **Otra carrera (escribirla)** y escribe su nombre.
 3. Elige la **Carrera de destino** en la UTA.
 4. Revisa el **Periodo del trámite** y escribe cuántos **Periodos aprobados** tienes.
 5. Sube tu **Malla curricular (PDF)** y tu **Récord académico (PDF)**.

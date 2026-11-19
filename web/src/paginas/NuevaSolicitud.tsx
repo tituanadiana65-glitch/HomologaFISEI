@@ -7,11 +7,28 @@ import SubirPdf from '../componentes/SubirPdf';
 interface Carrera { codigo: string; nombre: string }
 interface Solicitud { id: number; estado: string }
 
+// Carreras afines más comunes en otras universidades. Si no está la suya, el estudiante elige "Otra carrera" y la escribe.
+const CARRERAS_OTRA_UNIVERSIDAD = [
+  'Ingeniería en Sistemas',
+  'Ingeniería en Computación',
+  'Ingeniería de Software',
+  'Tecnologías de la Información',
+  'Ciencias de la Computación',
+  'Ingeniería Electrónica',
+  'Ingeniería en Telecomunicaciones',
+  'Ingeniería Eléctrica',
+  'Ingeniería en Automatización y Control',
+  'Ingeniería Mecatrónica',
+  'Ingeniería Industrial',
+];
+const OTRA = '__otra';
+
 export default function NuevaSolicitud() {
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [externo, setExterno] = useState(false); // false: de la UTA · true: de otra universidad
   const [d, setD] = useState({ carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' });
   const [x, setX] = useState({ universidadOrigen: '', carreraOrigen: '', periodosAprobados: 1, documentosLegalizados: false });
+  const [otraCarrera, setOtraCarrera] = useState(false); // la carrera de otra universidad no está en la lista
   const [mallaId, setMallaId] = useState<number>();
   const [recordId, setRecordId] = useState<number>();
   const [error, setError] = useState('');
@@ -75,7 +92,25 @@ export default function NuevaSolicitud() {
             </label>
             <label>
               Carrera de origen
-              <input value={x.carreraOrigen} placeholder="Ingeniería en Computación" onChange={(e) => setX({ ...x, carreraOrigen: e.target.value })} />
+              <select
+                value={otraCarrera ? OTRA : x.carreraOrigen}
+                onChange={(e) => {
+                  const otra = e.target.value === OTRA;
+                  setOtraCarrera(otra);
+                  setX({ ...x, carreraOrigen: otra ? '' : e.target.value });
+                }}
+              >
+                <option value="">Elige tu carrera…</option>
+                {CARRERAS_OTRA_UNIVERSIDAD.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+                <option value={OTRA}>Otra carrera (escribirla)</option>
+              </select>
+              {otraCarrera && (
+                <input value={x.carreraOrigen} placeholder="Escribe el nombre de tu carrera" autoFocus onChange={(e) => setX({ ...x, carreraOrigen: e.target.value })} />
+              )}
             </label>
           </>
         ) : (
