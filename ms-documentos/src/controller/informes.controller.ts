@@ -10,9 +10,20 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { EventosService } from '../events/eventos.service';
-import { crearPdf, type SolicitudInforme } from '../service/informe-pdf';
+import { conNombresDeCarrera, crearPdf, nombreEstudiante, type Carrera, type SolicitudInforme } from '../service/informe-pdf';
 
 const MS_SOLICITUDES = process.env.MS_SOLICITUDES || 'http://localhost:3003';
+const MS_CATALOGO = process.env.MS_CATALOGO || 'http://localhost:3002';
+
+// Nombres de las carreras ("Software" en vez de "SW"); si el catálogo no responde, el informe usa los códigos
+async function carreras(): Promise<Carrera[]> {
+  try {
+    const r = await fetch(`${MS_CATALOGO}/carreras`);
+    return r.ok ? ((await r.json()) as Carrera[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 @Controller('informes')
 export class InformesController {
@@ -23,6 +34,7 @@ export class InformesController {
     @Param('id', ParseIntPipe) id: number,
     @Headers('x-usuario-id') usuario: string,
     @Headers('x-usuario-correo') correo: string,
+    @Headers('x-usuario-nombre') nombre: string,
     @Res() res: Response,
   ) {
     // ms-solicitudes revisa que la solicitud sea de este usuario: 403 si no es suya, 404 si no existe
@@ -39,7 +51,7 @@ export class InformesController {
     if (s.estado !== 'RESULTADO_LISTO')
       throw new BadRequestException('El resultado todavía no está listo');
 
-    const pdf = await crearPdf(s, correo ?? '');
+    const pdf = await crearPdf(conNombresDeCarrera(s, await carreras()), nombreEstudiante(nombre, correo));
     await this.eventos.publicar('informe.generado', { solicitudId: id });
     res
       .set({

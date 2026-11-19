@@ -45,6 +45,6 @@ export class IdentidadService implements OnModuleInit {
 
   private sesion(u: { id: number; nombre: string; correo: string; rol: string }) {
     const usuario = { id: u.id, nombre: u.nombre, correo: u.correo, rol: u.rol };
-    return { token: jwt.sign({ sub: u.id, correo: u.correo, rol: u.rol }, secreto(), { expiresIn: '8h' }), usuario };
+    return { token: jwt.sign({ sub: u.id, correo: u.correo, nombre: u.nombre, rol: u.rol }, secreto(), { expiresIn: '8h' }), usuario };
   }
 }

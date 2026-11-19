@@ -121,6 +121,15 @@ export default function Materias() {
     }
   };
 
+  // Mientras llega la solicitud no se muestra ningún formulario (antes aparecía un momento el de la UTA)
+  if (!s) {
+    return (
+      <main>
+        <p className="vacio">Cargando…</p>
+      </main>
+    );
+  }
+
   return (
     <main>
       <h1>Tus materias aprobadas</h1>

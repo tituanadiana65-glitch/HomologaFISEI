@@ -177,7 +177,7 @@ Revisa que tu correo termine en `@uta.edu.ec` y que la contraseña tenga al meno
 Solo se permite una solicitud a la vez. Sigue con la que ya tienes.
 
 **Mis materias quedaron «Pendiente».**
-La inteligencia artificial estaba ocupada o no respondió. Espera un momento y pulsa **Reintentar las pendientes**.
+La inteligencia artificial estaba ocupada o no respondió. Espera un momento y pulsa **Reintentar las pendientes**. Púlsalo una vez: las materias pasan a «En revisión» y la página se actualiza sola.
 
 **El resultado tarda mucho.**
 El agente revisa materia por materia y espera a la inteligencia artificial. Con varias materias puede tardar unos minutos. No cierres la sesión: la página se actualiza sola.

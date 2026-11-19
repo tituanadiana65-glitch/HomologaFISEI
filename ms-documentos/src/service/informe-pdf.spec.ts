@@ -1,4 +1,4 @@
-import { crearPdf, leerRequisitos, textoNota } from './informe-pdf';
+import { conNombresDeCarrera, crearPdf, leerRequisitos, nombreEstudiante, textoNota } from './informe-pdf';
 import { leerTexto } from './lector-texto';
 
 const solicitud = {
@@ -128,5 +128,43 @@ describe('T50 · informe de otra universidad', () => {
       'No cumple los requisitos para cambiarse desde otra universidad (RN-08)',
     );
     expect(texto).toContain('Materias homologables');
+  });
+});
+
+// Prueba T47 (E-8): el informe muestra el nombre del estudiante y el nombre de la carrera
+describe('nombre del estudiante y de las carreras', () => {
+  const carreras = [
+    { codigo: 'SW', nombre: 'Software' },
+    { codigo: 'TI', nombre: 'Tecnologías de la Información' },
+  ];
+
+  it('usa el nombre (con tildes y ñ) y, si no hay, el correo', () => {
+    expect(nombreEstudiante(encodeURIComponent('Diana Tituaña'), 'd@uta.edu.ec')).toBe('Diana Tituaña');
+    expect(nombreEstudiante(undefined, 'd@uta.edu.ec')).toBe('d@uta.edu.ec');
+    expect(nombreEstudiante('%E0%A4%A', 'd@uta.edu.ec')).toBe('d@uta.edu.ec');
+  });
+
+  it('cambia los códigos por los nombres de las carreras', () => {
+    const r = conNombresDeCarrera(solicitud, carreras);
+    expect(r.carreraOrigen).toBe('Tecnologías de la Información');
+    expect(r.carreraDestino).toBe('Software');
+  });
+
+  it('en otra universidad deja la carrera de origen como la escribió el estudiante', () => {
+    const r = conNombresDeCarrera({ ...solicitud, tipo: 'EXTERNO', carreraOrigen: 'TI' }, carreras);
+    expect(r.carreraOrigen).toBe('TI');
+    expect(r.carreraDestino).toBe('Software');
+  });
+
+  it('si el catálogo no respondió deja los códigos', () => {
+    expect(conNombresDeCarrera(solicitud, []).carreraDestino).toBe('SW');
+  });
+
+  it('el PDF trae el nombre completo en una sola línea y la carrera con su nombre', async () => {
+    const largo = 'Diana Pamela Tituaña Calapiña de los Ángeles';
+    const pdf = await crearPdf(conNombresDeCarrera(solicitud, carreras), largo);
+    const texto = await leerTexto(pdf);
+    expect(texto).toContain(largo);
+    expect(texto).toContain('Software');
   });
 });

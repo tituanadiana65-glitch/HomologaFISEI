@@ -61,6 +61,34 @@ export function textoNota(m: MateriaInforme): string {
   return `Nota ${m.nota}`;
 }
 
+export interface Carrera {
+  codigo: string;
+  nombre: string;
+}
+
+// El informe muestra el nombre del estudiante; con una sesión antigua (sin nombre) muestra su correo
+export function nombreEstudiante(nombreCodificado?: string, correo?: string): string {
+  if (nombreCodificado) {
+    try {
+      const nombre = decodeURIComponent(nombreCodificado).trim();
+      if (nombre) return nombre;
+    } catch {
+      // encabezado mal formado: se usa el correo
+    }
+  }
+  return correo ?? '';
+}
+
+// Cambia los códigos de carrera (SW, TI) por sus nombres. La carrera de origen de otra universidad ya es un nombre.
+export function conNombresDeCarrera(s: SolicitudInforme, carreras: Carrera[]): SolicitudInforme {
+  const nombre = (codigo: string) => carreras.find((c) => c.codigo === codigo)?.nombre ?? codigo;
+  return {
+    ...s,
+    carreraDestino: nombre(s.carreraDestino),
+    carreraOrigen: s.tipo === 'EXTERNO' ? s.carreraOrigen : nombre(s.carreraOrigen),
+  };
+}
+
 // T50 · Lee la revisión de RN-08; null si no es EXTERNO o todavía no hay revisión
 export function leerRequisitos(s: SolicitudInforme): Requisitos | null {
   if (s.tipo !== 'EXTERNO' || !s.requisitos) return null;
@@ -106,22 +134,24 @@ export function crearPdf(
       .text('Informe de homologación', izq, 58);
 
     // Datos de la solicitud
-    const dato = (etiqueta: string, valor: string, x: number, y: number) => {
+    // unaLinea: achica la letra para que un nombre largo no se monte sobre la fila de abajo
+    const dato = (etiqueta: string, valor: string, x: number, y: number, unaLinea = false) => {
       doc
         .fillColor(GRIS)
         .font('Helvetica')
         .fontSize(7.5)
         .text(etiqueta.toUpperCase(), x, y, { width: 140 });
+      let tamano = 10;
+      doc.font('Helvetica-Bold').fontSize(tamano);
+      while (unaLinea && tamano > 7 && doc.widthOfString(valor) > 160) doc.fontSize(--tamano);
       doc
         .fillColor('#111111')
-        .font('Helvetica-Bold')
-        .fontSize(10)
-        .text(valor, x, y + 11, { width: 140 });
+        .text(valor, x, y + 11, { width: unaLinea ? 165 : 140, lineBreak: !unaLinea, ellipsis: unaLinea });
     };
     // T50 · el nombre de otra universidad ocupa más líneas: la casilla crece y todo baja
     const extra = s.tipo === 'EXTERNO' ? 16 : 0;
     doc.roundedRect(izq, 115, ancho, 80 + extra, 6).fill(FONDO);
-    dato('Estudiante', estudiante, izq + 15, 127);
+    dato('Estudiante', estudiante, izq + 15, 127, true);
     dato('Solicitud', `N.º ${s.id}`, izq + 185, 127);
     dato('Fecha', new Date().toLocaleDateString('es-EC'), izq + 340, 127);
     const externo = s.tipo === 'EXTERNO';
