@@ -5,7 +5,19 @@ interface Subido { id: number; nombre: string; caracteres: number }
 type Tipo = 'MALLA' | 'RECORD' | 'SILABO';
 
 // Sube un PDF a ms-documentos (T39) apenas se elige y avisa su id al formulario
-export default function SubirPdf({ etiqueta, tipo, alSubir }: { etiqueta: string; tipo: Tipo; alSubir: (id: number | undefined) => void }) {
+export default function SubirPdf({
+  etiqueta,
+  tipo,
+  alSubir,
+  obligatorio = false,
+  pista,
+}: {
+  etiqueta: string;
+  tipo: Tipo;
+  alSubir: (id: number | undefined) => void;
+  obligatorio?: boolean;
+  pista?: string;
+}) {
   const [estado, setEstado] = useState<'' | 'subiendo' | 'ok' | 'error'>('');
   const [mensaje, setMensaje] = useState('');
 
@@ -34,9 +46,11 @@ export default function SubirPdf({ etiqueta, tipo, alSubir }: { etiqueta: string
 
   return (
     <label>
-      {etiqueta}
+      <span>
+        {etiqueta} {obligatorio && <span className="req">*</span>}
+      </span>
       <input type="file" accept="application/pdf" onChange={(e) => void subir(e.target.files?.[0])} />
-      {mensaje && <small className={`subida ${estado}`}>{mensaje}</small>}
+      {mensaje ? <small className={`subida ${estado}`}>{mensaje}</small> : pista && <small className="pista">{pista}</small>}
     </label>
   );
 }

@@ -80,8 +80,9 @@ describe('SolicitudesService', () => {
   });
 
   it('al enviar publica solicitud.enviada con las materias', async () => {
-    const { servicio, eventos } = armar({ id: 1, usuarioId: 7, estado: 'BORRADOR', carreraDestino: 'SW', materias: [fisica] });
+    const { servicio, eventos, prisma } = armar({ id: 1, usuarioId: 7, estado: 'BORRADOR', carreraDestino: 'SW', materias: [fisica] });
     await expect(servicio.enviar(7, 1)).resolves.toEqual({ id: 1, estado: 'ENVIADA' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'ENVIADA', enviada: expect.any(Date) } });
     expect(eventos.publicar).toHaveBeenCalledWith('solicitud.enviada', {
       solicitudId: 1,
       carreraDestino: 'SW',

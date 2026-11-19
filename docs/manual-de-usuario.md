@@ -62,7 +62,7 @@ Después de enviar ya no puedes cambiar las materias.
 
 ### Paso 3 · Ver el resultado
 
-El agente revisa cada materia. Mientras tanto verás el aviso **«El agente está revisando tus materias»**: la página se actualiza sola. Puede tardar unos minutos. Cuando termine, mira la sección [4. Cómo leer el resultado](#4-cómo-leer-el-resultado).
+El agente revisa cada materia. Mientras tanto verás un recuadro con **cuánto tiempo lleva revisando**, qué está haciendo y cuánto suele tardar. La página se actualiza sola; también puedes cerrarla y volver después. Cuando termine, mira la sección [4. Cómo leer el resultado](#4-cómo-leer-el-resultado).
 
 ---
 
@@ -93,7 +93,7 @@ Por cada materia:
 
 1. Escribe el **Nombre de la materia** tal como aparece en tu récord (por ejemplo, «Cálculo II»).
 2. Escribe sus **Créditos** y sus **Horas**.
-3. Escribe tu **Nota** y elige sobre cuánto es (**Sobre**: 10, 20 o 100). El sistema la convierte a la escala de la UTA: por ejemplo, 16 sobre 20 equivale a 8,0 sobre 10.
+3. Escribe tu **Nota** y elige sobre cuánto califica tu universidad (**10, 20 o 100 puntos**). El sistema la convierte a la escala de la UTA: por ejemplo, 16 sobre 20 equivale a 8,0 sobre 10.
 4. Escribe el **Año de aprobación**.
 5. Sube el **Sílabo de la materia (PDF)**. Es obligatorio: sin él no se pueden comparar los temas.
 6. Pulsa **Agregar materia**.
@@ -115,7 +115,7 @@ Si no cumples alguno, el aviso te dice cuál y por qué.
 
 ## 4. Cómo leer el resultado
 
-Arriba hay un resumen con cuántas materias salieron en cada estado. Para cada materia verás **Tu materia**, **Se homologa por** (la materia de la nueva carrera) y el **Resultado**:
+Arriba verás una frase con **cuántas materias de la nueva carrera se te podrían reconocer** y un resumen con cuántas salieron en cada estado. Si tienes dudas, abre **«¿Qué significa cada resultado?»** y, al final, **«¿Y ahora qué?»** te dice qué hacer con tu informe. Para cada materia verás **Tu materia**, **Se homologa por** (la materia de la nueva carrera) y el **Resultado**:
 
 | Resultado | Qué significa |
 |---|---|
@@ -124,7 +124,7 @@ Arriba hay un resumen con cuántas materias salieron en cada estado. Para cada m
 | **Pendiente** | La inteligencia artificial no alcanzó a revisarla. Pulsa **Reintentar las pendientes**. |
 | **Sin materia equivalente** | No hay una materia igual o parecida en la nueva carrera. |
 
-Pulsa **Ver detalle** para ver cada regla, si se cumple y por qué:
+Pulsa **Ver por qué** para ver cada regla, si se cumple y por qué:
 
 | Regla | Qué revisa |
 |---|---|

@@ -113,7 +113,7 @@ export class SolicitudesService implements OnModuleInit {
     const s = await this.ver(usuarioId, id);
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
     if (s.materias.length === 0) throw new BadRequestException('Registra al menos una materia antes de enviar');
-    await this.prisma.solicitud.update({ where: { id }, data: { estado: 'ENVIADA' } });
+    await this.prisma.solicitud.update({ where: { id }, data: { estado: 'ENVIADA', enviada: new Date() } });
     await this.eventos.publicar('solicitud.enviada', mensajeEnviada(s, id, s.materias));
     return { id, estado: 'ENVIADA' };
   }
@@ -229,6 +229,7 @@ export class SolicitudesService implements OnModuleInit {
       data: { resultado: null },
     });
     if (tomadas.count === 0) throw new BadRequestException('No hay materias pendientes: el agente ya las está revisando');
+    await this.prisma.solicitud.update({ where: { id }, data: { enviada: new Date() } }); // la espera vuelve a contar desde ahora
     await this.eventos.publicar('solicitud.enviada', mensajeEnviada(s, id, pendientes));
     return { id, reintentadas: pendientes.length };
   }

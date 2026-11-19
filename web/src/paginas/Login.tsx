@@ -51,7 +51,7 @@ export default function Login() {
           {modo === 'registro' && (
             <label>
               Nombre completo
-              <input value={datos.nombre} onChange={(e) => setDatos({ ...datos, nombre: e.target.value })} />
+              <input value={datos.nombre} placeholder="Como aparecerá en tu informe" onChange={(e) => setDatos({ ...datos, nombre: e.target.value })} />
             </label>
           )}
           <label>
@@ -66,10 +66,25 @@ export default function Login() {
           <label>
             Contraseña
             <input type="password" value={datos.clave} onChange={(e) => setDatos({ ...datos, clave: e.target.value })} />
+            {modo === 'registro' && <small className="pista">Al menos 8 caracteres.</small>}
           </label>
           {error && <p role="alert">{error}</p>}
           <button type="submit">{modo === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
         </form>
+        <ol className="como-funciona">
+          <li>
+            <b>Crea tu solicitud</b>
+            <span>Dinos de qué carrera o universidad vienes y a cuál te cambias.</span>
+          </li>
+          <li>
+            <b>Registra tus materias</b>
+            <span>Las que aprobaste, con su nota (y su sílabo si vienes de otra universidad).</span>
+          </li>
+          <li>
+            <b>Recibe tu análisis</b>
+            <span>Qué materias se te podrían homologar, por qué, y un informe en PDF.</span>
+          </li>
+        </ol>
         <p className="acceso-pie">Análisis previo de homologación. La decisión oficial la toma el Consejo Directivo de la Facultad.</p>
       </div>
     </div>

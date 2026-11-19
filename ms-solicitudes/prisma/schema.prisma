@@ -17,6 +17,7 @@ model Solicitud {
   periodo               String               // NOVIEMBRE 2026 - MARZO 2027
   estado                String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO
   creada                DateTime             @default(now())
+  enviada               DateTime?            // cuándo se mandó al agente (la página muestra cuánto lleva revisando)
   // Solo para EXTERNO (T37)
   universidadOrigen     String?
   periodosAprobados     Int?                 // RN-08: al menos 2
