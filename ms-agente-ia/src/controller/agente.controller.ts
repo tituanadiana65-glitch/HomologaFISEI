@@ -24,6 +24,12 @@ export class AgenteController {
     return this.servicio.homologar(p);
   }
 
+  // { documentoId, carreraOrigen? } -> materias del récord (aprobadas, reprobadas, en curso) para revisarlas y registrarlas
+  @Post('leer-record')
+  leerRecord(@Body() p: { documentoId?: number; carreraOrigen?: string }) {
+    return this.servicio.leerRecord(p);
+  }
+
   @Get('homologaciones')
   listar() {
     return this.servicio.listar();

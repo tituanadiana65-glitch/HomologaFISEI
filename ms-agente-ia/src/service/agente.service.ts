@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Comparacion, MateriaTexto } from '../dto/tipos';
+import { armarPedidoRecord, leerRecord, SISTEMA_RECORD, type MateriaRecord } from './record';
 
 // Instrucciones del agente: solo compara contenidos (RN-01).
 // Créditos, horas, nota y vigencia los decide ms-motor-reglas, no la IA.
@@ -264,6 +265,11 @@ export class AgenteService {
 
   // T43 · Elige la materia de la FISEI más parecida al sílabo. Devuelve null si el parecido es menor a 50.
   // Si la IA falla, lanza el error (la solicitud deja esa materia en "Pendiente").
+  // Lee el récord académico (aprobadas, reprobadas, en curso) para que el estudiante no escriba todo a mano
+  async leerRecord(texto: string): Promise<MateriaRecord[]> {
+    return leerRecord(await this.llamarIA(armarPedidoRecord(texto), SISTEMA_RECORD));
+  }
+
   async elegirParecida(silabo: string, candidatas: MateriaTexto[], minimo = PARECIDO_MINIMO): Promise<Parecida | null> {
     const r = leerParecida(await this.llamarIA(armarPedidoParecida(silabo, candidatas), SISTEMA_PARECIDA), candidatas);
     return r.parecido < minimo ? null : r;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import SubirPdf from '../componentes/SubirPdf';
+import LeerRecord from '../componentes/LeerRecord';
 import { numero } from '../notas';
 
 interface Carrera { codigo: string; nombre: string }
@@ -25,6 +26,7 @@ interface Solicitud {
   carreraOrigen: string;
   carreraDestino: string;
   periodo: string;
+  recordId?: number | null;
   materias: Materia[];
 }
 
@@ -182,7 +184,18 @@ export default function Materias() {
         </div>
       )}
 
-      <h2>Agregar una materia</h2>
+      <LeerRecord
+        key={s.id}
+        solicitudId={s.id}
+        externo={externo}
+        recordId={s.recordId}
+        carreraOrigen={s.carreraOrigen}
+        nombreCarreraOrigen={externo ? (s.carreraOrigen ?? 'tu carrera') : nombreCarrera(s.carreraOrigen)}
+        registradas={s.materias}
+        alTerminar={recargar}
+      />
+
+      <h2>O agrega una materia a mano</h2>
       <p className="ayuda">
         Los campos con <span className="req">*</span> son obligatorios.{' '}
         {externo

@@ -23,6 +23,11 @@ export class ClientesService {
     return (await r.json()) as { codigo: string; nombre: string }[];
   }
 
+  // Lectura del récord (UTA) · materias de la carrera con nivel, docente, créditos y horas
+  async asignaturasConDatos(carrera: string): Promise<{ codigo: string; nombre: string; nivel?: string; docente?: string; creditos?: number; horasTotales?: number }[]> {
+    return this.asignaturas(carrera);
+  }
+
   // T43 · Materias de una carrera con sus unidades (para elegir la más parecida a un sílabo)
   async candidatas(carrera: string): Promise<MateriaTexto[]> {
     const lista = await this.asignaturas(carrera);

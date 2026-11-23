@@ -50,6 +50,9 @@ Solo puedes tener una solicitud abierta a la vez.
 
 ### Paso 2 · Registrar tus materias aprobadas
 
+**Lo más rápido: llénalas desde tu récord.** En **Llenar desde tu récord académico**, sube tu récord en PDF y pulsa **Leer mi récord**. La inteligencia artificial arma la lista de materias que cursaste, con las aprobadas y las reprobadas (las reprobadas no se pueden homologar). Marca las que quieras y pulsa **Agregar**. Si alguna no aparece, regístrala a mano como se explica abajo.
+
+
 Registra una por una las materias que aprobaste:
 
 1. Elige el **Nivel** (PRIMERO, SEGUNDO…) y luego la **Materia**: la lista solo muestra materias de tu carrera de origen.
@@ -88,6 +91,9 @@ Los PDF deben tener texto que se pueda copiar. Un documento escaneado como image
 7. Pulsa **Crear solicitud**.
 
 ### Paso 2 · Registrar tus materias
+
+**Lo más rápido: llénalas desde tu récord.** Pulsa **Leer mi récord** (es el que subiste en el paso 1). Verás tus materias con las aprobadas y las reprobadas. Marca las aprobadas que quieras homologar, revisa créditos y horas, sube el **sílabo** de cada una y pulsa **Agregar**. También puedes registrarlas una por una:
+
 
 Por cada materia:
 

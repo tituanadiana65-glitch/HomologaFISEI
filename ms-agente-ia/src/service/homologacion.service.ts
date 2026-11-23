@@ -6,6 +6,8 @@ import { PrismaService } from '../repository/prisma.service';
 import { EventosService } from '../events/eventos.service';
 import type { Informe, MateriaCatalogo, ParteJunta, PedidoComparar, PedidoExterno, PedidoHomologar, PedidoJuntas } from '../dto/tipos';
 
+import { unirConCatalogo } from './record';
+
 const coma = (n: number) => n.toFixed(1).replace('.', ',');
 
 // HU-26 · Nota de varias materias: promedio según sus créditos (sobre 10, con 2 decimales)
@@ -123,6 +125,20 @@ export class HomologacionService {
     });
     informe.juntas = p.partes.map((x) => x.nombre);
     return this.guardar({ codigoAprobada: codigo, codigoNueva: p.codigoNueva, nota, anio }, informe);
+  }
+
+  // Lee un récord académico (PDF ya subido a ms-documentos). Con la carrera de origen (UTA) une cada materia con el catálogo.
+  async leerRecord(p: { documentoId?: number; carreraOrigen?: string }) {
+    if (!p?.documentoId) throw new BadRequestException('Envía el documentoId del récord');
+    const texto = await this.clientes.textoSilabo(p.documentoId);
+    if (!texto.trim()) throw new BadRequestException('El récord no tiene texto que se pueda leer');
+    let materias = await this.agente.leerRecord(texto);
+    if (p.carreraOrigen) materias = unirConCatalogo(materias, await this.clientes.asignaturasConDatos(p.carreraOrigen));
+    return {
+      materias,
+      aprobadas: materias.filter((m) => m.estado === 'APROBADA').length,
+      reprobadas: materias.filter((m) => m.estado === 'REPROBADA').length,
+    };
   }
 
   // Guarda el informe, publica el evento y devuelve el informe con su id y fecha

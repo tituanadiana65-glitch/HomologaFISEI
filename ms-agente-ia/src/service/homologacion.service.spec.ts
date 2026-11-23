@@ -159,3 +159,28 @@ describe('HomologacionService · materias juntas (HU-26)', () => {
     await expect(s.homologarJuntas({ partes: [fisicaI], codigoNueva: 'SW-F' })).rejects.toThrow(BadRequestException);
   });
 });
+
+// Lectura del récord: el servicio pide el texto a ms-documentos y, para la UTA, une con el catálogo
+describe('HomologacionService · leer el récord', () => {
+  it('lee el récord y lo une con la carrera de origen', async () => {
+    const { s, clientes, agente } = armar();
+    clientes.textoSilabo = jest.fn().mockResolvedValue('RÉCORD ... FISICA 8,5 APROBADA');
+    clientes.asignaturasConDatos = jest.fn().mockResolvedValue([{ codigo: 'TI-F', nombre: 'FISICA', nivel: 'PRIMERO', docente: 'Ing. P' }]);
+    agente.leerRecord = jest.fn().mockResolvedValue([
+      { nombre: 'Fisica', creditos: 3, horas: 144, nota: 8.5, escala: 10, anio: 2025, periodo: null, estado: 'APROBADA', veces: 1 },
+      { nombre: 'Química', creditos: 3, horas: 144, nota: 5, escala: 10, anio: 2025, periodo: null, estado: 'REPROBADA', veces: 1 },
+    ]);
+    const r = await s.leerRecord({ documentoId: 4, carreraOrigen: 'TI' });
+    expect(clientes.textoSilabo).toHaveBeenCalledWith(4);
+    expect(r.aprobadas).toBe(1);
+    expect(r.reprobadas).toBe(1);
+    expect(r.materias[0]).toEqual(expect.objectContaining({ codigo: 'TI-F', nivel: 'PRIMERO' }));
+  });
+
+  it('pide el documento y rechaza un PDF sin texto', async () => {
+    const { s, clientes } = armar();
+    await expect(s.leerRecord({})).rejects.toThrow(BadRequestException);
+    clientes.textoSilabo = jest.fn().mockResolvedValue('   ');
+    await expect(s.leerRecord({ documentoId: 1 })).rejects.toThrow('no tiene texto');
+  });
+});
