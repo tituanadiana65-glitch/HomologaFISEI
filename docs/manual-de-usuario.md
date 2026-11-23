@@ -11,7 +11,8 @@ HomologaFISEI te dice, antes de empezar tu trámite, qué materias aprobadas se 
 3. [Estudiante que viene de otra universidad](#3-estudiante-que-viene-de-otra-universidad)
 4. [Cómo leer el resultado](#4-cómo-leer-el-resultado)
 5. [Administrador](#5-administrador)
-6. [Preguntas frecuentes](#6-preguntas-frecuentes)
+6. [Docente: revisar los informes](#6-docente-revisar-los-informes)
+7. [Preguntas frecuentes](#7-preguntas-frecuentes)
 
 ---
 
@@ -180,7 +181,20 @@ En **Reglas de homologación** están los valores que se aplican a todas las car
 
 ---
 
-## 6. Preguntas frecuentes
+## 6. Docente: revisar los informes
+
+Cada informe del agente lo revisan y aprueban **dos docentes distintos**. El administrador crea las cuentas de los docentes en **Administración → Docentes que revisan los informes**.
+
+1. Entra con tu cuenta de docente. Verás **Informes para revisar**, con cuántas aprobaciones tiene cada uno (0, 1 o 2 de 2).
+2. Pulsa **Revisar**. Verás cada materia con el resultado del **agente** y el **resultado final**. Pulsa **Ver por qué** para ver las reglas.
+3. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** (es obligatorio). Al cambiar algo, las aprobaciones anteriores se borran: el informe se debe aprobar tal como quedó.
+4. Pulsa **Aprobar informe** (puedes dejar un comentario). Con la aprobación del segundo docente el informe queda **Revisado**.
+
+El estudiante ve en su página y en el PDF quiénes revisaron el informe y los cambios que hicieron los docentes, con su comentario.
+
+---
+
+## 7. Preguntas frecuentes
 
 **No me deja crear la cuenta.**
 Revisa que tu correo termine en `@uta.edu.ec` y que la contraseña tenga al menos 8 caracteres.

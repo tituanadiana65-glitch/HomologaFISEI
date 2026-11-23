@@ -68,8 +68,8 @@ export class SolicitudesService implements OnModuleInit {
   ) {}
 
   // T20 · Crea la solicitud si el estudiante no tiene otra abierta (T37: también de otra universidad)
-  async crear(usuarioId: number, d: NuevaSolicitud) {
-    const abiertas = await this.prisma.solicitud.count({ where: { usuarioId, estado: { not: 'RESULTADO_LISTO' } } });
+  async crear(usuarioId: number, d: NuevaSolicitud, estudiante?: string) {
+    const abiertas = await this.prisma.solicitud.count({ where: { usuarioId, estado: { notIn: ['RESULTADO_LISTO', 'REVISADA'] } } });
     const error = validarSolicitud(d, abiertas);
     if (error) throw new BadRequestException(error);
     const externa = d.tipo === 'EXTERNO';
@@ -86,6 +86,7 @@ export class SolicitudesService implements OnModuleInit {
         documentosLegalizados: externa && d.documentosLegalizados === true,
         mallaId: externa ? (d.mallaId ?? null) : null,
         recordId: externa ? (d.recordId ?? null) : null,
+        estudiante: estudiante?.trim() || null,
       },
     });
   }
@@ -95,13 +96,13 @@ export class SolicitudesService implements OnModuleInit {
     return this.prisma.solicitud.findFirst({
       where: { usuarioId },
       orderBy: { creada: 'desc' },
-      include: { materias: true },
+      include: { materias: true, revisiones: { orderBy: { fecha: 'asc' } } },
     });
   }
 
   // T20 · Una solicitud; solo la ve su dueño
   async ver(usuarioId: number, id: number) {
-    const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true } });
+    const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true, revisiones: { orderBy: { fecha: 'asc' } } } });
     if (!s) throw new NotFoundException(`No existe la solicitud ${id}`);
     if (s.usuarioId !== usuarioId) throw new ForbiddenException('Esta solicitud no es tuya');
     return s;

@@ -8,6 +8,7 @@ function armar(existente: object | null = null) {
   const usuario = {
     findUnique: jest.fn().mockResolvedValue(existente),
     create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 1, rol: 'ESTUDIANTE', ...data })),
+    findMany: jest.fn().mockResolvedValue([]),
   };
   return { usuario, s: new IdentidadService({ usuario } as unknown as PrismaService) };
 }
@@ -67,5 +68,28 @@ describe('IdentidadService', () => {
       await s.onModuleInit();
       expect(usuario.create).not.toHaveBeenCalled();
     });
+  });
+});
+
+// Revisión docente: el administrador crea las cuentas de los docentes
+describe('IdentidadService · docentes', () => {
+  it('crea un docente con rol DOCENTE y la clave cifrada, sin devolver la clave', async () => {
+    const { s, usuario } = armar();
+    const r = await s.crearDocente({ nombre: 'Ing. Pérez', correo: 'JPerez@uta.edu.ec', clave: 'Docente2026*' });
+    const guardado = usuario.create.mock.calls[0][0].data;
+    expect(guardado).toEqual(expect.objectContaining({ rol: 'DOCENTE', correo: 'jperez@uta.edu.ec' }));
+    expect(guardado.claveHash).not.toBe('Docente2026*');
+    expect(r).toEqual({ id: 1, nombre: 'Ing. Pérez', correo: 'jperez@uta.edu.ec', rol: 'DOCENTE' });
+  });
+
+  it('valida los datos y no repite correos', async () => {
+    await expect(armar().s.crearDocente({ nombre: '', correo: 'a@uta.edu.ec', clave: 'Docente2026*' })).rejects.toThrow('el nombre del docente');
+    await expect(armar({ id: 3 }).s.crearDocente({ nombre: 'A', correo: 'a@uta.edu.ec', clave: 'Docente2026*' })).rejects.toThrow('ya está registrado');
+  });
+
+  it('lista solo los docentes', async () => {
+    const { s, usuario } = armar();
+    await s.docentes();
+    expect(usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { rol: 'DOCENTE' } }));
   });
 });

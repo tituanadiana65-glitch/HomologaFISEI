@@ -59,7 +59,7 @@ export default function NuevaSolicitud() {
     void api<Solicitud | Blob | null>('/solicitudes/mia').then((s) => {
       if (!s || s instanceof Blob) return; // no tiene solicitud: se muestra el formulario
       if (s.estado === 'BORRADOR') ir('/materias');
-      else if (s.estado !== 'RESULTADO_LISTO') ir('/resultado');
+      else if (!['RESULTADO_LISTO', 'REVISADA'].includes(s.estado)) ir('/resultado');
     });
   }, [ir]);
 

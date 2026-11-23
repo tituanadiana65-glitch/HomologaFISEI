@@ -35,11 +35,13 @@ export class InformesController {
     @Headers('x-usuario-id') usuario: string,
     @Headers('x-usuario-correo') correo: string,
     @Headers('x-usuario-nombre') nombre: string,
+    @Headers('x-usuario-rol') rol: string,
     @Res() res: Response,
   ) {
-    // ms-solicitudes revisa que la solicitud sea de este usuario: 403 si no es suya, 404 si no existe
-    const r = await fetch(`${MS_SOLICITUDES}/solicitudes/${id}`, {
-      headers: { 'x-usuario-id': usuario ?? '' },
+    // El estudiante solo baja su informe (ms-solicitudes responde 403 si no es suyo); el docente que revisa baja cualquiera
+    const docente = rol === 'DOCENTE';
+    const r = await fetch(`${MS_SOLICITUDES}/solicitudes/${docente ? 'revision/' : ''}${id}`, {
+      headers: { 'x-usuario-id': usuario ?? '', 'x-usuario-rol': rol ?? '' },
     });
     if (!r.ok)
       throw new HttpException(
@@ -47,11 +49,12 @@ export class InformesController {
         r.status,
       );
 
-    const s = (await r.json()) as SolicitudInforme & { estado: string };
-    if (s.estado !== 'RESULTADO_LISTO')
+    const s = (await r.json()) as SolicitudInforme & { estado: string; estudiante?: string | null };
+    if (!['RESULTADO_LISTO', 'REVISADA'].includes(s.estado))
       throw new BadRequestException('El resultado todavía no está listo');
 
-    const pdf = await crearPdf(conNombresDeCarrera(s, await carreras()), nombreEstudiante(nombre, correo));
+    const estudiante = docente ? (s.estudiante ?? `Solicitud N.º ${id}`) : nombreEstudiante(nombre, correo);
+    const pdf = await crearPdf(conNombresDeCarrera(s, await carreras()), estudiante);
     await this.eventos.publicar('informe.generado', { solicitudId: id });
     res
       .set({

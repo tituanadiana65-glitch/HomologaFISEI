@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { IdentidadService } from '../service/identidad.service';
 import type { Registro } from '../service/validaciones';
 
@@ -9,6 +9,17 @@ export class IdentidadController {
   @Post('registro')
   registrar(@Body() d: Registro) {
     return this.servicio.registrar(d);
+  }
+
+  // Solo el administrador (lo controla el api-gateway)
+  @Post('docentes')
+  crearDocente(@Body() d: Registro) {
+    return this.servicio.crearDocente(d);
+  }
+
+  @Get('docentes')
+  docentes() {
+    return this.servicio.docentes();
   }
 
   @Post('login')

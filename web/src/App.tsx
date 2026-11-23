@@ -6,10 +6,14 @@ import NuevaSolicitud from './paginas/NuevaSolicitud';
 import Materias from './paginas/Materias';
 import Resultado from './paginas/Resultado';
 import Administracion from './paginas/Administracion';
+import Revision from './paginas/Revision';
+import RevisionDetalle from './paginas/RevisionDetalle';
 import Barra from './componentes/Barra';
 
 const Privada = ({ children }: { children: ReactNode }) => (sesion() ? children : <Navigate to="/" />);
 const SoloAdmin = ({ children }: { children: ReactNode }) => (sesion()?.usuario.rol === 'ADMIN' ? children : <Navigate to="/" />);
+// Revisión docente
+const SoloDocente = ({ children }: { children: ReactNode }) => (sesion()?.usuario.rol === 'DOCENTE' ? children : <Navigate to="/" />);
 
 export default function App() {
   return (
@@ -21,6 +25,8 @@ export default function App() {
         <Route path="/materias" element={<Privada><Materias /></Privada>} />
         <Route path="/resultado" element={<Privada><Resultado /></Privada>} />
         <Route path="/admin" element={<SoloAdmin><Administracion /></SoloAdmin>} />
+        <Route path="/revision" element={<SoloDocente><Revision /></SoloDocente>} />
+        <Route path="/revision/:id" element={<SoloDocente><RevisionDetalle /></SoloDocente>} />
       </Routes>
     </BrowserRouter>
     

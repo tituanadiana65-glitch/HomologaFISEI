@@ -264,3 +264,13 @@ describe('SolicitudesService · materias juntas', () => {
     expect(prisma.asignaturaAprobada.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ juntoCon: 'B,C' }) }));
   });
 });
+
+// Revisión docente: la solicitud guarda el nombre del estudiante y una ya revisada no cuenta como abierta
+describe('SolicitudesService · nombre del estudiante', () => {
+  it('guarda el nombre y no cuenta como abiertas las REVISADAS', async () => {
+    const { servicio, prisma } = armar();
+    await servicio.crear(7, { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' }, 'Ana Tituaña');
+    expect(prisma.solicitud.count).toHaveBeenCalledWith({ where: { usuarioId: 7, estado: { notIn: ['RESULTADO_LISTO', 'REVISADA'] } } });
+    expect(prisma.solicitud.create).toHaveBeenCalledWith({ data: expect.objectContaining({ estudiante: 'Ana Tituaña' }) });
+  });
+});

@@ -10,12 +10,26 @@ export interface MateriaInforme {
   notaOriginal?: number | null; // T50 · solo EXTERNO: nota como la puso su universidad
   escala?: number | null; // 10, 20 o 100
   juntoCon?: string | null; // HU-26 · códigos de las materias evaluadas junto con esta
+  // Revisión docente: resultado cambiado por un docente, con su comentario
+  resultadoDocente?: string | null;
+  comentarioDocente?: string | null;
+  docenteCambio?: string | null;
+}
+
+// Revisión docente: aprobaciones de los docentes
+export interface RevisionInforme {
+  docente: string;
+  comentario?: string | null;
+  fecha: string;
 }
 
 // HU-26 · Una fila del informe por cada materia nueva evaluada (varias aprobadas juntas van en una fila)
 export interface FilaInforme {
   materias: MateriaInforme[];
-  resultado: string | null;
+  resultado: string | null; // el que vale: el del docente si lo cambió
+  resultadoAgente: string | null;
+  comentarioDocente?: string | null;
+  docenteCambio?: string | null;
   informe: string | null;
 }
 
@@ -27,7 +41,14 @@ export function armarFilas(materias: MateriaInforme[]): FilaInforme[] {
     const otras = (m.juntoCon ?? '').split(',').filter(Boolean);
     const grupo = [m, ...materias.filter((x) => x !== m && otras.includes(x.codigo))];
     grupo.forEach((x) => usadas.add(x.codigo));
-    filas.push({ materias: grupo, resultado: m.resultado, informe: m.informe });
+    filas.push({
+      materias: grupo,
+      resultado: m.resultadoDocente ?? m.resultado,
+      resultadoAgente: m.resultado,
+      comentarioDocente: m.comentarioDocente,
+      docenteCambio: m.docenteCambio,
+      informe: m.informe,
+    });
   }
   return filas;
 }
@@ -40,6 +61,8 @@ export interface SolicitudInforme {
   carreraDestino: string;
   periodo: string;
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
+  estado?: string;
+  revisiones?: RevisionInforme[];
   materias: MateriaInforme[];
 }
 
@@ -337,6 +360,18 @@ export function crearPdf(
           .text(inf.temasFaltan.join(', '));
       }
 
+      // Revisión docente: el docente cambió el resultado del agente
+      if (f.docenteCambio && f.resultado !== f.resultadoAgente) {
+        doc
+          .fillColor(GUINDA)
+          .font('Helvetica-Bold')
+          .fontSize(9)
+          .text(`Cambiado por ${f.docenteCambio} (el agente dijo: ${f.resultadoAgente ?? '—'}): `, izq + 14, doc.y + 4, { continued: true, width: ancho - 14 })
+          .fillColor('#333333')
+          .font('Helvetica')
+          .text(f.comentarioDocente ?? '');
+      }
+
       if (inf?.aviso) {
         doc
           .fillColor(COLORES.Pendiente)
@@ -358,6 +393,30 @@ export function crearPdf(
         .stroke('#dddddd');
       doc.y = fin + 16;
     }
+
+    // Revisión docente: quién aprobó el informe
+    if (doc.y > doc.page.height - 160) doc.addPage();
+    const revisiones = s.revisiones ?? [];
+    const revisado = s.estado === 'REVISADA';
+    doc
+      .fillColor(revisado ? COLORES.Homologable : COLORES.Pendiente)
+      .font('Helvetica-Bold')
+      .fontSize(11)
+      .text(revisado ? 'Revisado por dos docentes' : `Revisión docente: ${revisiones.length} de 2 aprobaciones`, izq, doc.y + 4);
+    if (!revisiones.length) {
+      doc.fillColor(GRIS).font('Helvetica').fontSize(9).text('Todavía ningún docente ha revisado este informe.', izq, doc.y + 2);
+    }
+    for (const r of revisiones) {
+      const fecha = new Date(r.fecha).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      doc
+        .fillColor('#333333')
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .text(`${r.docente} · ${fecha}`, izq + 14, doc.y + 3, { continued: !!r.comentario, width: ancho - 14 })
+        .font('Helvetica')
+        .text(r.comentario ? `   «${r.comentario}»` : '');
+    }
+    doc.y += 10;
 
     // Nota del Consejo Directivo
     if (doc.y > doc.page.height - 140) doc.addPage();

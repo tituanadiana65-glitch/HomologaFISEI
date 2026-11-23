@@ -9,14 +9,24 @@ export function usuario(id?: string): number {
   return n;
 }
 
+// El nombre llega codificado (puede tener tildes y ñ)
+export function nombreDe(codificado?: string): string | undefined {
+  if (!codificado) return undefined;
+  try {
+    return decodeURIComponent(codificado);
+  } catch {
+    return undefined;
+  }
+}
+
 @Controller('solicitudes')
 export class SolicitudesController {
   constructor(private readonly servicio: SolicitudesService) {}
 
   // POST /solicitudes  { carreraOrigen, carreraDestino, periodo }
   @Post()
-  crear(@Headers('x-usuario-id') u: string, @Body() d: NuevaSolicitud) {
-    return this.servicio.crear(usuario(u), d);
+  crear(@Headers('x-usuario-id') u: string, @Headers('x-usuario-nombre') nombre: string | undefined, @Body() d: NuevaSolicitud) {
+    return this.servicio.crear(usuario(u), d, nombreDe(nombre));
   }
 
   // GET /solicitudes/mia

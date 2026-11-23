@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../api';
+import AdminDocentes from '../componentes/AdminDocentes';
 
 interface Carrera {
   codigo: string;
@@ -208,6 +209,7 @@ export default function Administracion() {
             </tbody>
           </table>
         </section>
+        <AdminDocentes avisar={avisar} />
       </div>
 
       <p className="aviso">🔒 Solo el administrador puede entrar a esta pantalla.</p>

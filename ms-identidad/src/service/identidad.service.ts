@@ -37,6 +37,20 @@ export class IdentidadService implements OnModuleInit {
        }
      }
 
+  // Revisión docente (observación del 22/11/2026): el administrador crea las cuentas de los docentes que revisan los informes
+  async crearDocente(d: Registro) {
+    const error = validarRegistro(d);
+    if (error) throw new BadRequestException(error.replace('tu nombre', 'el nombre del docente').replace('Usa tu correo', 'Usa el correo'));
+    const correo = d.correo.trim().toLowerCase();
+    if (await this.prisma.usuario.findUnique({ where: { correo } })) throw new BadRequestException('Ese correo ya está registrado');
+    const u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, rol: 'DOCENTE', claveHash: await bcrypt.hash(d.clave, 10) } });
+    return { id: u.id, nombre: u.nombre, correo: u.correo, rol: u.rol };
+  }
+
+  docentes() {
+    return this.prisma.usuario.findMany({ where: { rol: 'DOCENTE' }, select: { id: true, nombre: true, correo: true }, orderBy: { nombre: 'asc' } });
+  }
+
   async entrar(d: { correo?: string; clave?: string }) {
     const u = await this.prisma.usuario.findUnique({ where: { correo: (d.correo ?? '').trim().toLowerCase() } });
     if (!u || !(await bcrypt.compare(d.clave ?? '', u.claveHash))) throw new UnauthorizedException('Correo o contraseña incorrectos');

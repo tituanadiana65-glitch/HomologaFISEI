@@ -60,4 +60,16 @@ describe('revisarToken', () => {
     expect(req.headers['x-usuario-rol']).toBeUndefined();
     expect(req.headers['x-usuario-nombre']).toBeUndefined();
   });
+
+  it('solo el administrador crea y lista docentes', () => {
+    expect(llamar('POST', '/api/identidad/docentes', estudiante).res.status).toHaveBeenCalledWith(403);
+    expect(llamar('GET', '/api/identidad/docentes', estudiante).res.status).toHaveBeenCalledWith(403);
+    expect(llamar('POST', '/api/identidad/docentes', admin).next).toHaveBeenCalled();
+  });
+  it('solo los docentes entran a la revisión de informes', () => {
+    const docente = jwt.sign({ sub: 9, correo: 'd@uta.edu.ec', nombre: 'Ing. D', rol: 'DOCENTE' }, secreto);
+    expect(llamar('GET', '/api/solicitudes/revision', estudiante).res.status).toHaveBeenCalledWith(403);
+    expect(llamar('GET', '/api/solicitudes/revision', docente).next).toHaveBeenCalled();
+    expect(llamar('POST', '/api/solicitudes/revision/3/aprobar', docente).req.headers['x-usuario-rol']).toBe('DOCENTE');
+  });
 });

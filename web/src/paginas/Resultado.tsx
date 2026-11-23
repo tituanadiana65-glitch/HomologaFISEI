@@ -27,6 +27,14 @@ interface Materia {
   notaOriginal?: number | null;
   escala?: number | null;
   juntoCon?: string | null; // HU-26
+  resultadoDocente?: string | null; // revisión docente
+  comentarioDocente?: string | null;
+  docenteCambio?: string | null;
+}
+interface Revision {
+  docente: string;
+  comentario?: string | null;
+  fecha: string;
 }
 interface Solicitud {
   id: number;
@@ -37,6 +45,7 @@ interface Solicitud {
   carreraDestino: string;
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
   enviada?: string | null; // cuándo se mandó al agente
+  revisiones?: Revision[];
   materias: Materia[];
 }
 
@@ -107,7 +116,7 @@ export default function Resultado() {
   }, [version]);
 
   // Reloj de la espera: avanza cada segundo mientras el agente trabaja
-  const esperando = !!s && s.estado !== 'RESULTADO_LISTO';
+  const esperando = !!s && !['RESULTADO_LISTO', 'REVISADA'].includes(s.estado);
   useEffect(() => {
     if (!esperando) return;
     const t = setInterval(() => setAhora(Date.now()), 1000);
@@ -148,7 +157,8 @@ export default function Resultado() {
     );
   }
 
-  const listo = s.estado === 'RESULTADO_LISTO';
+  const listo = s.estado === 'RESULTADO_LISTO' || s.estado === 'REVISADA';
+  const revisiones = s.revisiones ?? [];
   const hayPendientes = s.materias.some(m => m.resultado === 'Pendiente');
   // HU-26 · una fila por cada materia nueva evaluada
   const filas = armarFilas(s.materias);
@@ -221,6 +231,23 @@ export default function Resultado() {
         </div>
       )}
 
+      {listo && (
+        <div className={`aviso ${s.estado === 'REVISADA' ? 'listo' : ''}`}>
+          {s.estado === 'REVISADA' ? (
+            <>
+              ✓ <b>Revisado por dos docentes:</b> {revisiones.map((r) => r.docente).join(' y ')}.
+            </>
+          ) : (
+            <>
+              👩‍🏫 <b>Revisión docente:</b>{' '}
+              {revisiones.length
+                ? `${revisiones[0].docente} ya lo aprobó; falta un docente más.`
+                : 'dos docentes revisarán este análisis. Puedes descargar el informe desde ya.'}
+            </>
+          )}
+        </div>
+      )}
+
       {listo && requisitos && (
         <div className={`aviso ${requisitos.cumple ? 'listo' : 'alerta'}`}>
           <strong>
@@ -274,6 +301,11 @@ export default function Resultado() {
               <tr key={f.clave}>
                 <td>
                   {juntas && <small className="etiqueta-fila">Evaluadas juntas</small>}
+                  {f.docenteCambio && f.resultado !== f.resultadoAgente && (
+                    <small className="cambio-docente">
+                      <b>Cambiado por {f.docenteCambio}</b> (el agente dijo «{f.resultadoAgente}»): {f.comentarioDocente}
+                    </small>
+                  )}
                   {f.materias.map((m, i) => (
                     <div key={m.codigo} className="materia-de-fila">
                       <strong>

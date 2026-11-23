@@ -205,3 +205,44 @@ describe('materias juntas', () => {
     expect(texto).toContain('Esta materia es una parte de FÍSICA.');
   });
 });
+
+// Revisión docente en el PDF
+describe('revisión docente en el informe', () => {
+  const base = { nota: 8, codigoNueva: null, informe: null };
+  it('usa el resultado del docente, muestra su comentario y quiénes aprobaron', async () => {
+    const pdf = await crearPdf(
+      {
+        ...solicitud,
+        estado: 'REVISADA',
+        revisiones: [
+          { docente: 'Ing. Ana Pérez', comentario: 'De acuerdo', fecha: '2026-11-23T10:00:00Z' },
+          { docente: 'Ing. Luis Mora', fecha: '2026-11-23T11:00:00Z' },
+        ],
+        materias: [
+          {
+            ...base,
+            codigo: 'A',
+            nombre: 'Química',
+            resultado: 'Homologable',
+            resultadoDocente: 'No homologable',
+            comentarioDocente: 'No tiene laboratorio',
+            docenteCambio: 'Ing. Ana Pérez',
+            informe: JSON.stringify({ nueva: 'QUIMICA (Q)', resultado: 'Homologable', causas: [], temasFaltan: [] }),
+          },
+        ],
+      },
+      'Ana',
+    );
+    const texto = await leerTexto(pdf);
+    expect(texto).toContain('Revisado por dos docentes');
+    expect(texto).toContain('Ing. Luis Mora');
+    expect(texto).toContain('Cambiado por Ing. Ana Pérez');
+    expect(texto).toContain('No tiene laboratorio');
+    expect(texto).toContain('No homologable');
+  });
+
+  it('sin revisiones dice que falta la revisión docente', async () => {
+    const texto = await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO' }, 'Ana'));
+    expect(texto).toContain('Revisión docente: 0 de 2 aprobaciones');
+  });
+});
