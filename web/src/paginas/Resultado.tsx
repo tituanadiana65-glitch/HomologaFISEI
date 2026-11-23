@@ -346,17 +346,6 @@ export default function Resultado() {
 
       {error && <p role="alert">{error}</p>}
 
-      {listo && (
-        <div className="guia">
-          <strong>¿Y ahora qué?</strong>
-          <ol>
-            <li>Descarga tu informe en PDF con el botón de abajo.</li>
-            <li>Preséntalo junto con tu trámite de cambio de carrera.</li>
-            <li>El Consejo Directivo de la Facultad toma la decisión oficial; este informe es un análisis previo.</li>
-          </ol>
-        </div>
-      )}
-
       <div className="acciones">
         {hayPendientes && (
           <button className="pequeno" onClick={() => void reintentar()} disabled={reintentando}>

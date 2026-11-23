@@ -115,7 +115,7 @@ Si no cumples alguno, el aviso te dice cuál y por qué.
 
 ## 4. Cómo leer el resultado
 
-Arriba verás una frase con **cuántas materias de la nueva carrera se te podrían reconocer** y un resumen con cuántas salieron en cada estado. Si tienes dudas, abre **«¿Qué significa cada resultado?»** y, al final, **«¿Y ahora qué?»** te dice qué hacer con tu informe. Para cada materia verás **Tu materia**, **Se homologa por** (la materia de la nueva carrera) y el **Resultado**:
+Arriba verás una frase con **cuántas materias de la nueva carrera se te podrían reconocer** y un resumen con cuántas salieron en cada estado. Si tienes dudas, abre **«¿Qué significa cada resultado?»**. Para cada materia verás **Tu materia**, **Se homologa por** (la materia de la nueva carrera) y el **Resultado**:
 
 | Resultado | Qué significa |
 |---|---|
