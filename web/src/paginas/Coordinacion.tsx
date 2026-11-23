@@ -128,7 +128,7 @@ export default function Coordinacion() {
                       <>
                         <span className="etiqueta homologable">Terminada</span>
                         <small className="equivale">
-                          {s.docente} · {fecha(s.terminada)}
+                          {s.docente ? `${s.docente} · ${fecha(s.terminada)}` : 'Revisada antes de asignar docentes'}
                         </small>
                       </>
                     ) : (

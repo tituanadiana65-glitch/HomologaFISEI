@@ -56,3 +56,14 @@ Prueba en la PC de Diana el 22/11/2026, rama `feature/HU-26-HU-29`, con todos lo
 
 > **Actualización 23/11/2026:** el equipo definió que trabajan **un coordinador y un docente**: el coordinador elige al docente y el docente hace la homologación. La aprobación de dos docentes (CP-43) se reemplazó por ese flujo.
 
+## Coordinador y docente (23/11/2026)
+
+Prueba en la PC de Diana, rama `feature/HU-26-HU-29`, todos los servicios reconstruidos, con la solicitud **3003** (otra universidad: Física I + Física II y Cálculo).
+
+| # | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|
+| CP-45 | Cuentas | El administrador crea un coordinador de prueba | Se crea con rol COORDINADOR y ve la lista de docentes | 201; la lista muestra al coordinador y a los dos docentes | OK |
+| CP-46 | Asignar y cambiar docente | El coordinador asigna el docente 2 y luego lo cambia por el docente 1 | El estudiante ve quién revisa; el docente 2 ya no la ve | 200 y 200; el estudiante vio «Docente Prueba Dos» y luego «Docente Prueba Uno»; el docente 2 recibe 403 | OK |
+| CP-47 | El docente homologa | El docente 1 cambia Cálculo a No homologable con comentario; cambia Física I (se aplica también a Física II) y la devuelve al resultado del agente; termina con comentario | Cambios guardados; el grupo cambia junto; RN-08 se vuelve a revisar; queda REVISADA y ya no se cambia | Física I y II cambiaron juntas; resultado final: Cálculo No homologable, Física I y II Homologable; RN-08 «1 materia homologable»; REVISADA; cambiar o reasignar después → 400 | OK |
+| CP-48 | PDF y permisos | Descargar el informe como estudiante, docente 1, coordinador y docente 2; entrar a las rutas de otros roles | Estudiante, docente asignado y coordinador sí; el otro docente no; roles cruzados 403 | 200, 200, 200 y 403; el PDF dice «Homologación hecha por Ing. Docente Prueba Uno», «Docente asignado por Ing. Coordinador Prueba» y el comentario final; estudiante, docente y coordinador en rutas ajenas → 403 | OK |
+
