@@ -6,6 +6,8 @@ import { Registro, validarRegistro } from './validaciones';
 
 const secreto = () => process.env.JWT_SECRETO ?? 'homologa-sprint2-secreto';
 
+export const ROLES_PERSONAL = ['COORDINADOR', 'DOCENTE'];
+
 @Injectable()
 export class IdentidadService implements OnModuleInit {
   private readonly log = new Logger(IdentidadService.name);
@@ -37,16 +39,27 @@ export class IdentidadService implements OnModuleInit {
        }
      }
 
-  // Revisión docente (observación del 22/11/2026): el administrador crea las cuentas de los docentes que revisan los informes
-  async crearDocente(d: Registro) {
+  // El administrador crea las cuentas del personal: COORDINADOR (asigna docentes) y DOCENTE (hace la homologación)
+  async crearPersonal(d: Registro & { rol?: string }) {
+    const rol = d?.rol ?? 'DOCENTE';
+    if (!ROLES_PERSONAL.includes(rol)) throw new BadRequestException('El rol debe ser COORDINADOR o DOCENTE');
     const error = validarRegistro(d);
-    if (error) throw new BadRequestException(error.replace('tu nombre', 'el nombre del docente').replace('Usa tu correo', 'Usa el correo'));
+    if (error) throw new BadRequestException(error.replace('tu nombre', 'el nombre').replace('Usa tu correo', 'Usa el correo'));
     const correo = d.correo.trim().toLowerCase();
     if (await this.prisma.usuario.findUnique({ where: { correo } })) throw new BadRequestException('Ese correo ya está registrado');
-    const u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, rol: 'DOCENTE', claveHash: await bcrypt.hash(d.clave, 10) } });
+    const u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, rol, claveHash: await bcrypt.hash(d.clave, 10) } });
     return { id: u.id, nombre: u.nombre, correo: u.correo, rol: u.rol };
   }
 
+  personal() {
+    return this.prisma.usuario.findMany({
+      where: { rol: { in: ROLES_PERSONAL } },
+      select: { id: true, nombre: true, correo: true, rol: true },
+      orderBy: [{ rol: 'asc' }, { nombre: 'asc' }],
+    });
+  }
+
+  // Para que el coordinador elija a quién asignar
   docentes() {
     return this.prisma.usuario.findMany({ where: { rol: 'DOCENTE' }, select: { id: true, nombre: true, correo: true }, orderBy: { nombre: 'asc' } });
   }

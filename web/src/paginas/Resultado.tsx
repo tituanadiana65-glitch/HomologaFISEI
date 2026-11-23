@@ -31,11 +31,6 @@ interface Materia {
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
 }
-interface Revision {
-  docente: string;
-  comentario?: string | null;
-  fecha: string;
-}
 interface Solicitud {
   id: number;
   estado: string;
@@ -45,7 +40,9 @@ interface Solicitud {
   carreraDestino: string;
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
   enviada?: string | null; // cuándo se mandó al agente
-  revisiones?: Revision[];
+  docente?: string | null; // docente que hace la homologación (lo asigna el coordinador)
+  terminada?: string | null;
+  comentarioFinal?: string | null;
   materias: Materia[];
 }
 
@@ -158,7 +155,6 @@ export default function Resultado() {
   }
 
   const listo = s.estado === 'RESULTADO_LISTO' || s.estado === 'REVISADA';
-  const revisiones = s.revisiones ?? [];
   const hayPendientes = s.materias.some(m => m.resultado === 'Pendiente');
   // HU-26 · una fila por cada materia nueva evaluada
   const filas = armarFilas(s.materias);
@@ -235,15 +231,15 @@ export default function Resultado() {
         <div className={`aviso ${s.estado === 'REVISADA' ? 'listo' : ''}`}>
           {s.estado === 'REVISADA' ? (
             <>
-              ✓ <b>Revisado por dos docentes:</b> {revisiones.map((r) => r.docente).join(' y ')}.
+              ✓ <b>Homologación terminada</b> por {s.docente}
+              {s.terminada && ` el ${new Date(s.terminada).toLocaleDateString('es-EC')}`}.{s.comentarioFinal && <> «{s.comentarioFinal}»</>}
+            </>
+          ) : s.docente ? (
+            <>
+              👩‍🏫 <b>{s.docente}</b> está revisando tu homologación. Lo que veas aquí puede cambiar hasta que termine.
             </>
           ) : (
-            <>
-              👩‍🏫 <b>Revisión docente:</b>{' '}
-              {revisiones.length
-                ? `${revisiones[0].docente} ya lo aprobó; falta un docente más.`
-                : 'dos docentes revisarán este análisis. Puedes descargar el informe desde ya.'}
-            </>
+            <>👩‍🏫 Este es el análisis del agente. El coordinador asignará un docente para que haga tu homologación.</>
           )}
         </div>
       )}

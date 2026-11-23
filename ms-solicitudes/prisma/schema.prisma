@@ -15,7 +15,7 @@ model Solicitud {
   carreraOrigen         String               // INTERNO: código (TI). EXTERNO: nombre escrito por el estudiante
   carreraDestino        String               // SW
   periodo               String               // NOVIEMBRE 2026 - MARZO 2027
-  estado                String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO, REVISADA (dos docentes)
+  estado                String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO, REVISADA (homologación terminada por el docente)
   creada                DateTime             @default(now())
   enviada               DateTime?            // cuándo se mandó al agente (la página muestra cuánto lleva revisando)
   // Solo para EXTERNO (T37)
@@ -25,26 +25,17 @@ model Solicitud {
   mallaId               Int?                 // id del PDF en ms-documentos
   recordId              Int?                 // id del PDF en ms-documentos
   requisitos            String?              @db.NVarChar(Max) // resultado de RN-08 en JSON (T45)
-  estudiante            String?              // nombre del estudiante (lo ven los docentes que revisan)
+  estudiante            String?              // nombre del estudiante (lo ven el coordinador y el docente)
+  // Coordinador y docente: el coordinador asigna un docente y el docente hace la homologación
+  docenteId             Int?
+  docente               String?              // nombre del docente asignado
+  coordinador           String?              // quién lo asignó
+  asignada              DateTime?
+  terminada             DateTime?            // cuando el docente terminó la homologación (estado REVISADA)
+  comentarioFinal       String?              @db.NVarChar(Max)
   materias              AsignaturaAprobada[]
-  revisiones            Revision[]
 }
 
-// Revisión docente (observación del 22/11/2026): dos docentes revisan el mismo informe.
-// Con dos aprobaciones de docentes distintos la solicitud pasa a REVISADA.
-model Revision {
-  id          Int       @id @default(autoincrement())
-  solicitudId Int
-  docenteId   Int
-  docente     String    // nombre del docente
-  comentario  String?   @db.NVarChar(Max)
-  fecha       DateTime  @default(now())
-  solicitud   Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
-
-  @@unique([solicitudId, docenteId])
-}
-
-// Materia aprobada que el estudiante registra en su solicitud (HU-05)
 model AsignaturaAprobada {
   id          Int       @id @default(autoincrement())
   solicitudId Int
@@ -68,7 +59,7 @@ model AsignaturaAprobada {
   silaboId     Int?      // id del sílabo en ms-documentos
   // HU-26 · códigos de las otras materias aprobadas evaluadas junto con esta, separados por coma
   juntoCon     String?
-  // Revisión docente: un docente puede cambiar el resultado del agente, con su comentario
+  // El docente asignado puede cambiar el resultado del agente, con su comentario
   resultadoDocente  String?
   comentarioDocente String?  @db.NVarChar(1000)
   docenteCambio     String?  // nombre del docente que lo cambió

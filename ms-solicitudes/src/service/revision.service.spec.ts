@@ -1,8 +1,8 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { docenteDe, resultadoFinal, RevisionService } from './revision.service';
+import { personaDe, resultadoFinal, RevisionService } from './revision.service';
 import { PrismaService } from '../repository/prisma.service';
 
-// Revisión docente: dos docentes revisan el mismo informe
+// Coordinador y docente: el coordinador asigna el docente y el docente hace la homologación
 function armar(solicitud: object | null) {
   const prisma = {
     solicitud: {
@@ -11,18 +11,18 @@ function armar(solicitud: object | null) {
       update: jest.fn().mockResolvedValue({}),
     },
     asignaturaAprobada: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    revision: { create: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   };
   return { prisma, s: new RevisionService(prisma as unknown as PrismaService) };
 }
 
+const coord = { id: 5, nombre: 'Ing. Coordinadora' };
 const ana = { id: 10, nombre: 'Ing. Ana' };
 const luis = { id: 11, nombre: 'Ing. Luis' };
 const lista = (extra: object = {}) => ({
   id: 3,
   tipo: 'INTERNO',
   estado: 'RESULTADO_LISTO',
-  revisiones: [],
+  docenteId: 10,
   materias: [
     { codigo: 'A', resultado: 'Homologable', juntoCon: 'B' },
     { codigo: 'B', resultado: 'Homologable', juntoCon: 'A' },
@@ -31,26 +31,44 @@ const lista = (extra: object = {}) => ({
   ...extra,
 });
 
-describe('RevisionService', () => {
-  it('lista los informes con resultado del agente', async () => {
+describe('RevisionService · coordinador', () => {
+  it('lista las solicitudes con resultado del agente', async () => {
     const { s, prisma } = armar(null);
-    await s.listar();
+    await s.listarCoordinacion();
     expect(prisma.solicitud.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { estado: { in: ['RESULTADO_LISTO', 'REVISADA'] } } }));
   });
 
-  it('no deja revisar una solicitud sin resultado', async () => {
-    await expect(armar(lista({ estado: 'ENVIADA' })).s.ver(3)).rejects.toThrow('todavía no tiene');
+  it('asigna (o cambia) el docente y guarda quién lo asignó', async () => {
+    const { s, prisma } = armar(lista({ docenteId: null }));
+    await expect(s.asignar(coord, 3, { docenteId: 11, docente: ' Ing. Luis ' })).resolves.toEqual({ id: 3, docenteId: 11, docente: 'Ing. Luis' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { docenteId: 11, docente: 'Ing. Luis', coordinador: 'Ing. Coordinadora', asignada: expect.any(Date) },
+    });
   });
 
-  it('el docente cambia el resultado con comentario; se aplica al grupo y se borran las aprobaciones', async () => {
+  it('pide el docente, no asigna sin resultado ni cuando ya está terminada', async () => {
+    await expect(armar(lista()).s.asignar(coord, 3, {})).rejects.toThrow('Elige el docente');
+    await expect(armar(lista({ estado: 'ENVIADA' })).s.asignar(coord, 3, { docenteId: 11, docente: 'L' })).rejects.toThrow('todavía no tiene');
+    await expect(armar(lista({ estado: 'REVISADA' })).s.asignar(coord, 3, { docenteId: 11, docente: 'L' })).rejects.toThrow('ya terminó');
+  });
+});
+
+describe('RevisionService · docente', () => {
+  it('ve solo sus solicitudes', async () => {
+    const { s, prisma } = armar(null);
+    await s.listarDelDocente(ana);
+    expect(prisma.solicitud.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { docenteId: 10, estado: { in: ['RESULTADO_LISTO', 'REVISADA'] } } }));
+    await expect(armar(lista()).s.verDelDocente(luis, 3)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('cambia el resultado con comentario y se aplica a las materias evaluadas juntas', async () => {
     const { s, prisma } = armar(lista());
-    const r = await s.cambiar(ana, 3, 'A', { resultado: 'No homologable', comentario: 'Los temas de laboratorio no coinciden' });
+    await s.cambiar(ana, 3, 'A', { resultado: 'No homologable', comentario: 'Los temas de laboratorio no coinciden' });
     expect(prisma.asignaturaAprobada.updateMany).toHaveBeenCalledWith({
       where: { solicitudId: 3, codigo: { in: ['A', 'B'] } },
       data: { resultadoDocente: 'No homologable', comentarioDocente: 'Los temas de laboratorio no coinciden', docenteCambio: 'Ing. Ana' },
     });
-    expect(prisma.revision.deleteMany).toHaveBeenCalledWith({ where: { solicitudId: 3 } });
-    expect(r.aprobacionesBorradas).toBe(1);
   });
 
   it('si vuelve al resultado del agente se quita el cambio', async () => {
@@ -61,11 +79,12 @@ describe('RevisionService', () => {
     );
   });
 
-  it('pide un resultado válido y un comentario', async () => {
+  it('pide un resultado válido, un comentario y una materia de la solicitud; otro docente no puede cambiar', async () => {
     const { s } = armar(lista());
     await expect(s.cambiar(ana, 3, 'C', { resultado: 'Tal vez', comentario: 'xxxxxx' })).rejects.toThrow('El resultado debe ser');
     await expect(s.cambiar(ana, 3, 'C', { resultado: 'Homologable', comentario: ' ' })).rejects.toThrow('comentario');
     await expect(s.cambiar(ana, 3, 'Z', { resultado: 'Homologable', comentario: 'xxxxxx' })).rejects.toThrow('no está');
+    await expect(s.cambiar(luis, 3, 'C', { resultado: 'Homologable', comentario: 'xxxxxx' })).rejects.toThrow('no está asignada a ti');
   });
 
   it('otra universidad: RN-08 se vuelve a revisar con el resultado del docente', async () => {
@@ -74,27 +93,23 @@ describe('RevisionService', () => {
     expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { requisitos: expect.stringContaining('"cumple"') } });
   });
 
-  it('con la primera aprobación falta un docente; con la segunda queda REVISADA', async () => {
-    const primera = armar(lista());
-    await expect(primera.s.aprobar(ana, 3, { comentario: 'De acuerdo' })).resolves.toEqual({ id: 3, aprobaciones: 1, revisada: false });
-    expect(primera.prisma.revision.create).toHaveBeenCalledWith({ data: { solicitudId: 3, docenteId: 10, docente: 'Ing. Ana', comentario: 'De acuerdo' } });
-    expect(primera.prisma.solicitud.update).not.toHaveBeenCalled();
-
-    const segunda = armar(lista({ revisiones: [{ docenteId: 10, docente: 'Ing. Ana' }] }));
-    await expect(segunda.s.aprobar(luis, 3, {})).resolves.toEqual({ id: 3, aprobaciones: 2, revisada: true });
-    expect(segunda.prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { estado: 'REVISADA' } });
+  it('termina la homologación: queda REVISADA con su comentario y ya no se cambia', async () => {
+    const { s, prisma } = armar(lista());
+    await expect(s.terminar(ana, 3, { comentario: ' Listo ' })).resolves.toEqual({ id: 3, estado: 'REVISADA' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { estado: 'REVISADA', terminada: expect.any(Date), comentarioFinal: 'Listo' } });
+    const terminada = armar(lista({ estado: 'REVISADA' }));
+    await expect(terminada.s.terminar(ana, 3, {})).rejects.toThrow(BadRequestException);
+    await expect(terminada.s.cambiar(ana, 3, 'C', { resultado: 'Homologable', comentario: 'xxxxxx' })).rejects.toThrow('Ya terminaste');
   });
 
-  it('el mismo docente no aprueba dos veces, y no se aprueba con pendientes ni ya revisado', async () => {
-    await expect(armar(lista({ revisiones: [{ docenteId: 10 }] })).s.aprobar(ana, 3, {})).rejects.toThrow('Ya aprobaste');
-    await expect(armar(lista({ materias: [{ codigo: 'A', resultado: 'Pendiente' }] })).s.aprobar(ana, 3, {})).rejects.toThrow('pendientes');
-    await expect(armar(lista({ estado: 'REVISADA' })).s.aprobar(ana, 3, {})).rejects.toThrow(BadRequestException);
+  it('no termina con materias pendientes', async () => {
+    await expect(armar(lista({ materias: [{ codigo: 'A', resultado: 'Pendiente' }] })).s.terminar(ana, 3, {})).rejects.toThrow('pendientes');
   });
 
-  it('resultado final y quién es docente', () => {
+  it('resultado final y permisos', () => {
     expect(resultadoFinal({ resultado: 'Homologable', resultadoDocente: 'No homologable' })).toBe('No homologable');
     expect(resultadoFinal({ resultado: 'Homologable' })).toBe('Homologable');
-    expect(docenteDe('10', 'DOCENTE', 'Ing. Ana')).toEqual({ id: 10, nombre: 'Ing. Ana' });
-    expect(() => docenteDe('5', 'ESTUDIANTE')).toThrow(ForbiddenException);
+    expect(personaDe('DOCENTE', '10', 'DOCENTE', 'Ing. Ana')).toEqual({ id: 10, nombre: 'Ing. Ana' });
+    expect(() => personaDe('COORDINADOR', '10', 'DOCENTE')).toThrow(ForbiddenException);
   });
 });

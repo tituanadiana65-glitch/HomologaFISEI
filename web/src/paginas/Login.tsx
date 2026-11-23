@@ -13,7 +13,8 @@ export default function Login() {
     try {
       const s = await api<Sesion>(`/identidad/${modo}`, { method: 'POST', body: JSON.stringify(datos) });
       guardarSesion(s);
-      ir(s.usuario.rol === 'ADMIN' ? '/admin' : s.usuario.rol === 'DOCENTE' ? '/revision' : '/solicitud');
+      const inicio: Record<string, string> = { ADMIN: '/admin', COORDINADOR: '/coordinacion', DOCENTE: '/revision' };
+      ir(inicio[s.usuario.rol] ?? '/solicitud');
     } catch (err) {
       setError((err as Error).message);
     }

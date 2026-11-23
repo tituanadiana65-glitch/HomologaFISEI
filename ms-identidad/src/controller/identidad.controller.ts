@@ -11,12 +11,18 @@ export class IdentidadController {
     return this.servicio.registrar(d);
   }
 
-  // Solo el administrador (lo controla el api-gateway)
-  @Post('docentes')
-  crearDocente(@Body() d: Registro) {
-    return this.servicio.crearDocente(d);
+  // Solo el administrador (lo controla el api-gateway): crea coordinadores y docentes
+  @Post('personal')
+  crearPersonal(@Body() d: Registro & { rol?: string }) {
+    return this.servicio.crearPersonal(d);
   }
 
+  @Get('personal')
+  personal() {
+    return this.servicio.personal();
+  }
+
+  // Administrador y coordinador
   @Get('docentes')
   docentes() {
     return this.servicio.docentes();

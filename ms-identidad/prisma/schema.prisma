@@ -12,6 +12,6 @@ model Usuario {
   nombre    String
   correo    String   @unique
   claveHash String   // la contraseña nunca se guarda tal cual
-  rol       String   @default("ESTUDIANTE") // ESTUDIANTE, ADMIN o DOCENTE (revisa los informes)
+  rol       String   @default("ESTUDIANTE") // ESTUDIANTE, ADMIN, COORDINADOR (asigna docentes) o DOCENTE (hace la homologación)
   creado    DateTime @default(now())
 }

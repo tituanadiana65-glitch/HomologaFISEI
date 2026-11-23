@@ -1372,7 +1372,9 @@ textarea {
   gap: 6px;
 }
 .tabla-record td.cambio {
-  max-width: 300px;
+  width: 34%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .tabla-record td:last-child {
   width: 1%;
@@ -1382,4 +1384,17 @@ a.volver {
   font-weight: 600;
   text-decoration: none;
   font-size: 14px;
+}
+.asignar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+.asignar select {
+  height: 34px;
+  font-size: 13px;
+}
+.asignar button {
+  align-self: flex-start;
 }

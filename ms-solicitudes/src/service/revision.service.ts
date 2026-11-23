@@ -2,13 +2,12 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../repository/prisma.service';
 import { revisarRequisitos } from './validaciones';
 
-// Revisión docente (observación del 22/11/2026: "dos docentes trabajan en un mismo informe").
-// El agente hace el análisis; luego dos docentes distintos lo revisan. Un docente puede cambiar el resultado
-// de una materia con su comentario. Con dos aprobaciones el informe queda REVISADO.
+// Coordinador y docente (definido por el equipo el 23/11/2026): el agente hace el análisis, el coordinador
+// elige al docente y el docente hace la homologación (puede cambiar resultados con su comentario y la termina).
 export const RESULTADOS = ['Homologable', 'No homologable', 'Sin materia equivalente'];
-export const APROBACIONES_NECESARIAS = 2;
+const CON_RESULTADO = ['RESULTADO_LISTO', 'REVISADA'];
 
-export interface Docente {
+export interface Persona {
   id: number;
   nombre: string;
 }
@@ -20,60 +19,82 @@ export const resultadoFinal = (m: { resultado?: string | null; resultadoDocente?
 export class RevisionService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Informes con resultado del agente, para revisar
-  listar() {
+  // ---------- Coordinador ----------
+  listarCoordinacion() {
     return this.prisma.solicitud.findMany({
-      where: { estado: { in: ['RESULTADO_LISTO', 'REVISADA'] } },
-      include: { revisiones: { orderBy: { fecha: 'asc' } }, _count: { select: { materias: true } } },
+      where: { estado: { in: CON_RESULTADO } },
+      include: { _count: { select: { materias: true } } },
       orderBy: { id: 'desc' },
     });
   }
 
-  async ver(id: number) {
-    const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true, revisiones: { orderBy: { fecha: 'asc' } } } });
+  async verCoordinacion(id: number) {
+    const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true } });
     if (!s) throw new NotFoundException(`No existe la solicitud ${id}`);
-    if (!['RESULTADO_LISTO', 'REVISADA'].includes(s.estado)) throw new BadRequestException('Esta solicitud todavía no tiene el resultado del agente');
+    if (!CON_RESULTADO.includes(s.estado)) throw new BadRequestException('Esta solicitud todavía no tiene el resultado del agente');
     return s;
   }
 
-  // El docente cambia el resultado de una materia (y de las que se evaluaron junto con ella). Las aprobaciones anteriores
-  // se borran: los docentes deben aprobar el informe tal como quedó.
-  async cambiar(docente: Docente, id: number, codigo: string, d: { resultado?: string; comentario?: string }) {
-    const s = await this.ver(id);
-    if (s.estado === 'REVISADA') throw new BadRequestException('Este informe ya fue aprobado por dos docentes');
+  // El coordinador elige (o cambia) el docente mientras la homologación no esté terminada
+  async asignar(coordinador: Persona, id: number, d: { docenteId?: number; docente?: string }) {
+    const s = await this.verCoordinacion(id);
+    if (s.estado === 'REVISADA') throw new BadRequestException('El docente ya terminó esta homologación');
+    const docenteId = Number(d?.docenteId);
+    if (!Number.isInteger(docenteId) || docenteId <= 0 || !d?.docente?.trim()) throw new BadRequestException('Elige el docente');
+    await this.prisma.solicitud.update({
+      where: { id },
+      data: { docenteId, docente: d.docente.trim(), coordinador: coordinador.nombre, asignada: new Date() },
+    });
+    return { id, docenteId, docente: d.docente.trim() };
+  }
+
+  // ---------- Docente ----------
+  listarDelDocente(docente: Persona) {
+    return this.prisma.solicitud.findMany({
+      where: { docenteId: docente.id, estado: { in: CON_RESULTADO } },
+      include: { _count: { select: { materias: true } } },
+      orderBy: { asignada: 'desc' },
+    });
+  }
+
+  // Solo el docente asignado ve y trabaja la solicitud
+  async verDelDocente(docente: Persona, id: number) {
+    const s = await this.verCoordinacion(id);
+    if (s.docenteId !== docente.id) throw new ForbiddenException('Esta solicitud no está asignada a ti');
+    return s;
+  }
+
+  // El docente cambia el resultado de una materia (y de las que se evaluaron junto con ella), con su comentario
+  async cambiar(docente: Persona, id: number, codigo: string, d: { resultado?: string; comentario?: string }) {
+    const s = await this.verDelDocente(docente, id);
+    if (s.estado === 'REVISADA') throw new BadRequestException('Ya terminaste esta homologación');
     if (!d?.resultado || !RESULTADOS.includes(d.resultado)) throw new BadRequestException(`El resultado debe ser: ${RESULTADOS.join(', ')}`);
     const comentario = (d.comentario ?? '').trim();
     if (comentario.length < 5) throw new BadRequestException('Explica en un comentario por qué cambias el resultado');
     const m = s.materias.find((x) => x.codigo === codigo);
     if (!m) throw new NotFoundException(`La materia ${codigo} no está en la solicitud`);
     const grupo = [codigo, ...(m.juntoCon ?? '').split(',').filter(Boolean)];
-    const vuelveAlAgente = d.resultado === m.resultado; // si deja el mismo resultado del agente, se quita el cambio
+    const vuelveAlAgente = d.resultado === m.resultado; // si deja el resultado del agente, se quita el cambio
     await this.prisma.asignaturaAprobada.updateMany({
       where: { solicitudId: id, codigo: { in: grupo } },
       data: vuelveAlAgente
         ? { resultadoDocente: null, comentarioDocente: null, docenteCambio: null }
         : { resultadoDocente: d.resultado, comentarioDocente: comentario, docenteCambio: docente.nombre },
     });
-    const borradas = await this.prisma.revision.deleteMany({ where: { solicitudId: id } });
     await this.actualizarRequisitos(id);
-    return { codigo, resultado: d.resultado, aprobacionesBorradas: borradas.count };
+    return { codigo, resultado: d.resultado };
   }
 
-  // El docente aprueba el informe. Con dos docentes distintos queda REVISADO.
-  async aprobar(docente: Docente, id: number, d: { comentario?: string }) {
-    const s = await this.ver(id);
-    if (s.estado === 'REVISADA') throw new BadRequestException('Este informe ya fue aprobado por dos docentes');
-    if (s.materias.some((m) => resultadoFinal(m) === 'Pendiente')) {
-      throw new BadRequestException('Hay materias pendientes: decide su resultado antes de aprobar');
-    }
-    if (s.revisiones.some((r) => r.docenteId === docente.id)) throw new BadRequestException('Ya aprobaste este informe; falta el otro docente');
-    await this.prisma.revision.create({
-      data: { solicitudId: id, docenteId: docente.id, docente: docente.nombre, comentario: d?.comentario?.trim() || null },
+  // El docente termina la homologación: la solicitud queda REVISADA
+  async terminar(docente: Persona, id: number, d: { comentario?: string }) {
+    const s = await this.verDelDocente(docente, id);
+    if (s.estado === 'REVISADA') throw new BadRequestException('Ya terminaste esta homologación');
+    if (s.materias.some((m) => resultadoFinal(m) === 'Pendiente')) throw new BadRequestException('Hay materias pendientes: decide su resultado antes de terminar');
+    await this.prisma.solicitud.update({
+      where: { id },
+      data: { estado: 'REVISADA', terminada: new Date(), comentarioFinal: d?.comentario?.trim() || null },
     });
-    const aprobaciones = s.revisiones.length + 1;
-    const revisada = aprobaciones >= APROBACIONES_NECESARIAS;
-    if (revisada) await this.prisma.solicitud.update({ where: { id }, data: { estado: 'REVISADA' } });
-    return { id, aprobaciones, revisada };
+    return { id, estado: 'REVISADA' };
   }
 
   // RN-08 se vuelve a revisar con los resultados finales (solo otra universidad)
@@ -85,9 +106,9 @@ export class RevisionService {
   }
 }
 
-// El api-gateway solo deja pasar a los docentes; aquí se vuelve a revisar por si alguien llama directo
-export function docenteDe(id?: string, rol?: string, nombre?: string, correo?: string): Docente {
+// El api-gateway ya filtra por rol; aquí se vuelve a revisar por si alguien llama directo
+export function personaDe(rolEsperado: string, id?: string, rol?: string, nombre?: string, correo?: string): Persona {
   const n = Number(id);
-  if (rol !== 'DOCENTE' || !Number.isInteger(n) || n <= 0) throw new ForbiddenException('Solo los docentes pueden revisar informes');
-  return { id: n, nombre: nombre || correo || `Docente ${n}` };
+  if (rol !== rolEsperado || !Number.isInteger(n) || n <= 0) throw new ForbiddenException('No tienes permiso para esto');
+  return { id: n, nombre: nombre || correo || `Usuario ${n}` };
 }

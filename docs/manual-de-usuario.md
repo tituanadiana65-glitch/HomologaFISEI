@@ -11,7 +11,7 @@ HomologaFISEI te dice, antes de empezar tu trámite, qué materias aprobadas se 
 3. [Estudiante que viene de otra universidad](#3-estudiante-que-viene-de-otra-universidad)
 4. [Cómo leer el resultado](#4-cómo-leer-el-resultado)
 5. [Administrador](#5-administrador)
-6. [Docente: revisar los informes](#6-docente-revisar-los-informes)
+6. [Coordinador y docente](#6-coordinador-y-docente)
 7. [Preguntas frecuentes](#7-preguntas-frecuentes)
 
 ---
@@ -181,16 +181,24 @@ En **Reglas de homologación** están los valores que se aplican a todas las car
 
 ---
 
-## 6. Docente: revisar los informes
+## 6. Coordinador y docente
 
-Cada informe del agente lo revisan y aprueban **dos docentes distintos**. El administrador crea las cuentas de los docentes en **Administración → Docentes que revisan los informes**.
+Después del análisis del agente, la homologación la hace un **docente** que elige el **coordinador**. El administrador crea sus cuentas en **Administración → Coordinador y docentes**.
 
-1. Entra con tu cuenta de docente. Verás **Informes para revisar**, con cuántas aprobaciones tiene cada uno (0, 1 o 2 de 2).
-2. Pulsa **Revisar**. Verás cada materia con el resultado del **agente** y el **resultado final**. Pulsa **Ver por qué** para ver las reglas.
-3. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** (es obligatorio). Al cambiar algo, las aprobaciones anteriores se borran: el informe se debe aprobar tal como quedó.
-4. Pulsa **Aprobar informe** (puedes dejar un comentario). Con la aprobación del segundo docente el informe queda **Revisado**.
+### Coordinador
 
-El estudiante ve en su página y en el PDF quiénes revisaron el informe y los cambios que hicieron los docentes, con su comentario.
+1. Entra con tu cuenta de coordinador. Verás **Coordinación de homologaciones**, con las solicitudes que ya tienen el análisis del agente, agrupadas en **Sin docente**, **En revisión** y **Terminadas**.
+2. En cada solicitud, elige el docente y pulsa **Asignar**. Mientras no la termine, puedes cambiarlo con **Cambiar**.
+3. Con **PDF** descargas el informe de cualquier solicitud.
+
+### Docente
+
+1. Entra con tu cuenta de docente. En **Mis homologaciones** verás solo las solicitudes que te asignaron.
+2. Pulsa **Homologar**. Verás cada materia con el resultado del **agente** y el **resultado final**. Con **Ver por qué** ves las reglas.
+3. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** (obligatorio).
+4. Cuando todo esté bien, pulsa **Terminar homologación** (puedes dejar un comentario). Después ya no se puede cambiar.
+
+El estudiante ve en su página y en el PDF qué docente hizo su homologación, quién lo asignó y los cambios del docente con su comentario.
 
 ---
 

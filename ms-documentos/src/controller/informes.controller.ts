@@ -38,9 +38,11 @@ export class InformesController {
     @Headers('x-usuario-rol') rol: string,
     @Res() res: Response,
   ) {
-    // El estudiante solo baja su informe (ms-solicitudes responde 403 si no es suyo); el docente que revisa baja cualquiera
-    const docente = rol === 'DOCENTE';
-    const r = await fetch(`${MS_SOLICITUDES}/solicitudes/${docente ? 'revision/' : ''}${id}`, {
+    // El estudiante baja su informe; el docente, los que tiene asignados; el coordinador, cualquiera con resultado.
+    // ms-solicitudes responde 403 si no le corresponde.
+    const ruta = rol === 'DOCENTE' ? 'revision/' : rol === 'COORDINADOR' ? 'coordinacion/' : '';
+    const personal = ruta !== '';
+    const r = await fetch(`${MS_SOLICITUDES}/solicitudes/${ruta}${id}`, {
       headers: { 'x-usuario-id': usuario ?? '', 'x-usuario-rol': rol ?? '' },
     });
     if (!r.ok)
@@ -53,7 +55,7 @@ export class InformesController {
     if (!['RESULTADO_LISTO', 'REVISADA'].includes(s.estado))
       throw new BadRequestException('El resultado todavía no está listo');
 
-    const estudiante = docente ? (s.estudiante ?? `Solicitud N.º ${id}`) : nombreEstudiante(nombre, correo);
+    const estudiante = personal ? (s.estudiante ?? `Solicitud N.º ${id}`) : nombreEstudiante(nombre, correo);
     const pdf = await crearPdf(conNombresDeCarrera(s, await carreras()), estudiante);
     await this.eventos.publicar('informe.generado', { solicitudId: id });
     res

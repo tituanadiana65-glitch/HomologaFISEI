@@ -206,18 +206,18 @@ describe('materias juntas', () => {
   });
 });
 
-// Revisión docente en el PDF
-describe('revisión docente en el informe', () => {
+// Coordinador y docente en el PDF
+describe('homologación del docente en el informe', () => {
   const base = { nota: 8, codigoNueva: null, informe: null };
-  it('usa el resultado del docente, muestra su comentario y quiénes aprobaron', async () => {
+  it('usa el resultado del docente, muestra su comentario, quién la hizo y quién lo asignó', async () => {
     const pdf = await crearPdf(
       {
         ...solicitud,
         estado: 'REVISADA',
-        revisiones: [
-          { docente: 'Ing. Ana Pérez', comentario: 'De acuerdo', fecha: '2026-11-23T10:00:00Z' },
-          { docente: 'Ing. Luis Mora', fecha: '2026-11-23T11:00:00Z' },
-        ],
+        docente: 'Ing. Ana Pérez',
+        coordinador: 'Ing. Luis Mora',
+        terminada: '2026-11-23T10:00:00Z',
+        comentarioFinal: 'Revisado con los sílabos',
         materias: [
           {
             ...base,
@@ -234,15 +234,15 @@ describe('revisión docente en el informe', () => {
       'Ana',
     );
     const texto = await leerTexto(pdf);
-    expect(texto).toContain('Revisado por dos docentes');
-    expect(texto).toContain('Ing. Luis Mora');
+    expect(texto).toContain('Homologación hecha por Ing. Ana Pérez');
+    expect(texto).toContain('Docente asignado por Ing. Luis Mora');
+    expect(texto).toContain('Revisado con los sílabos');
     expect(texto).toContain('Cambiado por Ing. Ana Pérez');
     expect(texto).toContain('No tiene laboratorio');
-    expect(texto).toContain('No homologable');
   });
 
-  it('sin revisiones dice que falta la revisión docente', async () => {
-    const texto = await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO' }, 'Ana'));
-    expect(texto).toContain('Revisión docente: 0 de 2 aprobaciones');
+  it('sin docente dice que el coordinador lo asignará; con docente, que está en revisión', async () => {
+    expect(await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO' }, 'Ana'))).toContain('el coordinador asignará un docente');
+    expect(await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO', docente: 'Ing. Ana' }, 'Ana'))).toContain('En revisión por Ing. Ana');
   });
 });

@@ -96,13 +96,13 @@ export class SolicitudesService implements OnModuleInit {
     return this.prisma.solicitud.findFirst({
       where: { usuarioId },
       orderBy: { creada: 'desc' },
-      include: { materias: true, revisiones: { orderBy: { fecha: 'asc' } } },
+      include: { materias: true },
     });
   }
 
   // T20 · Una solicitud; solo la ve su dueño
   async ver(usuarioId: number, id: number) {
-    const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true, revisiones: { orderBy: { fecha: 'asc' } } } });
+    const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true } });
     if (!s) throw new NotFoundException(`No existe la solicitud ${id}`);
     if (s.usuarioId !== usuarioId) throw new ForbiddenException('Esta solicitud no es tuya');
     return s;

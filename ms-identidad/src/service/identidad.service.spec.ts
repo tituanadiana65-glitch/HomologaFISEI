@@ -71,25 +71,30 @@ describe('IdentidadService', () => {
   });
 });
 
-// Revisión docente: el administrador crea las cuentas de los docentes
-describe('IdentidadService · docentes', () => {
-  it('crea un docente con rol DOCENTE y la clave cifrada, sin devolver la clave', async () => {
+// El administrador crea las cuentas de coordinadores y docentes
+describe('IdentidadService · personal', () => {
+  it('crea un docente (por defecto) o un coordinador, con la clave cifrada y sin devolverla', async () => {
     const { s, usuario } = armar();
-    const r = await s.crearDocente({ nombre: 'Ing. Pérez', correo: 'JPerez@uta.edu.ec', clave: 'Docente2026*' });
+    const r = await s.crearPersonal({ nombre: 'Ing. Pérez', correo: 'JPerez@uta.edu.ec', clave: 'Docente2026*' });
     const guardado = usuario.create.mock.calls[0][0].data;
     expect(guardado).toEqual(expect.objectContaining({ rol: 'DOCENTE', correo: 'jperez@uta.edu.ec' }));
     expect(guardado.claveHash).not.toBe('Docente2026*');
     expect(r).toEqual({ id: 1, nombre: 'Ing. Pérez', correo: 'jperez@uta.edu.ec', rol: 'DOCENTE' });
+    await s.crearPersonal({ nombre: 'Ing. Coord', correo: 'coord@uta.edu.ec', clave: 'Coordina2026*', rol: 'COORDINADOR' });
+    expect(usuario.create.mock.calls[1][0].data.rol).toBe('COORDINADOR');
   });
 
-  it('valida los datos y no repite correos', async () => {
-    await expect(armar().s.crearDocente({ nombre: '', correo: 'a@uta.edu.ec', clave: 'Docente2026*' })).rejects.toThrow('el nombre del docente');
-    await expect(armar({ id: 3 }).s.crearDocente({ nombre: 'A', correo: 'a@uta.edu.ec', clave: 'Docente2026*' })).rejects.toThrow('ya está registrado');
+  it('no crea administradores ni repite correos', async () => {
+    await expect(armar().s.crearPersonal({ nombre: 'A', correo: 'a@uta.edu.ec', clave: 'Clave2026*', rol: 'ADMIN' })).rejects.toThrow('COORDINADOR o DOCENTE');
+    await expect(armar().s.crearPersonal({ nombre: '', correo: 'a@uta.edu.ec', clave: 'Clave2026*' })).rejects.toThrow('el nombre');
+    await expect(armar({ id: 3 }).s.crearPersonal({ nombre: 'A', correo: 'a@uta.edu.ec', clave: 'Clave2026*' })).rejects.toThrow('ya está registrado');
   });
 
-  it('lista solo los docentes', async () => {
+  it('lista el personal y los docentes', async () => {
     const { s, usuario } = armar();
+    await s.personal();
+    expect(usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { rol: { in: ['COORDINADOR', 'DOCENTE'] } } }));
     await s.docentes();
-    expect(usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { rol: 'DOCENTE' } }));
+    expect(usuario.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: { rol: 'DOCENTE' } }));
   });
 });

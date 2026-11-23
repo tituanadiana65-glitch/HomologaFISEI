@@ -16,12 +16,6 @@ export interface MateriaInforme {
   docenteCambio?: string | null;
 }
 
-// Revisión docente: aprobaciones de los docentes
-export interface RevisionInforme {
-  docente: string;
-  comentario?: string | null;
-  fecha: string;
-}
 
 // HU-26 · Una fila del informe por cada materia nueva evaluada (varias aprobadas juntas van en una fila)
 export interface FilaInforme {
@@ -62,7 +56,11 @@ export interface SolicitudInforme {
   periodo: string;
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
   estado?: string;
-  revisiones?: RevisionInforme[];
+  // Coordinador y docente: quién hace la homologación
+  docente?: string | null;
+  coordinador?: string | null;
+  terminada?: string | null;
+  comentarioFinal?: string | null;
   materias: MateriaInforme[];
 }
 
@@ -394,27 +392,26 @@ export function crearPdf(
       doc.y = fin + 16;
     }
 
-    // Revisión docente: quién aprobó el informe
+    // Coordinador y docente: quién hizo la homologación
     if (doc.y > doc.page.height - 160) doc.addPage();
-    const revisiones = s.revisiones ?? [];
-    const revisado = s.estado === 'REVISADA';
+    const terminada = s.estado === 'REVISADA';
+    const fecha = s.terminada ? new Date(s.terminada).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
     doc
-      .fillColor(revisado ? COLORES.Homologable : COLORES.Pendiente)
+      .fillColor(terminada ? COLORES.Homologable : COLORES.Pendiente)
       .font('Helvetica-Bold')
       .fontSize(11)
-      .text(revisado ? 'Revisado por dos docentes' : `Revisión docente: ${revisiones.length} de 2 aprobaciones`, izq, doc.y + 4);
-    if (!revisiones.length) {
-      doc.fillColor(GRIS).font('Helvetica').fontSize(9).text('Todavía ningún docente ha revisado este informe.', izq, doc.y + 2);
-    }
-    for (const r of revisiones) {
-      const fecha = new Date(r.fecha).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      doc
-        .fillColor('#333333')
-        .font('Helvetica-Bold')
-        .fontSize(9)
-        .text(`${r.docente} · ${fecha}`, izq + 14, doc.y + 3, { continued: !!r.comentario, width: ancho - 14 })
-        .font('Helvetica')
-        .text(r.comentario ? `   «${r.comentario}»` : '');
+      .text(
+        terminada
+          ? `Homologación hecha por ${s.docente ?? 'el docente'}${fecha ? ` el ${fecha}` : ''}`
+          : s.docente
+            ? `En revisión por ${s.docente}`
+            : 'Pendiente: el coordinador asignará un docente',
+        izq,
+        doc.y + 4,
+      );
+    if (s.coordinador && s.docente) doc.fillColor(GRIS).font('Helvetica').fontSize(9).text(`Docente asignado por ${s.coordinador}.`, izq, doc.y + 2);
+    if (terminada && s.comentarioFinal) {
+      doc.fillColor('#333333').font('Helvetica').fontSize(9).text(`«${s.comentarioFinal}»`, izq, doc.y + 2, { width: ancho });
     }
     doc.y += 10;
 

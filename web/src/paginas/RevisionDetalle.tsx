@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api, sesion } from '../api';
+import { api } from '../api';
 import { armarFilas } from '../filas';
 import { notaConvertida } from '../notas';
 
-// Revisión docente de un informe: ver el análisis del agente, cambiar resultados con comentario y aprobar
+// El docente asignado hace la homologación: revisa el análisis del agente, cambia resultados con comentario y la termina
 interface Causa { regla: string; cumple: boolean; causa: string }
 interface Informe { nueva: string; resultado: string; causas: Causa[]; temasFaltan: string[]; parecido?: number; aviso?: string }
 interface Materia {
@@ -31,7 +31,9 @@ interface Solicitud {
   carreraDestino: string;
   periodo: string;
   requisitos?: string | null;
-  revisiones: { docenteId: number; docente: string; comentario?: string | null; fecha: string }[];
+  coordinador?: string | null;
+  terminada?: string | null;
+  comentarioFinal?: string | null;
   materias: Materia[];
 }
 interface Carrera { codigo: string; nombre: string }
@@ -48,7 +50,6 @@ export default function RevisionDetalle() {
   const [comentario, setComentario] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
-  const yo = sesion()?.usuario.id;
 
   const cargar = useCallback(() => {
     void api<Solicitud>(`/solicitudes/revision/${id}`).then(setS).catch((e: Error) => setError(e.message));
@@ -63,30 +64,25 @@ export default function RevisionDetalle() {
   const guardarCambio = async () => {
     if (!editando) return;
     try {
-      const r = await api<{ aprobacionesBorradas: number }>(`/solicitudes/revision/${id}/materias/${encodeURIComponent(editando.codigo)}`, {
+      await api(`/solicitudes/revision/${id}/materias/${encodeURIComponent(editando.codigo)}`, {
         method: 'PUT',
         body: JSON.stringify({ resultado: editando.resultado, comentario: editando.comentario }),
       });
       setEditando(null);
       setError('');
-      setMensaje(
-        `Se guardó el cambio.${r.aprobacionesBorradas ? ' Como el informe cambió, las aprobaciones anteriores se borraron: deben aprobarlo otra vez.' : ''}`,
-      );
+      setMensaje('Se guardó el cambio.');
       cargar();
     } catch (e) {
       setError((e as Error).message);
     }
   };
 
-  const aprobar = async () => {
+  const terminar = async () => {
     try {
-      const r = await api<{ aprobaciones: number; revisada: boolean }>(`/solicitudes/revision/${id}/aprobar`, {
-        method: 'POST',
-        body: JSON.stringify({ comentario }),
-      });
+      await api(`/solicitudes/revision/${id}/terminar`, { method: 'POST', body: JSON.stringify({ comentario }) });
       setComentario('');
       setError('');
-      setMensaje(r.revisada ? 'Aprobaste el informe. Con dos docentes, el informe quedó REVISADO.' : 'Aprobaste el informe. Falta la aprobación de otro docente.');
+      setMensaje('Terminaste la homologación. El estudiante ya ve el resultado final.');
       cargar();
     } catch (e) {
       setError((e as Error).message);
@@ -109,7 +105,6 @@ export default function RevisionDetalle() {
 
   const filas = armarFilas(s.materias);
   const revisada = s.estado === 'REVISADA';
-  const yaAprobe = s.revisiones.some((r) => r.docenteId === yo);
   const requisitos = s.tipo === 'EXTERNO' && s.requisitos ? (JSON.parse(s.requisitos) as { cumple: boolean; causas: { requisito: string; cumple: boolean; causa: string }[] }) : null;
 
   return (
@@ -123,6 +118,7 @@ export default function RevisionDetalle() {
       <p className="ayuda">
         <b>{s.estudiante ?? 'Estudiante'}</b> ·{' '}
         {s.tipo === 'EXTERNO' ? `${s.universidadOrigen ?? ''} · ${s.carreraOrigen}` : nombre(s.carreraOrigen)} → <b>{nombre(s.carreraDestino)}</b> · {s.periodo}
+        {s.coordinador && <> · Asignada por {s.coordinador}</>}
       </p>
 
       {mensaje && <p className="aviso listo">✓ {mensaje}</p>}
@@ -245,28 +241,24 @@ export default function RevisionDetalle() {
       </div>
 
       <section className="aprobar">
-        <h2>Aprobación de los docentes ({s.revisiones.length} de 2)</h2>
-        {s.revisiones.length === 0 && <p className="vacio">Ningún docente lo ha aprobado todavía.</p>}
-        <ul>
-          {s.revisiones.map((r) => (
-            <li key={r.docenteId}>
-              ✓ <b>{r.docente}</b> · {new Date(r.fecha).toLocaleString('es-EC')}
-              {r.comentario && <> · «{r.comentario}»</>}
-            </li>
-          ))}
-        </ul>
+        <h2>Terminar la homologación</h2>
         {revisada ? (
-          <p className="aviso listo">✓ Este informe ya fue revisado y aprobado por dos docentes.</p>
-        ) : yaAprobe ? (
-          <p className="aviso">Ya lo aprobaste. Falta la aprobación de otro docente.</p>
+          <p className="aviso listo">
+            ✓ Terminaste esta homologación el {s.terminada ? new Date(s.terminada).toLocaleString('es-EC') : ''}
+            {s.comentarioFinal && <> · «{s.comentarioFinal}»</>}
+          </p>
         ) : (
           <>
+            <p className="ayuda">
+              Cuando estés de acuerdo con todos los resultados, termina la homologación. Después ya no se pueden cambiar y el estudiante ve el resultado
+              final.
+            </p>
             <label>
               Comentario para el informe (opcional)
               <textarea rows={2} value={comentario} onChange={(e) => setComentario(e.target.value)} />
             </label>
             <div className="acciones">
-              <button onClick={() => void aprobar()}>Aprobar informe</button>
+              <button onClick={() => void terminar()}>Terminar homologación</button>
             </div>
           </>
         )}

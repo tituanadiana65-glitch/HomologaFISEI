@@ -1,22 +1,54 @@
 import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
-import { docenteDe, RevisionService } from '../service/revision.service';
+import { personaDe, RevisionService } from '../service/revision.service';
 import { nombreDe } from './solicitudes.controller';
 
-// Revisión docente. Va antes que SolicitudesController en el módulo para que /solicitudes/revision no se lea como un id.
+// Estos controladores van antes que SolicitudesController en el módulo para que
+// /solicitudes/coordinacion y /solicitudes/revision no se lean como un id.
+
+// Coordinador: ve las solicitudes con resultado y asigna el docente
+@Controller('solicitudes/coordinacion')
+export class CoordinacionController {
+  constructor(private readonly servicio: RevisionService) {}
+
+  @Get()
+  listar(@Headers('x-usuario-id') u: string, @Headers('x-usuario-rol') rol: string) {
+    personaDe('COORDINADOR', u, rol);
+    return this.servicio.listarCoordinacion();
+  }
+
+  @Get(':id')
+  ver(@Headers('x-usuario-id') u: string, @Headers('x-usuario-rol') rol: string, @Param('id', ParseIntPipe) id: number) {
+    personaDe('COORDINADOR', u, rol);
+    return this.servicio.verCoordinacion(id);
+  }
+
+  // PUT /solicitudes/coordinacion/:id/docente  { docenteId, docente }
+  @Put(':id/docente')
+  asignar(
+    @Headers('x-usuario-id') u: string,
+    @Headers('x-usuario-rol') rol: string,
+    @Headers('x-usuario-nombre') nombre: string,
+    @Headers('x-usuario-correo') correo: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() d: { docenteId?: number; docente?: string },
+  ) {
+    return this.servicio.asignar(personaDe('COORDINADOR', u, rol, nombreDe(nombre), correo), id, d);
+  }
+}
+
+// Docente: solo las solicitudes que le asignaron
 @Controller('solicitudes/revision')
 export class RevisionController {
   constructor(private readonly servicio: RevisionService) {}
 
   @Get()
   listar(@Headers('x-usuario-id') u: string, @Headers('x-usuario-rol') rol: string) {
-    docenteDe(u, rol);
-    return this.servicio.listar();
+    return this.servicio.listarDelDocente(personaDe('DOCENTE', u, rol));
   }
 
   @Get(':id')
   ver(@Headers('x-usuario-id') u: string, @Headers('x-usuario-rol') rol: string, @Param('id', ParseIntPipe) id: number) {
-    docenteDe(u, rol);
-    return this.servicio.ver(id);
+    return this.servicio.verDelDocente(personaDe('DOCENTE', u, rol), id);
   }
 
   // PUT /solicitudes/revision/:id/materias/:codigo  { resultado, comentario }
@@ -30,12 +62,12 @@ export class RevisionController {
     @Param('codigo') codigo: string,
     @Body() d: { resultado?: string; comentario?: string },
   ) {
-    return this.servicio.cambiar(docenteDe(u, rol, nombreDe(nombre), correo), id, codigo, d);
+    return this.servicio.cambiar(personaDe('DOCENTE', u, rol, nombreDe(nombre), correo), id, codigo, d);
   }
 
-  // POST /solicitudes/revision/:id/aprobar  { comentario? }
-  @Post(':id/aprobar')
-  aprobar(
+  // POST /solicitudes/revision/:id/terminar  { comentario? }
+  @Post(':id/terminar')
+  terminar(
     @Headers('x-usuario-id') u: string,
     @Headers('x-usuario-rol') rol: string,
     @Headers('x-usuario-nombre') nombre: string,
@@ -43,6 +75,6 @@ export class RevisionController {
     @Param('id', ParseIntPipe) id: number,
     @Body() d: { comentario?: string },
   ) {
-    return this.servicio.aprobar(docenteDe(u, rol, nombreDe(nombre), correo), id, d);
+    return this.servicio.terminar(personaDe('DOCENTE', u, rol, nombreDe(nombre), correo), id, d);
   }
 }
