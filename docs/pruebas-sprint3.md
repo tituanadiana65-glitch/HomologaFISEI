@@ -43,3 +43,14 @@ Prueba en la PC de Diana el 19/11/2026, rama `feature/HU-26-HU-29`, solicitud **
 
 El agente terminó en unos 4 minutos. Los casos de una sola parte («Física I» sola: aviso de que falta la otra) y de la UTA («FISICA» frente a «FISICA I» y «FISICA II») están cubiertos con pruebas automáticas, porque las mallas de TI y Software no tienen materias divididas en partes.
 
+## Observaciones de la revisión del 22/11/2026
+
+Prueba en la PC de Diana el 22/11/2026, rama `feature/HU-26-HU-29`, con todos los servicios reconstruidos.
+
+| # | Observación | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|---|
+| CP-41 | «Caso contrario no» | Una materia no homologa dos | Pruebas automáticas: «FISICA» frente a «FISICA I» y «FISICA II» | Sin materia equivalente; nunca dos resultados para una materia | Sin materia equivalente; HU-29 quitada del agente, la página y el PDF | OK |
+| CP-42 | Récord y «no meter todo a mano» | Leer el récord con IA | `POST /api/agente/leer-record` con el récord de prueba | Lista con nota, escala, año, créditos, horas y estado | 10 materias leídas en 28 s, todas con nota, escala, año, créditos, horas y estado «Aprobada» (el récord de prueba no tenía reprobadas) | OK |
+| CP-43 | Dos docentes en un mismo informe | Revisión de la solicitud 3004 | El administrador crea dos docentes; el docente 1 cambia «Fisica» de No homologable a Homologable sin comentario y luego con comentario; aprueba dos veces; el docente 2 aprueba; luego intenta cambiar | Sin comentario se rechaza; no aprueba dos veces; con dos aprobaciones queda REVISADA y ya no se cambia | 400 «Explica en un comentario…»; cambio guardado; 400 «Ya aprobaste este informe»; 2 de 2 → **REVISADA**; 400 «ya fue aprobado por dos docentes». El estudiante ve el resultado final y los dos docentes; el PDF (estudiante y docente) muestra «Cambiado por…» y «Revisado por dos docentes» ([captura](evidencias/CP-43-revision-docente.jpg)) | OK |
+| CP-44 | Permisos | Estudiante en rutas de docentes y administrador | Crear docente y ver la revisión con la cuenta de un estudiante | 403 | 403 y 403 | OK |
+

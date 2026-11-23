@@ -173,7 +173,7 @@ export default function LeerRecord({
           {leyendo ? 'Leyendo tu récord…' : filas ? 'Volver a leer' : 'Leer mi récord'}
         </button>
         {externo && !recordId && <small className="pista alerta">Tu solicitud no tiene récord. Regístralas a mano más abajo.</small>}
-        {leyendo && <small className="pista">Puede tardar unos segundos.</small>}
+        {leyendo && <small className="pista">La inteligencia artificial está leyendo tu récord: puede tardar hasta un minuto.</small>}
       </div>
       {error && <p role="alert">{error}</p>}
       {mensaje && <p className="aviso listo">{mensaje}</p>}
