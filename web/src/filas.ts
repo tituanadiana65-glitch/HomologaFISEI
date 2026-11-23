@@ -1,6 +1,5 @@
-// HU-26 y HU-29 · Filas del resultado: una por cada materia nueva que se evalúa.
-// Dos materias aprobadas juntas (Física I + Física II → Física) van en una sola fila;
-// una materia aprobada que cubre dos nuevas (Física → Física I y Física II) tiene una fila por cada una.
+// HU-26 · Filas del resultado: una por cada materia nueva evaluada.
+// Varias materias aprobadas juntas (Física I + Física II → Física) van en una sola fila.
 export interface MateriaConResultado {
   codigo: string;
   nombre: string;
@@ -11,7 +10,6 @@ export interface MateriaConResultado {
   resultado: string | null;
   informe: string | null;
   juntoCon?: string | null;
-  adicionales?: string | null;
 }
 
 export interface Fila<M extends MateriaConResultado = MateriaConResultado> {
@@ -20,23 +18,7 @@ export interface Fila<M extends MateriaConResultado = MateriaConResultado> {
   codigoNueva: string | null;
   resultado: string | null;
   informe: string | null;
-  tambien: boolean; // HU-29: otra materia nueva que cubre la misma materia aprobada
 }
-
-interface Adicional {
-  codigoNueva: string;
-  resultado: string;
-  informe: unknown;
-}
-
-const leerAdicionales = (texto?: string | null): Adicional[] => {
-  try {
-    const lista = texto ? (JSON.parse(texto) as unknown) : [];
-    return Array.isArray(lista) ? (lista as Adicional[]) : [];
-  } catch {
-    return [];
-  }
-};
 
 export function armarFilas<M extends MateriaConResultado>(materias: M[]): Fila<M>[] {
   const filas: Fila<M>[] = [];
@@ -46,17 +28,7 @@ export function armarFilas<M extends MateriaConResultado>(materias: M[]): Fila<M
     const otras = (m.juntoCon ?? '').split(',').filter(Boolean);
     const grupo = [m, ...materias.filter(x => x !== m && otras.includes(x.codigo))];
     grupo.forEach(x => usadas.add(x.codigo));
-    filas.push({ clave: m.codigo, materias: grupo, codigoNueva: m.codigoNueva, resultado: m.resultado, informe: m.informe, tambien: false });
-    for (const a of leerAdicionales(m.adicionales)) {
-      filas.push({
-        clave: `${m.codigo}>${a.codigoNueva}`,
-        materias: [m],
-        codigoNueva: a.codigoNueva,
-        resultado: a.resultado,
-        informe: a.informe ? JSON.stringify(a.informe) : null,
-        tambien: true,
-      });
-    }
+    filas.push({ clave: m.codigo, materias: grupo, codigoNueva: m.codigoNueva, resultado: m.resultado, informe: m.informe });
   }
   return filas;
 }

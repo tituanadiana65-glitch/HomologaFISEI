@@ -722,7 +722,7 @@ tbody tr:hover td {
   font-size: 12px;
   margin-top: 2px;
 }
-/* HU-26 y HU-29 · materias evaluadas juntas y materias nuevas adicionales */
+/* HU-26 · materias evaluadas juntas */
 .etiqueta-fila {
   display: inline-block;
   margin-bottom: 4px;
@@ -738,13 +738,7 @@ tbody tr:hover td {
 .materia-de-fila + .materia-de-fila {
   margin-top: 6px;
 }
-/* "También cubre": la misma materia aprobada, un poco hacia adentro */
-tr.tambien td {
-  background: #fafbfc;
-}
-tr.tambien td:first-child {
-  padding-left: 26px;
-}
+
 .sin-equivalente {
   color: var(--gris);
   font-style: italic;

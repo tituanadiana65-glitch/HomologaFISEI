@@ -142,7 +142,7 @@ describe('SolicitudesService · resultado del agente (T28)', () => {
     expect(prisma.asignaturaAprobada.update).toHaveBeenCalledTimes(2);
     expect(prisma.asignaturaAprobada.update).toHaveBeenCalledWith({
       where: { solicitudId_codigo: { solicitudId: 1, codigo: 'FIS-TI' } },
-      data: { resultado: 'Homologable', codigoNueva: 'FIS-SW', informe: JSON.stringify({ resultado: 'Homologable' }), juntoCon: null, adicionales: null },
+      data: { resultado: 'Homologable', codigoNueva: 'FIS-SW', informe: JSON.stringify({ resultado: 'Homologable' }), juntoCon: null },
     });
     expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'RESULTADO_LISTO' } });
   });
@@ -252,20 +252,15 @@ describe('SolicitudesService · otra universidad (T38)', () => {
   });
 });
 
-// HU-26 y HU-29 · se guardan las materias evaluadas juntas y las otras materias nuevas que cubre
-describe('SolicitudesService · materias juntas y adicionales', () => {
-  it('guarda juntoCon y adicionales', async () => {
+// HU-26 · se guardan las materias evaluadas juntas
+describe('SolicitudesService · materias juntas', () => {
+  it('guarda juntoCon', async () => {
     const { servicio, prisma } = armar();
     prisma.solicitud.findUnique.mockResolvedValue({ id: 3, tipo: 'INTERNO' });
-    const adicional = { codigoNueva: 'SW-F2', resultado: 'No homologable', informe: { resultado: 'No homologable' } };
     await servicio.guardarResultado({
       solicitudId: 3,
-      resultados: [
-        { codigoAprobada: 'A', codigoNueva: 'SW-F', resultado: 'Homologable', informe: null, juntoCon: ['B', 'C'] },
-        { codigoAprobada: 'D', codigoNueva: 'SW-F1', resultado: 'Homologable', informe: null, adicionales: [adicional] },
-      ],
+      resultados: [{ codigoAprobada: 'A', codigoNueva: 'SW-F', resultado: 'Homologable', informe: null, juntoCon: ['B', 'C'] }],
     });
-    expect(prisma.asignaturaAprobada.update).toHaveBeenNthCalledWith(1, expect.objectContaining({ data: expect.objectContaining({ juntoCon: 'B,C', adicionales: null }) }));
-    expect(prisma.asignaturaAprobada.update).toHaveBeenNthCalledWith(2, expect.objectContaining({ data: expect.objectContaining({ juntoCon: null, adicionales: JSON.stringify([adicional]) }) }));
+    expect(prisma.asignaturaAprobada.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ juntoCon: 'B,C' }) }));
   });
 });

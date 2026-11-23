@@ -27,7 +27,6 @@ interface Materia {
   notaOriginal?: number | null;
   escala?: number | null;
   juntoCon?: string | null; // HU-26
-  adicionales?: string | null; // HU-29
 }
 interface Solicitud {
   id: number;
@@ -151,7 +150,7 @@ export default function Resultado() {
 
   const listo = s.estado === 'RESULTADO_LISTO';
   const hayPendientes = s.materias.some(m => m.resultado === 'Pendiente');
-  // HU-26 y HU-29 · una fila por cada materia nueva evaluada
+  // HU-26 · una fila por cada materia nueva evaluada
   const filas = armarFilas(s.materias);
   // Resumen en una frase: cuántas materias de la nueva carrera se le reconocerían
   const reconocidas = new Set(filas.filter(f => f.resultado === 'Homologable').map(f => f.codigoNueva ?? f.clave)).size;
@@ -272,9 +271,8 @@ export default function Resultado() {
             const resultado = f.resultado ?? 'En revisión';
             const juntas = f.materias.length > 1;
             return (
-              <tr key={f.clave} className={f.tambien ? 'tambien' : undefined}>
+              <tr key={f.clave}>
                 <td>
-                  {f.tambien && <small className="etiqueta-fila">También cubre</small>}
                   {juntas && <small className="etiqueta-fila">Evaluadas juntas</small>}
                   {f.materias.map((m, i) => (
                     <div key={m.codigo} className="materia-de-fila">

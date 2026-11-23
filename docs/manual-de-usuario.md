@@ -138,8 +138,8 @@ Si los temas no coinciden del todo, el detalle también muestra los **temas que 
 
 ### Materias divididas en partes
 
-- **Dos materias tuyas para una nueva.** Si aprobaste, por ejemplo, «Física I» y «Física II» y la nueva carrera tiene una sola «Física», el agente las revisa **juntas**: suma créditos y horas, une los temas y promedia las notas según sus créditos. En la tabla aparecen en una sola fila con la etiqueta **Evaluadas juntas**. Registra las dos materias en tu solicitud.
-- **Una materia tuya para varias nuevas.** Si tu materia cubre más de una de la nueva carrera (por ejemplo, tu «Física» frente a «Física I» y «Física II»), verás una fila más con la etiqueta **También cubre**, con su propio resultado.
+- **Varias materias tuyas para una nueva.** Si aprobaste, por ejemplo, «Física I» y «Física II» y la nueva carrera tiene una sola «Física», el agente las revisa **juntas**: suma créditos y horas, une los temas y promedia las notas según sus créditos. En la tabla aparecen en una sola fila con la etiqueta **Evaluadas juntas**. Registra las dos materias en tu solicitud.
+- **Una materia tuya no cubre dos nuevas.** Si la nueva carrera divide una materia en partes (Física I y Física II), tu materia solo puede homologar una de ellas o ninguna.
 - Si registraste solo una parte (por ejemplo, solo «Física I»), el detalle te avisa que registres la otra para evaluarlas juntas.
 
 ### Descargar el informe en PDF

@@ -96,30 +96,21 @@ export interface Requisitos {
   causas: { requisito: string; cumple: boolean; causa: string }[];
 }
 
-// RN-08 · Cuántas materias de la nueva carrera se le reconocen: dos aprobadas juntas cuentan como una (HU-26)
-// y una aprobada que cubre dos nuevas cuenta como dos (HU-29)
-export function materiasHomologables(materias: { resultado?: string | null; codigoNueva?: string | null; adicionales?: string | null }[]): number {
+// RN-08 · Cuántas materias de la nueva carrera se le reconocen: varias aprobadas juntas cuentan como una (HU-26)
+export function materiasHomologables(materias: { resultado?: string | null; codigoNueva?: string | null }[]): number {
   const nuevas = new Set<string>();
   let sinCodigo = 0;
   for (const m of materias) {
-    if (m.resultado === 'Homologable') {
-      if (m.codigoNueva) nuevas.add(m.codigoNueva);
-      else sinCodigo++;
-    }
-    let extra: { codigoNueva?: string; resultado?: string }[] = [];
-    try {
-      extra = m.adicionales ? (JSON.parse(m.adicionales) as typeof extra) : [];
-    } catch {
-      extra = [];
-    }
-    for (const a of extra) if (a.resultado === 'Homologable' && a.codigoNueva) nuevas.add(a.codigoNueva);
+    if (m.resultado !== 'Homologable') continue;
+    if (m.codigoNueva) nuevas.add(m.codigoNueva);
+    else sinCodigo++;
   }
   return nuevas.size + sinCodigo;
 }
 
 export function revisarRequisitos(
   s: { periodosAprobados?: number | null; documentosLegalizados?: boolean | null },
-  materias: { resultado?: string | null; codigoNueva?: string | null; adicionales?: string | null }[],
+  materias: { resultado?: string | null; codigoNueva?: string | null }[],
 ): Requisitos {
   const periodos = s.periodosAprobados ?? 0;
   const homologables = materiasHomologables(materias);

@@ -168,12 +168,6 @@ describe('AgenteService', () => {
     expect(() => leerParecida('{"codigo":"SW-CI"}', candidatas)).toThrow('parecido');
   });
 
-  it('HU-29: lee otras materias que cubre el sílabo (al menos 70, sin repetir, máximo 2)', () => {
-    const lista = [{ codigo: 'SW-CD' }, { codigo: 'SW-CI' }, { codigo: 'SW-F' }, { codigo: 'SW-A' }];
-    const r = leerParecida('{"codigo":"SW-CD","parecido":90,"otras":[{"codigo":"SW-CI","parecido":85},{"codigo":"SW-CD","parecido":90},{"codigo":"XX","parecido":99},{"codigo":"SW-F","parecido":40},{"codigo":"SW-CI","parecido":80},{"codigo":"SW-A","parecido":75}]}', lista);
-    expect(r).toEqual({ codigo: 'SW-CD', parecido: 90, otras: [{ codigo: 'SW-CI', parecido: 85 }, { codigo: 'SW-A', parecido: 75 }] });
-    expect(leerParecida('{"codigo":"SW-CD","parecido":90,"otras":[]}', lista)).toEqual({ codigo: 'SW-CD', parecido: 90 });
-  });
 
   it('T43: elige bien (Cálculo II -> Cálculo Integral)', async () => {
     jest.spyOn(s, 'llamarIA').mockResolvedValue('{"codigo":"SW-CI","parecido":82}');

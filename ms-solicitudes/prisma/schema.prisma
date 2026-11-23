@@ -50,9 +50,8 @@ model AsignaturaAprobada {
   notaOriginal Float?    // la nota como la puso su universidad (16); en nota queda la convertida (8)
   escala       Int?      // 10, 20 o 100
   silaboId     Int?      // id del sílabo en ms-documentos
-  // HU-26 y HU-29
-  juntoCon     String?   // códigos de las otras materias aprobadas evaluadas junto con esta, separados por coma
-  adicionales  String?   @db.NVarChar(Max) // otras materias nuevas que también cubre esta: [{ codigoNueva, resultado, informe }] en JSON
+  // HU-26 · códigos de las otras materias aprobadas evaluadas junto con esta, separados por coma
+  juntoCon     String?
   solicitud   Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
 
   @@unique([solicitudId, codigo])

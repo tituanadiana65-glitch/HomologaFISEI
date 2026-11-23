@@ -55,7 +55,6 @@ export interface ResultadoMateria {
   resultado: string;
   informe: unknown;
   juntoCon?: string[]; // HU-26
-  adicionales?: { codigoNueva: string; resultado: string; informe: unknown }[]; // HU-29
 }
 
 @Injectable()
@@ -199,7 +198,6 @@ export class SolicitudesService implements OnModuleInit {
           codigoNueva: r.codigoNueva,
           informe: r.informe ? JSON.stringify(r.informe) : null,
           juntoCon: r.juntoCon?.length ? r.juntoCon.join(',') : null,
-          adicionales: r.adicionales?.length ? JSON.stringify(r.adicionales) : null,
         },
       });
     }

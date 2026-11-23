@@ -169,25 +169,24 @@ describe('nombre del estudiante y de las carreras', () => {
   });
 });
 
-// HU-26 y HU-29 · filas del informe
-describe('materias juntas y materias que cubren varias', () => {
+// HU-26 · filas del informe
+describe('materias juntas', () => {
   const base = { nota: 8, codigoNueva: null, informe: null };
   const informeDe = (nueva: string, resultado: string) => JSON.stringify({ nueva, resultado, causas: [{ regla: 'RN-01', cumple: true, causa: 'Contenidos 90 %' }], temasFaltan: [] });
 
-  it('dos materias juntas forman una fila y una que cubre dos nuevas forma dos', () => {
+  it('las materias juntas forman una fila', () => {
     const filas = armarFilas([
       { ...base, codigo: 'A', nombre: 'Física I', resultado: 'Homologable', juntoCon: 'B' },
       { ...base, codigo: 'B', nombre: 'Física II', resultado: 'Homologable', juntoCon: 'A' },
-      { ...base, codigo: 'C', nombre: 'Cálculo', resultado: 'Homologable', adicionales: JSON.stringify([{ codigoNueva: 'CI', resultado: 'No homologable', informe: { nueva: 'CI' } }]) },
+      { ...base, codigo: 'C', nombre: 'Química', resultado: 'Sin materia equivalente' },
     ]);
-    expect(filas.map((f) => [f.materias.map((m) => m.codigo).join('+'), f.resultado, f.tambien])).toEqual([
-      ['A+B', 'Homologable', false],
-      ['C', 'Homologable', false],
-      ['C', 'No homologable', true],
+    expect(filas.map((f) => [f.materias.map((m) => m.codigo).join('+'), f.resultado])).toEqual([
+      ['A+B', 'Homologable'],
+      ['C', 'Sin materia equivalente'],
     ]);
   });
 
-  it('el PDF muestra las materias juntas, la otra materia que cubre y el aviso', async () => {
+  it('el PDF muestra las materias juntas y el aviso', async () => {
     const aviso = JSON.stringify({ nueva: 'FÍSICA (SW-F)', resultado: 'No homologable', causas: [], temasFaltan: [], aviso: 'Esta materia es una parte de FÍSICA.' });
     const pdf = await crearPdf(
       {
@@ -195,10 +194,6 @@ describe('materias juntas y materias que cubren varias', () => {
         materias: [
           { ...base, codigo: 'A', nombre: 'Física I', resultado: 'Homologable', juntoCon: 'B', informe: informeDe('FÍSICA (SW-F)', 'Homologable') },
           { ...base, codigo: 'B', nombre: 'Física II', resultado: 'Homologable', juntoCon: 'A', informe: informeDe('FÍSICA (SW-F)', 'Homologable') },
-          {
-            ...base, codigo: 'C', nombre: 'Cálculo', resultado: 'Homologable', informe: informeDe('CÁLCULO DIFERENCIAL (SW-CD)', 'Homologable'),
-            adicionales: JSON.stringify([{ codigoNueva: 'SW-CI', resultado: 'Homologable', informe: JSON.parse(informeDe('CÁLCULO INTEGRAL (SW-CI)', 'Homologable')) }]),
-          },
           { ...base, codigo: 'D', nombre: 'Química I', resultado: 'No homologable', informe: aviso },
         ],
       },
@@ -207,8 +202,6 @@ describe('materias juntas y materias que cubren varias', () => {
     const texto = await leerTexto(pdf);
     expect(texto).toContain('Física I + Física II');
     expect(texto).toContain('Evaluadas juntas');
-    expect(texto).toContain('También cubre · Cálculo');
-    expect(texto).toContain('CÁLCULO INTEGRAL');
     expect(texto).toContain('Esta materia es una parte de FÍSICA.');
   });
 });

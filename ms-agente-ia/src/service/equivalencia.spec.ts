@@ -14,10 +14,10 @@ describe('buscarEquivalente', () => {
   });
 });
 
-// HU-26 / HU-29 · materias divididas en partes (I, II)
+// HU-26 · materias divididas en partes (I, II)
 import { buscarPorNombre, nombreBase, tieneNumero } from './equivalencia';
 
-describe('materias por partes (HU-26 y HU-29)', () => {
+describe('materias por partes (HU-26)', () => {
   const destino = [
     { codigo: 'F', nombre: 'FÍSICA' },
     { codigo: 'C2', nombre: 'CÁLCULO II' },
@@ -34,18 +34,18 @@ describe('materias por partes (HU-26 y HU-29)', () => {
   });
 
   it('el mismo nombre sigue siendo una con una', () => {
-    expect(buscarPorNombre('Física', destino)).toEqual({ exacta: destino[0], partes: [] });
+    expect(buscarPorNombre('Física', destino)).toEqual({ exacta: destino[0] });
   });
 
   it('HU-26: "Física I" es una parte de "FÍSICA"', () => {
     expect(buscarPorNombre('Física I', destino).base).toEqual(destino[0]);
   });
 
-  it('HU-29: "Cálculo" cubre "CÁLCULO I" y "CÁLCULO II", en orden', () => {
-    expect(buscarPorNombre('Cálculo', destino).partes.map((p) => p.codigo)).toEqual(['C1', 'C2']);
+  it('una materia aprobada no cubre dos nuevas: "Cálculo" no se asocia a "CÁLCULO I" ni a "CÁLCULO II"', () => {
+    expect(buscarPorNombre('Cálculo', destino)).toEqual({ base: undefined });
   });
 
   it('sin relación por nombre no devuelve nada', () => {
-    expect(buscarPorNombre('Química', destino)).toEqual({ partes: [], base: undefined });
+    expect(buscarPorNombre('Química', destino)).toEqual({ base: undefined });
   });
 });

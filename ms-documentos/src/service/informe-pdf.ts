@@ -10,15 +10,13 @@ export interface MateriaInforme {
   notaOriginal?: number | null; // T50 · solo EXTERNO: nota como la puso su universidad
   escala?: number | null; // 10, 20 o 100
   juntoCon?: string | null; // HU-26 · códigos de las materias evaluadas junto con esta
-  adicionales?: string | null; // HU-29 · otras materias nuevas que también cubre (JSON)
 }
 
-// HU-26 y HU-29 · Una fila del informe por cada materia nueva evaluada
+// HU-26 · Una fila del informe por cada materia nueva evaluada (varias aprobadas juntas van en una fila)
 export interface FilaInforme {
   materias: MateriaInforme[];
   resultado: string | null;
   informe: string | null;
-  tambien: boolean;
 }
 
 export function armarFilas(materias: MateriaInforme[]): FilaInforme[] {
@@ -29,17 +27,7 @@ export function armarFilas(materias: MateriaInforme[]): FilaInforme[] {
     const otras = (m.juntoCon ?? '').split(',').filter(Boolean);
     const grupo = [m, ...materias.filter((x) => x !== m && otras.includes(x.codigo))];
     grupo.forEach((x) => usadas.add(x.codigo));
-    filas.push({ materias: grupo, resultado: m.resultado, informe: m.informe, tambien: false });
-    let extra: { resultado?: string; informe?: unknown }[] = [];
-    try {
-      const lista = m.adicionales ? (JSON.parse(m.adicionales) as unknown) : [];
-      extra = Array.isArray(lista) ? (lista as typeof extra) : [];
-    } catch {
-      extra = [];
-    }
-    for (const a of extra) {
-      filas.push({ materias: [m], resultado: a.resultado ?? null, informe: a.informe ? JSON.stringify(a.informe) : null, tambien: true });
-    }
+    filas.push({ materias: grupo, resultado: m.resultado, informe: m.informe });
   }
   return filas;
 }
@@ -281,8 +269,8 @@ export function crearPdf(
       const inicio = doc.y;
       const color = colorDe(f.resultado);
       const resultado = f.resultado ?? 'En revisión';
-      // HU-26: "Física I + Física II" · HU-29: "También cubre · Física"
-      const nombre = `${f.tambien ? 'También cubre · ' : ''}${f.materias.map((m) => m.nombre).join(' + ')}`;
+      // HU-26: "Física I + Física II"
+      const nombre = f.materias.map((m) => m.nombre).join(' + ');
       const notas = f.materias.map((m) => (f.materias.length > 1 ? `${m.nombre}: ${textoNota(m)}` : textoNota(m))).join('   ·   ');
 
       // Etiqueta de color con el resultado (a la derecha)

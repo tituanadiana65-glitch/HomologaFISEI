@@ -162,7 +162,7 @@ describe('SolicitudesAgenteService', () => {
   });
 
   // ---------- HU-26 y HU-29 · materias por partes ----------
-  describe('materias juntas (HU-26) y una materia que cubre varias (HU-29)', () => {
+  describe('materias juntas (HU-26)', () => {
     const informe = (resultado: string) => ({ resultado, causas: [], temasFaltan: [] });
     const armar = (destino: object[], homologacion: object, agente: object = {}, clientesExtra: object = {}) => {
       process.env.IA_PAUSA_MS = '0';
@@ -264,49 +264,23 @@ describe('SolicitudesAgenteService', () => {
       });
     });
 
-    it('UTA: FISICA cubre FISICA I y FISICA II; las dos se muestran aunque una no se homologue', async () => {
-      const homologacion = {
-        homologar: jest.fn((p: { codigoNueva: string }) => Promise.resolve(informe(p.codigoNueva === 'SW-F1' ? 'Homologable' : 'No homologable'))),
-      };
-      const { s, resultados } = armar([{ codigo: 'SW-F2', nombre: 'FISICA II' }, { codigo: 'SW-F1', nombre: 'FISICA I' }], homologacion, {}, {
+    it('una materia aprobada no cubre dos nuevas: "FISICA" de la UTA no se asocia a "FISICA I" ni a "FISICA II"', async () => {
+      const homologacion = { homologar: jest.fn() };
+      const { s, resultados } = armar([{ codigo: 'SW-F1', nombre: 'FISICA I' }, { codigo: 'SW-F2', nombre: 'FISICA II' }], homologacion, {}, {
         materia: jest.fn().mockResolvedValue({ codigo: 'TI-F', nombre: 'FISICA' }),
       });
       await s.homologarSolicitud({ solicitudId: 1, carreraDestino: 'SW', materias: [{ codigo: 'TI-F', nota: 8, anio: 2025 }] });
-      expect(resultados()).toEqual([
-        expect.objectContaining({
-          codigoAprobada: 'TI-F', codigoNueva: 'SW-F1', resultado: 'Homologable',
-          adicionales: [{ codigoNueva: 'SW-F2', resultado: 'No homologable', informe: informe('No homologable') }],
-        }),
-      ]);
+      expect(homologacion.homologar).not.toHaveBeenCalled();
+      expect(resultados()).toEqual([{ codigoAprobada: 'TI-F', codigoNueva: null, resultado: 'Sin materia equivalente', informe: null }]);
     });
 
-    it('otra universidad: un sílabo de Cálculo cubre por temas Cálculo Diferencial y Cálculo Integral', async () => {
-      const agente = { elegirParecida: jest.fn().mockResolvedValue({ codigo: 'SW-CD', parecido: 90, otras: [{ codigo: 'SW-CI', parecido: 85 }, { codigo: 'SW-AL', parecido: 72 }] }) };
-      const homologacion = {
-        homologarExterna: jest.fn((p: { codigoNueva: string }) => Promise.resolve(informe(p.codigoNueva === 'SW-AL' ? 'No homologable' : 'Homologable'))),
-      };
-      const destino = [{ codigo: 'SW-CD', nombre: 'CÁLCULO DIFERENCIAL' }, { codigo: 'SW-CI', nombre: 'CÁLCULO INTEGRAL' }, { codigo: 'SW-AL', nombre: 'ÁLGEBRA LINEAL' }];
-      const { s, resultados } = armar(destino, homologacion, agente);
-      await s.homologarSolicitud({ solicitudId: 1, tipo: 'EXTERNO', carreraDestino: 'SW', materias: [ext('EXT-CALCULO', 'Cálculo', 1, { creditos: 8, horas: 320 })] });
-      expect(homologacion.homologarExterna).toHaveBeenCalledTimes(3);
-      expect(homologacion.homologarExterna).toHaveBeenCalledWith(expect.objectContaining({ codigoNueva: 'SW-CI', parecido: 85, creditos: 8 }));
-      // la que eligió la IA por temas y no se homologa no se muestra
-      expect(resultados()).toEqual([
-        expect.objectContaining({
-          codigoNueva: 'SW-CD', resultado: 'Homologable',
-          adicionales: [{ codigoNueva: 'SW-CI', resultado: 'Homologable', informe: informe('Homologable') }],
-        }),
-      ]);
-    });
-
-    it('si una de las otras queda Pendiente, toda la materia queda Pendiente para reintentarla completa', async () => {
-      const agente = { elegirParecida: jest.fn().mockResolvedValue({ codigo: 'SW-CD', parecido: 90, otras: [{ codigo: 'SW-CI', parecido: 85 }] }) };
-      const homologacion = {
-        homologarExterna: jest.fn((p: { codigoNueva: string }) => Promise.resolve(informe(p.codigoNueva === 'SW-CI' ? 'Pendiente' : 'Homologable'))),
-      };
-      const { s, resultados } = armar([{ codigo: 'SW-CD', nombre: 'CD' }, { codigo: 'SW-CI', nombre: 'CI' }], homologacion, agente);
-      await s.homologarSolicitud({ solicitudId: 1, tipo: 'EXTERNO', carreraDestino: 'SW', materias: [ext('EXT-CALCULO', 'Cálculo', 1)] });
-      expect(resultados()).toEqual([{ codigoAprobada: 'EXT-CALCULO', codigoNueva: null, resultado: 'Pendiente', informe: null }]);
+    it('tres o más materias que apuntan a la misma nueva forman un solo grupo', async () => {
+      const homologacion = { homologarJuntas: jest.fn().mockResolvedValue(informe('Homologable')) };
+      const { s, resultados } = armar([{ codigo: 'SW-F', nombre: 'FÍSICA' }], homologacion);
+      await s.homologarSolicitud({ solicitudId: 1, tipo: 'EXTERNO', carreraDestino: 'SW', materias: [ext('A', 'Física I', 1), ext('B', 'Física II', 2), ext('C', 'Física III', 3)] });
+      expect(homologacion.homologarJuntas).toHaveBeenCalledTimes(1);
+      expect((homologacion.homologarJuntas.mock.calls[0][0] as { partes: unknown[] }).partes).toHaveLength(3);
+      expect(resultados()[2]).toEqual(expect.objectContaining({ codigoAprobada: 'C', juntoCon: ['A', 'B'] }));
     });
 
     it('una materia de igual nombre no se junta con otra que es solo parte', async () => {

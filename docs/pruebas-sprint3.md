@@ -30,6 +30,8 @@ Datos: cuenta de prueba `ext1.t47@uta.edu.ec`, solicitud **3002**, de la *Univer
 
 ## HU-26 y HU-29 · materias divididas en partes
 
+> **Actualización 22/11/2026:** en la revisión el docente indicó que una materia aprobada **no** puede homologar dos materias nuevas («caso contrario no»). Se quitó HU-29; CP-38 queda como registro de lo probado y ya no aplica. HU-26 (Física I + Física II → Física) se mantiene.
+
 Prueba en la PC de Diana el 19/11/2026, rama `feature/HU-26-HU-29`, solicitud **3003** de otra universidad (Universidad del Pacífico Andino, institución ficticia → Software). Se usaron sílabos de prueba: Física I y Física II (cada una con la mitad de los temas de FÍSICA de Software) y un Cálculo anual (temas de Cálculo Diferencial y de Cálculo Integral).
 
 | # | HU | Caso | Pasos | Esperado | Obtenido | OK |

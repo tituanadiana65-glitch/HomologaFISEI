@@ -26,19 +26,12 @@ interface SolicitudEnviada {
   materias: MateriaEnviada[];
 }
 
-interface Adicional {
-  codigoNueva: string;
-  resultado: Resultado;
-  informe: Informe | null;
-}
-
 interface ResultadoMateria {
   codigoAprobada: string;
   codigoNueva: string | null;
   resultado: Resultado;
   informe: Informe | null;
   juntoCon?: string[]; // HU-26 · otras materias aprobadas evaluadas junto con esta
-  adicionales?: Adicional[]; // HU-29 · otras materias nuevas que también cubre esta
 }
 
 // A qué materia (o materias) de la carrera de destino apunta cada materia aprobada, antes de evaluar
@@ -47,7 +40,6 @@ interface Asignacion {
   nombre: string;
   principal: { codigo: string; parecido: number } | null;
   exacta: boolean; // mismo nombre: nunca se junta con otra
-  otras: { codigo: string; parecido: number; porNombre: boolean }[]; // HU-29
   silabo?: string; // otra universidad
   aprobada?: MateriaCatalogo; // UTA
   aviso?: string; // HU-26 · es una parte de la materia nueva
@@ -126,7 +118,7 @@ export class SolicitudesAgenteService implements OnModuleInit {
           for (const r of await this.evaluarJuntas(grupo, externa)) porCodigo.set(r.codigoAprobada, r);
           continue;
         }
-        porCodigo.set(a.m.codigo, await this.evaluarSola(a, externa, pausar));
+        porCodigo.set(a.m.codigo, await this.evaluarSola(a, externa));
       } catch (e) {
         this.log.warn(`Solicitud ${d.solicitudId}, materia ${a.m.codigo}: ${(e as Error).message}`);
         for (const x of grupo.length >= 2 ? grupo : [a]) porCodigo.set(x.m.codigo, { codigoAprobada: x.m.codigo, codigoNueva: null, resultado: 'Pendiente', informe: null });
@@ -138,18 +130,14 @@ export class SolicitudesAgenteService implements OnModuleInit {
     this.log.log(`Solicitud ${d.solicitudId}: ${resultados.length} materias homologadas`);
   }
 
-  // UTA · por nombre: igual (una con una), "Física I" → "Física" (HU-26) o "Física" → "Física I" y "Física II" (HU-29)
+  // UTA · por nombre: igual (una con una) o "Física I" → "Física" (HU-26, se junta con las otras partes)
   private async asignarUta(m: MateriaEnviada, destino: { codigo: string; nombre: string }[], enviadas: MateriaEnviada[]): Promise<Asignacion | null> {
     const aprobada = await this.clientes.materia(m.codigo);
     const n = buscarPorNombre(aprobada.nombre, destino);
     const base = { m, nombre: aprobada.nombre, aprobada };
-    if (n.exacta) return { ...base, principal: { codigo: n.exacta.codigo, parecido: 100 }, exacta: true, otras: [] };
-    if (n.partes.length) {
-      const [primera, ...resto] = n.partes;
-      return { ...base, principal: { codigo: primera.codigo, parecido: 100 }, exacta: true, otras: resto.map((x) => ({ codigo: x.codigo, parecido: 100, porNombre: true })) };
-    }
+    if (n.exacta) return { ...base, principal: { codigo: n.exacta.codigo, parecido: 100 }, exacta: true };
     if (!n.base) return null;
-    return { ...base, principal: { codigo: n.base.codigo, parecido: 100 }, exacta: false, otras: [], aviso: await this.avisoUta(aprobada, n.base.nombre, enviadas) };
+    return { ...base, principal: { codigo: n.base.codigo, parecido: 100 }, exacta: false, aviso: await this.avisoUta(aprobada, n.base.nombre, enviadas) };
   }
 
   // HU-26 · "Para cubrir FÍSICA también cuenta FÍSICA II, que no está en tu solicitud": las partes de la carrera de origen que faltan
@@ -168,7 +156,7 @@ export class SolicitudesAgenteService implements OnModuleInit {
     }
   }
 
-  // Otra universidad · primero por nombre (igual, por partes o por su nombre base) y, si no hay, por los temas del sílabo (T43)
+  // Otra universidad · primero por nombre (igual o por su nombre base) y, si no hay, por los temas del sílabo (T43)
   private async asignarExterna(
     m: MateriaEnviada,
     destino: { codigo: string; nombre: string }[],
@@ -184,42 +172,22 @@ export class SolicitudesAgenteService implements OnModuleInit {
     const nombre = m.nombre ?? m.codigo;
     const base = { m, nombre, silabo };
     const n = buscarPorNombre(nombre, destino);
-    if (n.exacta) return { ...base, principal: { codigo: n.exacta.codigo, parecido: 100 }, exacta: true, otras: [] };
-    if (n.partes.length) {
-      const [primera, ...resto] = n.partes;
-      return { ...base, principal: { codigo: primera.codigo, parecido: 100 }, exacta: true, otras: resto.map((x) => ({ codigo: x.codigo, parecido: 100, porNombre: true })) };
-    }
+    if (n.exacta) return { ...base, principal: { codigo: n.exacta.codigo, parecido: 100 }, exacta: true };
     if (n.base) {
       const aviso = `Esta materia es una parte de ${n.base.nombre}. Si aprobaste las otras partes (por ejemplo, la II), regístralas para evaluarlas juntas.`;
-      return { ...base, principal: { codigo: n.base.codigo, parecido: 100 }, exacta: false, otras: [], aviso };
+      return { ...base, principal: { codigo: n.base.codigo, parecido: 100 }, exacta: false, aviso };
     }
     await pausar();
     const parecida = await this.agente.elegirParecida(silabo, await candidatas());
     if (!parecida) return null;
-    return {
-      ...base,
-      principal: { codigo: parecida.codigo, parecido: parecida.parecido },
-      exacta: false,
-      otras: (parecida.otras ?? []).map((o) => ({ ...o, porNombre: false })),
-    };
+    return { ...base, principal: { codigo: parecida.codigo, parecido: parecida.parecido }, exacta: false };
   }
 
-  // Una materia con su materia nueva y, si cubre más (HU-29), también con las demás
-  private async evaluarSola(a: Asignacion, externa: boolean, pausar: () => Promise<void>): Promise<ResultadoMateria> {
+  // Una materia con su materia nueva (una con una). Una materia aprobada no cubre dos nuevas: el ingeniero lo descartó.
+  private async evaluarSola(a: Asignacion, externa: boolean): Promise<ResultadoMateria> {
     const informe = await this.evaluarUna(a, a.principal!.codigo, a.principal!.parecido, externa);
     if (a.aviso && informe.resultado !== 'Homologable') informe.aviso = a.aviso;
-    const r: ResultadoMateria = { codigoAprobada: a.m.codigo, codigoNueva: a.principal!.codigo, resultado: informe.resultado, informe };
-    const adicionales: Adicional[] = [];
-    for (const o of a.otras) {
-      await pausar();
-      const inf = await this.evaluarUna(a, o.codigo, o.parecido, externa);
-      // Las que salen por el nombre se muestran siempre; las que eligió la IA por temas, solo si se homologan
-      if (o.porNombre || inf.resultado === 'Homologable' || inf.resultado === 'Pendiente') adicionales.push({ codigoNueva: o.codigo, resultado: inf.resultado, informe: inf });
-    }
-    if (!adicionales.length) return r;
-    // Si alguna quedó Pendiente, toda la materia queda Pendiente para que "Reintentar" la vuelva a evaluar completa
-    if (adicionales.some((x) => x.resultado === 'Pendiente')) return { codigoAprobada: a.m.codigo, codigoNueva: null, resultado: 'Pendiente', informe: null };
-    return { ...r, adicionales };
+    return { codigoAprobada: a.m.codigo, codigoNueva: a.principal!.codigo, resultado: informe.resultado, informe };
   }
 
   private evaluarUna(a: Asignacion, codigoNueva: string, parecido: number, externa: boolean): Promise<Informe> {
