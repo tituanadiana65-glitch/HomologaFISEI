@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import Pasos from '../componentes/Pasos';
 import { api } from '../api';
 import { armarFilas } from '../filas';
 import { notaConvertida } from '../notas';
@@ -82,7 +83,7 @@ export default function RevisionDetalle() {
       await api(`/solicitudes/revision/${id}/terminar`, { method: 'POST', body: JSON.stringify({ comentario }) });
       setComentario('');
       setError('');
-      setMensaje('Terminaste la homologación. El estudiante ya ve el resultado final.');
+      setMensaje('Enviaste el resultado al coordinador.');
       cargar();
     } catch (e) {
       setError((e as Error).message);
@@ -111,16 +112,17 @@ export default function RevisionDetalle() {
     <main>
       <p>
         <Link className="volver" to="/revision">
-          ← Volver a la lista
+          ← Volver a mis homologaciones
         </Link>
       </p>
-      <h1>Informe N.º {s.id}</h1>
+      <h1>Homologación N.º {s.id}</h1>
       <p className="ayuda">
         <b>{s.estudiante ?? 'Estudiante'}</b> ·{' '}
         {s.tipo === 'EXTERNO' ? `${s.universidadOrigen ?? ''} · ${s.carreraOrigen}` : nombre(s.carreraOrigen)} → <b>{nombre(s.carreraDestino)}</b> · {s.periodo}
         {s.coordinador && <> · Asignada por {s.coordinador}</>}
       </p>
 
+      <Pasos actual={revisada ? 5 : 3} />
       {mensaje && <p className="aviso listo">✓ {mensaje}</p>}
       {error && <p role="alert">{error}</p>}
 
@@ -241,24 +243,24 @@ export default function RevisionDetalle() {
       </div>
 
       <section className="aprobar">
-        <h2>Terminar la homologación</h2>
+        <h2>Enviar el resultado al coordinador</h2>
         {revisada ? (
           <p className="aviso listo">
-            ✓ Terminaste esta homologación el {s.terminada ? new Date(s.terminada).toLocaleString('es-EC') : ''}
+            ✓ Enviaste el resultado al coordinador el {s.terminada ? new Date(s.terminada).toLocaleString('es-EC') : ''}
             {s.comentarioFinal && <> · «{s.comentarioFinal}»</>}
           </p>
         ) : (
           <>
             <p className="ayuda">
-              Cuando estés de acuerdo con todos los resultados, termina la homologación. Después ya no se pueden cambiar y el estudiante ve el resultado
-              final.
+              Cuando estés de acuerdo con todos los resultados, envía al coordinador lo homologable y lo no homologable. Después ya no se pueden
+              cambiar.
             </p>
             <label>
-              Comentario para el informe (opcional)
+              Comentario para el coordinador (opcional)
               <textarea rows={2} value={comentario} onChange={(e) => setComentario(e.target.value)} />
             </label>
             <div className="acciones">
-              <button onClick={() => void terminar()}>Terminar homologación</button>
+              <button onClick={() => void terminar()}>Enviar al coordinador</button>
             </div>
           </>
         )}

@@ -1398,3 +1398,31 @@ a.volver {
 .asignar button {
   align-self: flex-start;
 }
+.titulo-con-accion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.titulo-con-accion a.boton {
+  height: 40px;
+  font-size: 14px;
+  padding: 0 16px;
+}
+.volver-arriba {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.leer-record > .doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .leer-record > .doble {
+    grid-template-columns: 1fr;
+  }
+}

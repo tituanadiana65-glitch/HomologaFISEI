@@ -2,8 +2,9 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../repository/prisma.service';
 import { revisarRequisitos } from './validaciones';
 
-// Coordinador y docente (definido por el equipo el 23/11/2026): el agente hace el análisis, el coordinador
-// elige al docente y el docente hace la homologación (puede cambiar resultados con su comentario y la termina).
+// Coordinador y docente (definido por el equipo el 23/11/2026). No hay estudiantes en el sistema: el coordinador
+// registra la solicitud que el estudiante entregó y elige al docente; el docente sube el expediente, lo envía al
+// agente, revisa el análisis (puede cambiar resultados con su comentario) y envía el resultado al coordinador.
 export const RESULTADOS = ['Homologable', 'No homologable', 'Sin materia equivalente'];
 const CON_RESULTADO = ['RESULTADO_LISTO', 'REVISADA'];
 
@@ -22,7 +23,6 @@ export class RevisionService {
   // ---------- Coordinador ----------
   listarCoordinacion() {
     return this.prisma.solicitud.findMany({
-      where: { estado: { in: CON_RESULTADO } },
       include: { _count: { select: { materias: true } } },
       orderBy: { id: 'desc' },
     });
@@ -31,14 +31,13 @@ export class RevisionService {
   async verCoordinacion(id: number) {
     const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true } });
     if (!s) throw new NotFoundException(`No existe la solicitud ${id}`);
-    if (!CON_RESULTADO.includes(s.estado)) throw new BadRequestException('Esta solicitud todavía no tiene el resultado del agente');
     return s;
   }
 
-  // El coordinador elige (o cambia) el docente mientras la homologación no esté terminada
+  // El coordinador elige (o cambia) el docente mientras el docente no haya enviado el resultado
   async asignar(coordinador: Persona, id: number, d: { docenteId?: number; docente?: string }) {
     const s = await this.verCoordinacion(id);
-    if (s.estado === 'REVISADA') throw new BadRequestException('El docente ya terminó esta homologación');
+    if (s.estado === 'REVISADA') throw new BadRequestException('El docente ya envió el resultado de esta homologación');
     const docenteId = Number(d?.docenteId);
     if (!Number.isInteger(docenteId) || docenteId <= 0 || !d?.docente?.trim()) throw new BadRequestException('Elige el docente');
     await this.prisma.solicitud.update({
@@ -51,23 +50,24 @@ export class RevisionService {
   // ---------- Docente ----------
   listarDelDocente(docente: Persona) {
     return this.prisma.solicitud.findMany({
-      where: { docenteId: docente.id, estado: { in: CON_RESULTADO } },
+      where: { docenteId: docente.id },
       include: { _count: { select: { materias: true } } },
       orderBy: { asignada: 'desc' },
     });
   }
 
-  // Solo el docente asignado ve y trabaja la solicitud
+  // Revisión del análisis: solo el docente asignado y cuando el agente ya respondió
   async verDelDocente(docente: Persona, id: number) {
     const s = await this.verCoordinacion(id);
     if (s.docenteId !== docente.id) throw new ForbiddenException('Esta solicitud no está asignada a ti');
+    if (!CON_RESULTADO.includes(s.estado)) throw new BadRequestException('Esta solicitud todavía no tiene el resultado del agente');
     return s;
   }
 
   // El docente cambia el resultado de una materia (y de las que se evaluaron junto con ella), con su comentario
   async cambiar(docente: Persona, id: number, codigo: string, d: { resultado?: string; comentario?: string }) {
     const s = await this.verDelDocente(docente, id);
-    if (s.estado === 'REVISADA') throw new BadRequestException('Ya terminaste esta homologación');
+    if (s.estado === 'REVISADA') throw new BadRequestException('Ya enviaste el resultado al coordinador');
     if (!d?.resultado || !RESULTADOS.includes(d.resultado)) throw new BadRequestException(`El resultado debe ser: ${RESULTADOS.join(', ')}`);
     const comentario = (d.comentario ?? '').trim();
     if (comentario.length < 5) throw new BadRequestException('Explica en un comentario por qué cambias el resultado');
@@ -85,11 +85,11 @@ export class RevisionService {
     return { codigo, resultado: d.resultado };
   }
 
-  // El docente termina la homologación: la solicitud queda REVISADA
+  // El docente envía al coordinador lo homologable y lo no homologable: la solicitud queda REVISADA
   async terminar(docente: Persona, id: number, d: { comentario?: string }) {
     const s = await this.verDelDocente(docente, id);
-    if (s.estado === 'REVISADA') throw new BadRequestException('Ya terminaste esta homologación');
-    if (s.materias.some((m) => resultadoFinal(m) === 'Pendiente')) throw new BadRequestException('Hay materias pendientes: decide su resultado antes de terminar');
+    if (s.estado === 'REVISADA') throw new BadRequestException('Ya enviaste el resultado al coordinador');
+    if (s.materias.some((m) => resultadoFinal(m) === 'Pendiente')) throw new BadRequestException('Hay materias pendientes: decide su resultado antes de enviarlo');
     await this.prisma.solicitud.update({
       where: { id },
       data: { estado: 'REVISADA', terminada: new Date(), comentarioFinal: d?.comentario?.trim() || null },

@@ -1,14 +1,31 @@
 import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
 import { personaDe, RevisionService } from '../service/revision.service';
+import { SolicitudesService } from '../service/solicitudes.service';
+import type { NuevaSolicitud } from '../service/validaciones';
 import { nombreDe } from './solicitudes.controller';
 
 // Estos controladores van antes que SolicitudesController en el módulo para que
 // /solicitudes/coordinacion y /solicitudes/revision no se lean como un id.
 
-// Coordinador: ve las solicitudes con resultado y asigna el docente
+// Coordinador: registra las solicitudes que entregan los estudiantes, asigna el docente y recibe el resultado
 @Controller('solicitudes/coordinacion')
 export class CoordinacionController {
-  constructor(private readonly servicio: RevisionService) {}
+  constructor(
+    private readonly servicio: RevisionService,
+    private readonly solicitudes: SolicitudesService,
+  ) {}
+
+  // POST /solicitudes/coordinacion  { estudiante, tipo, carreraOrigen, carreraDestino, periodo, universidadOrigen?, periodosAprobados?, documentosLegalizados?, docenteId?, docente? }
+  @Post()
+  crear(
+    @Headers('x-usuario-id') u: string,
+    @Headers('x-usuario-rol') rol: string,
+    @Headers('x-usuario-nombre') nombre: string,
+    @Headers('x-usuario-correo') correo: string,
+    @Body() d: NuevaSolicitud & { estudiante?: string; docenteId?: number; docente?: string },
+  ) {
+    return this.solicitudes.crearPorCoordinador(personaDe('COORDINADOR', u, rol, nombreDe(nombre), correo), d);
+  }
 
   @Get()
   listar(@Headers('x-usuario-id') u: string, @Headers('x-usuario-rol') rol: string) {

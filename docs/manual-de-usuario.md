@@ -1,137 +1,86 @@
 # Manual de usuario · HomologaFISEI
 
-HomologaFISEI te dice, antes de empezar tu trámite, qué materias aprobadas se te pueden homologar en la nueva carrera, por qué, y te entrega un informe en PDF.
+HomologaFISEI ayuda a la FISEI a analizar las solicitudes de homologación. El estudiante entrega su solicitud y sus documentos en la facultad; en el sistema trabajan el **coordinador** y los **docentes**:
+
+1. El **coordinador** registra la solicitud del estudiante y elige el **docente** que hará la homologación.
+2. El **docente** sube el expediente (récord, malla, sílabos), registra las materias aprobadas y las envía al **agente**.
+3. El **agente** (inteligencia artificial + reglas) analiza cada materia.
+4. El **docente** revisa el análisis, lo corrige si hace falta y **envía al coordinador** lo homologable y lo no homologable.
+5. El **coordinador** recibe el resultado y descarga el informe en PDF.
 
 > **Importante:** el resultado es un **análisis previo**. La decisión oficial la toma el **Consejo Directivo de la Facultad**.
 
 **Contenido**
 
 1. [Entrar al sistema](#1-entrar-al-sistema)
-2. [Estudiante de la UTA (cambio entre carreras de la FISEI)](#2-estudiante-de-la-uta)
-3. [Estudiante que viene de otra universidad](#3-estudiante-que-viene-de-otra-universidad)
+2. [Coordinador](#2-coordinador)
+3. [Docente](#3-docente)
 4. [Cómo leer el resultado](#4-cómo-leer-el-resultado)
 5. [Administrador](#5-administrador)
-6. [Coordinador y docente](#6-coordinador-y-docente)
-7. [Preguntas frecuentes](#7-preguntas-frecuentes)
+6. [Preguntas frecuentes](#6-preguntas-frecuentes)
 
 ---
 
 ## 1. Entrar al sistema
 
-Abre la dirección de HomologaFISEI en tu navegador (en la computadora del equipo: http://localhost:5173).
-
-### Crear tu cuenta (solo la primera vez)
-
-1. Pulsa la pestaña **Crear cuenta**.
-2. Escribe tu **nombre completo**, tu **correo institucional** (debe terminar en `@uta.edu.ec`) y una **contraseña** de al menos 8 caracteres.
-3. Pulsa **Crear cuenta**. Entras directamente al paso 1.
-
-### Iniciar sesión
-
-1. En la pestaña **Iniciar sesión**, escribe tu correo y tu contraseña.
-2. Pulsa **Entrar**.
-
-Tu sesión dura 8 horas. Para salir, pulsa **Salir** arriba a la derecha.
+Abre la dirección de HomologaFISEI en tu navegador (en la computadora del equipo: http://localhost:5173). Escribe tu correo institucional y la contraseña que te entregó el administrador y pulsa **Entrar**. El sistema te lleva a tu pantalla según tu rol. Tu sesión dura 8 horas; para salir, pulsa **Salir** arriba a la derecha.
 
 ---
 
-## 2. Estudiante de la UTA
+## 2. Coordinador
 
-Para quien se cambia de una carrera de la FISEI a otra (por ejemplo, de Tecnologías de la Información a Software). Son tres pasos: **Solicitud → Materias → Resultado**.
+### Registrar una solicitud
 
-### Paso 1 · Crear la solicitud
+1. En **Coordinación de homologaciones**, pulsa **+ Registrar solicitud**.
+2. Elige si el estudiante es **de la UTA** (se cambia entre carreras de la FISEI) o **viene de otra universidad**.
+3. Escribe el **nombre del estudiante**, la carrera (y universidad) de origen, la **carrera de destino** y el **periodo**. Si viene de otra universidad, indica también sus **periodos aprobados** y si sus documentos están **legalizados**.
+4. Elige el **docente que hará la homologación** (o déjalo para después) y pulsa **Registrar solicitud**.
 
-1. Elige **Soy estudiante de la UTA**.
-2. En **Carrera de origen**, elige la carrera de la que vienes.
-3. En **Carrera de destino**, elige la carrera a la que te cambias. Debe ser distinta a la de origen.
-4. Revisa el **Periodo del trámite**.
-5. Pulsa **Crear solicitud**.
+### Asignar o cambiar el docente
 
-Solo puedes tener una solicitud abierta a la vez.
+Las solicitudes están en tres grupos: **Sin docente**, **En homologación** y **Recibidas**. En cada solicitud sin docente, elige el docente y pulsa **Asignar**. Mientras el docente no te envíe el resultado, puedes cambiarlo con **Cambiar**. En la columna **Docente** ves en qué va: el docente sube el expediente, el agente está analizando o el docente revisa el análisis.
 
-### Paso 2 · Registrar tus materias aprobadas
+### Recibir el resultado
 
-**Lo más rápido: llénalas desde tu récord.** En **Llenar desde tu récord académico**, sube tu récord en PDF y pulsa **Leer mi récord**. La inteligencia artificial arma la lista de materias que cursaste, con las aprobadas y las reprobadas (las reprobadas no se pueden homologar). Marca las que quieras y pulsa **Agregar**. Si alguna no aparece, regístrala a mano como se explica abajo.
-
-
-Registra una por una las materias que aprobaste:
-
-1. Elige el **Nivel** (PRIMERO, SEGUNDO…) y luego la **Materia**: la lista solo muestra materias de tu carrera de origen.
-2. Completa **Paralelo**, **Docente**, **Periodo**, **Año** de aprobación, **Nota** (de 0 a 10) y **Matrícula** (1, 2 o 3).
-3. Pulsa **Agregar materia**. Aparece en la lista **Registradas**.
-4. Si te equivocaste, pulsa **Quitar** junto a la materia.
-5. Cuando estén todas, pulsa **Enviar a homologar**.
-
-Después de enviar ya no puedes cambiar las materias.
-
-### Paso 3 · Ver el resultado
-
-El agente revisa cada materia. Mientras tanto verás un recuadro con **cuánto tiempo lleva revisando**, qué está haciendo y cuánto suele tardar. La página se actualiza sola; también puedes cerrarla y volver después. Cuando termine, mira la sección [4. Cómo leer el resultado](#4-cómo-leer-el-resultado).
+Cuando el docente envía el resultado, la solicitud pasa a **Recibidas**. Pulsa **Ver** para ver cada materia con su resultado y **PDF** para descargar el informe.
 
 ---
 
-## 3. Estudiante que viene de otra universidad
+## 3. Docente
 
-Para quien aprobó materias en otra universidad y quiere entrar a una carrera de la FISEI.
+En **Mis homologaciones** están solo las solicitudes que te asignó el coordinador, con su etapa. Pulsa **Abrir**.
 
-**Ten listos en PDF:**
-- tu **malla curricular**;
-- tu **récord académico** (notas);
-- el **sílabo** de cada materia que quieras homologar.
+### Paso 1 · Expediente y materias
 
-Los PDF deben tener texto que se pueda copiar. Un documento escaneado como imagen no se puede leer.
+1. En **Expediente del estudiante**, sube en PDF (con texto, no escaneado) el **récord académico**. Si viene de otra universidad, sube también la **malla curricular** y revisa los **periodos aprobados** y si los documentos están **legalizados**.
+2. **Lo más rápido: llena las materias desde el récord.** Pulsa **Leer el récord**: la inteligencia artificial arma la lista de materias que cursó, con las **aprobadas** y las **reprobadas** (las reprobadas no se pueden homologar). Marca las que quieras, revisa créditos y horas y, si viene de otra universidad, sube el **sílabo** de cada una. Pulsa **Agregar**.
+3. También puedes agregarlas **a mano**:
+   - **Estudiante de la UTA:** elige el **Nivel** y la **Materia**, y completa paralelo, docente, periodo, año, nota (de 0 a 10) y matrícula.
+   - **De otra universidad:** escribe el nombre tal como aparece en el récord, créditos, horas, la nota y sobre cuánto califica su universidad (10, 20 o 100: el sistema la convierte a la escala de la UTA), el año y sube el **sílabo** (obligatorio).
+4. Cuando estén todas, pulsa **Enviar al agente**. Después ya no se pueden cambiar las materias.
 
-### Paso 1 · Crear la solicitud
+### Paso 2 · Análisis del agente
 
-1. Elige **Vengo de otra universidad**.
-2. Escribe tu **Universidad de origen** y elige tu **Carrera de origen** de la lista. Si no está, elige **Otra carrera (escribirla)** y escribe su nombre.
-3. Elige la **Carrera de destino** en la UTA.
-4. Revisa el **Periodo del trámite** y escribe cuántos **Periodos aprobados** tienes.
-5. Sube tu **Malla curricular (PDF)** y tu **Récord académico (PDF)**.
-6. Si tus documentos están legalizados, marca **Mis documentos están legalizados**.
-7. Pulsa **Crear solicitud**.
+Verás cuánto tiempo lleva el agente revisando y qué está haciendo. Suele tardar unos minutos; la página se actualiza sola. Si alguna materia queda **Pendiente**, pulsa **Reintentar las pendientes** (una sola vez).
 
-### Paso 2 · Registrar tus materias
+### Paso 3 · Revisión y envío al coordinador
 
-**Lo más rápido: llénalas desde tu récord.** Pulsa **Leer mi récord** (es el que subiste en el paso 1). Verás tus materias con las aprobadas y las reprobadas. Marca las aprobadas que quieras homologar, revisa créditos y horas, sube el **sílabo** de cada una y pulsa **Agregar**. También puedes registrarlas una por una:
-
-
-Por cada materia:
-
-1. Escribe el **Nombre de la materia** tal como aparece en tu récord (por ejemplo, «Cálculo II»).
-2. Escribe sus **Créditos** y sus **Horas**.
-3. Escribe tu **Nota** y elige sobre cuánto califica tu universidad (**10, 20 o 100 puntos**). El sistema la convierte a la escala de la UTA: por ejemplo, 16 sobre 20 equivale a 8,0 sobre 10.
-4. Escribe el **Año de aprobación**.
-5. Sube el **Sílabo de la materia (PDF)**. Es obligatorio: sin él no se pueden comparar los temas.
-6. Pulsa **Agregar materia**.
-
-En la lista verás la nota original y la convertida. Cuando estén todas, pulsa **Enviar a homologar**.
-
-### Paso 3 · Ver el resultado
-
-Como tus materias pueden llamarse distinto en la UTA, el agente busca **la materia más parecida por sus temas** y te muestra cuánto se parece (columna **Parecido**).
-
-Arriba verás también si cumples los **requisitos para cambiarte desde otra universidad (RN-08)**:
-- al menos **2 periodos aprobados**;
-- al menos **2 materias homologables**;
-- **documentos legalizados**.
-
-Si no cumples alguno, el aviso te dice cuál y por qué.
+1. Verás cada materia con el resultado del **agente** y el **resultado final**. Pulsa **Ver por qué** para ver las reglas.
+2. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** (obligatorio).
+3. Cuando todo esté bien, pulsa **Enviar al coordinador** (puedes dejar un comentario). Después ya no se puede cambiar.
 
 ---
 
 ## 4. Cómo leer el resultado
 
-Arriba verás una frase con **cuántas materias de la nueva carrera se te podrían reconocer** y un resumen con cuántas salieron en cada estado. Si tienes dudas, abre **«¿Qué significa cada resultado?»**. Para cada materia verás **Tu materia**, **Se homologa por** (la materia de la nueva carrera) y el **Resultado**:
+Arriba hay una frase con **cuántas materias de la nueva carrera se le podrían reconocer** y un resumen con cuántas salieron en cada estado. Para cada materia se ve la **materia aprobada**, por cuál **se homologa** y el **resultado**:
 
 | Resultado | Qué significa |
 |---|---|
-| **Homologable** | Cumple todas las reglas. Se te podría reconocer. |
+| **Homologable** | Cumple todas las reglas. Se le podría reconocer. |
 | **No homologable** | No cumple al menos una regla. El detalle dice cuál. |
 | **Pendiente** | La inteligencia artificial no alcanzó a revisarla. Pulsa **Reintentar las pendientes**. |
 | **Sin materia equivalente** | No hay una materia igual o parecida en la nueva carrera. |
-
-Pulsa **Ver por qué** para ver cada regla, si se cumple y por qué:
 
 | Regla | Qué revisa |
 |---|---|
@@ -139,25 +88,24 @@ Pulsa **Ver por qué** para ver cada regla, si se cumple y por qué:
 | RN-02 | Los créditos son al menos el 80 % de los de la materia nueva |
 | RN-03 | Las horas son al menos el 80 % de las de la materia nueva |
 | RN-04 | La nota es de al menos 7 sobre 10 |
-| RN-05 | No han pasado más de 10 años desde que la aprobaste |
-
-Si los temas no coinciden del todo, el detalle también muestra los **temas que te faltan**.
+| RN-05 | No han pasado más de 10 años desde que la aprobó |
+| RN-08 | De otra universidad: al menos 2 periodos aprobados, 2 materias homologables y documentos legalizados |
 
 ### Materias divididas en partes
 
-- **Varias materias tuyas para una nueva.** Si aprobaste, por ejemplo, «Física I» y «Física II» y la nueva carrera tiene una sola «Física», el agente las revisa **juntas**: suma créditos y horas, une los temas y promedia las notas según sus créditos. En la tabla aparecen en una sola fila con la etiqueta **Evaluadas juntas**. Registra las dos materias en tu solicitud.
-- **Una materia tuya no cubre dos nuevas.** Si la nueva carrera divide una materia en partes (Física I y Física II), tu materia solo puede homologar una de ellas o ninguna.
-- Si registraste solo una parte (por ejemplo, solo «Física I»), el detalle te avisa que registres la otra para evaluarlas juntas.
+- **Varias materias aprobadas para una nueva.** Si el estudiante aprobó, por ejemplo, «Física I» y «Física II» y la nueva carrera tiene una sola «Física», el agente las revisa **juntas** (suma créditos y horas, une los temas y promedia las notas según sus créditos). Aparecen en una sola fila con la etiqueta **Evaluadas juntas**. Registra todas las partes.
+- **Una materia aprobada no cubre dos nuevas.** Si la nueva carrera divide una materia (Física I y Física II), la materia aprobada solo puede homologar una de ellas o ninguna.
+- Si se registró solo una parte, el detalle avisa que falta la otra.
 
-### Descargar el informe en PDF
+### El informe en PDF
 
-Cuando aparezca **«Tu resultado está listo»**, pulsa **Descargar informe en PDF**. El informe trae tus datos, las carreras, la fecha y, por cada materia, el resultado con sus reglas. Puedes presentarlo en tu trámite.
+Trae los datos del estudiante, las carreras, la fecha, el resumen, RN-08 (otra universidad) y, por cada materia, el resultado con sus reglas, los cambios del docente con su comentario, qué docente hizo la homologación y quién lo asignó.
 
 ---
 
 ## 5. Administrador
 
-El administrador prepara el sistema: carreras, planes analíticos y reglas. Entra con la cuenta de administrador que le entrega el equipo. Al iniciar sesión va directo a la pantalla **Administración**. Los estudiantes no pueden entrar a esta pantalla.
+El administrador prepara el sistema: carreras, planes analíticos y reglas. Entra con la cuenta de administrador que le entrega el equipo. Al iniciar sesión va directo a la pantalla **Administración**. El coordinador y los docentes no pueden entrar a esta pantalla.
 
 ### Ver y agregar carreras
 
@@ -179,48 +127,29 @@ En **Reglas de homologación** están los valores que se aplican a todas las car
 2. Pulsa **Guardar**. Desde ese momento todas las homologaciones usan el valor nuevo.
 3. Si una regla no se debe aplicar, pulsa **Desactivar**. Para volver a aplicarla, pulsa **Activar**.
 
----
+### Crear las cuentas del coordinador y los docentes
 
-## 6. Coordinador y docente
+En **Coordinador y docentes**, elige el **Rol** (Docente o Coordinador), escribe el **nombre**, el **correo institucional** y una **contraseña inicial** (al menos 8 caracteres) y pulsa **Crear cuenta**. Entrega el correo y la contraseña a la persona.
 
-Después del análisis del agente, la homologación la hace un **docente** que elige el **coordinador**. El administrador crea sus cuentas en **Administración → Coordinador y docentes**.
-
-### Coordinador
-
-1. Entra con tu cuenta de coordinador. Verás **Coordinación de homologaciones**, con las solicitudes que ya tienen el análisis del agente, agrupadas en **Sin docente**, **En revisión** y **Terminadas**.
-2. En cada solicitud, elige el docente y pulsa **Asignar**. Mientras no la termine, puedes cambiarlo con **Cambiar**.
-3. Con **PDF** descargas el informe de cualquier solicitud.
-
-### Docente
-
-1. Entra con tu cuenta de docente. En **Mis homologaciones** verás solo las solicitudes que te asignaron.
-2. Pulsa **Homologar**. Verás cada materia con el resultado del **agente** y el **resultado final**. Con **Ver por qué** ves las reglas.
-3. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** (obligatorio).
-4. Cuando todo esté bien, pulsa **Terminar homologación** (puedes dejar un comentario). Después ya no se puede cambiar.
-
-El estudiante ve en su página y en el PDF qué docente hizo su homologación, quién lo asignó y los cambios del docente con su comentario.
 
 ---
 
-## 7. Preguntas frecuentes
+## 6. Preguntas frecuentes
 
-**No me deja crear la cuenta.**
-Revisa que tu correo termine en `@uta.edu.ec` y que la contraseña tenga al menos 8 caracteres.
+**El estudiante quiere ver su resultado.**
+El estudiante no entra al sistema. El coordinador le entrega el informe en PDF.
 
-**Dice «Ya tienes una solicitud abierta».**
-Solo se permite una solicitud a la vez. Sigue con la que ya tienes.
-
-**Mis materias quedaron «Pendiente».**
-La inteligencia artificial estaba ocupada o no respondió. Espera un momento y pulsa **Reintentar las pendientes**. Púlsalo una vez: las materias pasan a «En revisión» y la página se actualiza sola.
+**Las materias quedaron «Pendiente».**
+La inteligencia artificial estaba ocupada o no respondió. Espera un momento y pulsa **Reintentar las pendientes** una sola vez.
 
 **El resultado tarda mucho.**
-El agente revisa materia por materia y espera a la inteligencia artificial. Con varias materias puede tardar unos minutos. No cierres la sesión: la página se actualiza sola.
+El agente revisa materia por materia y espera a la inteligencia artificial. Con varias materias puede tardar unos minutos. La página se actualiza sola.
 
 **Dice «El PDF no tiene texto».**
 El archivo es una imagen escaneada. Pide el documento en PDF con texto (que se pueda seleccionar y copiar) y vuelve a subirlo.
 
-**No encuentro mi materia en la lista (estudiante de la UTA).**
-La lista solo muestra las materias de tu carrera de origen y del nivel que elegiste. Revisa que hayas elegido el nivel correcto.
+**No encuentro la materia en la lista (estudiante de la UTA).**
+La lista solo muestra las materias de la carrera de origen y del nivel elegido. Revisa el nivel.
 
 **¿El resultado ya es oficial?**
-No. Es un análisis previo para que sepas qué esperar. La decisión oficial la toma el Consejo Directivo de la Facultad.
+No. Es un análisis previo. La decisión oficial la toma el Consejo Directivo de la Facultad.

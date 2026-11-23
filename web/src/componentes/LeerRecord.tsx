@@ -47,20 +47,19 @@ export default function LeerRecord({
 }: {
   solicitudId: number;
   externo: boolean;
-  recordId?: number | null; // otra universidad: el récord ya se subió al crear la solicitud
+  recordId?: number | null; // el récord del expediente (lo sube el docente)
   carreraOrigen: string;
   nombreCarreraOrigen: string;
   registradas: { codigo: string; nombre: string }[];
   alTerminar: () => void;
 }) {
-  const [idUta, setIdUta] = useState<number | undefined>();
   const [leyendo, setLeyendo] = useState(false);
   const [agregando, setAgregando] = useState(false);
   const [filas, setFilas] = useState<Fila[] | null>(null);
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
-  const documentoId = externo ? recordId : idUta;
+  const documentoId = recordId ?? undefined;
   const yaRegistrada = (m: MateriaRecord) =>
     registradas.some((r) => (m.codigo ? r.codigo === m.codigo : normalizar(r.nombre) === normalizar(m.nombre)));
   // Solo se pueden agregar las aprobadas; de la UTA, además, que estén en la malla de su carrera
@@ -85,7 +84,7 @@ export default function LeerRecord({
         })),
       );
       setMensaje(
-        `Encontramos ${r.materias.length} materias en tu récord: ${r.aprobadas} ${r.aprobadas === 1 ? 'aprobada' : 'aprobadas'}` +
+        `Encontramos ${r.materias.length} materias en el récord: ${r.aprobadas} ${r.aprobadas === 1 ? 'aprobada' : 'aprobadas'}` +
           (r.reprobadas ? ` y ${r.reprobadas} ${r.reprobadas === 1 ? 'reprobada' : 'reprobadas'} (no se pueden homologar)` : '') +
           '. Revisa la lista y agrega las que quieras homologar.',
       );
@@ -152,28 +151,25 @@ export default function LeerRecord({
     setFilas(nuevas);
     setAgregando(false);
     if (bien) {
-      setMensaje(`Se agregaron ${bien} ${bien === 1 ? 'materia' : 'materias'} desde tu récord.`);
+      setMensaje(`Se agregaron ${bien} ${bien === 1 ? 'materia' : 'materias'} desde el récord.`);
       alTerminar();
     }
   };
 
   return (
     <section className="leer-record">
-      <h2>Llenar desde tu récord académico</h2>
+      <h2>Llenar desde el récord académico</h2>
       <p className="ayuda">
-        La inteligencia artificial lee tu récord y arma la lista de materias que <b>cursaste</b>, con las que <b>aprobaste</b> y las que{' '}
-        <b>reprobaste</b>. Solo revisas y agregas{externo ? ' (y subes el sílabo de cada una)' : ''}. Si prefieres, más abajo puedes registrarlas una
+        La inteligencia artificial lee el récord del estudiante y arma la lista de materias que <b>cursó</b>, con las que <b>aprobó</b> y las que{' '}
+        <b>reprobó</b>. Solo revisas y agregas{externo ? ' (y subes el sílabo de cada una)' : ''}. Si prefieres, más abajo puedes registrarlas una
         por una.
       </p>
       <div className="leer-record-accion">
-        {!externo && (
-          <SubirPdf etiqueta="Tu récord académico (PDF)" tipo="RECORD" alSubir={setIdUta} pista="El que descargas del sistema académico de la UTA." />
-        )}
         <button type="button" onClick={() => void leer()} disabled={!documentoId || leyendo}>
-          {leyendo ? 'Leyendo tu récord…' : filas ? 'Volver a leer' : 'Leer mi récord'}
+          {leyendo ? 'Leyendo el récord…' : filas ? 'Volver a leer' : 'Leer el récord'}
         </button>
-        {externo && !recordId && <small className="pista alerta">Tu solicitud no tiene récord. Regístralas a mano más abajo.</small>}
-        {leyendo && <small className="pista">La inteligencia artificial está leyendo tu récord: puede tardar hasta un minuto.</small>}
+        {!recordId && <small className="pista alerta">Primero sube el récord en el expediente (arriba).</small>}
+        {leyendo && <small className="pista">La inteligencia artificial está leyendo el récord: puede tardar hasta un minuto.</small>}
       </div>
       {error && <p role="alert">{error}</p>}
       {mensaje && <p className="aviso listo">{mensaje}</p>}

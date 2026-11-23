@@ -57,6 +57,10 @@ export interface ResultadoMateria {
   juntoCon?: string[]; // HU-26
 }
 
+// Quién hace el pedido: su id y su rol (un número solo, por compatibilidad, es el dueño)
+export type Quien = number | { id: number; rol?: string };
+const deQuien = (q: Quien) => (typeof q === 'number' ? { id: q, rol: undefined as string | undefined } : q);
+
 @Injectable()
 export class SolicitudesService implements OnModuleInit {
   private readonly log = new Logger(SolicitudesService.name);
@@ -100,27 +104,79 @@ export class SolicitudesService implements OnModuleInit {
     });
   }
 
-  // T20 · Una solicitud; solo la ve su dueño
-  async ver(usuarioId: number, id: number) {
+  // T20 · Una solicitud. La trabaja el docente asignado (23/11/2026: el docente hace la homologación);
+  // el coordinador la puede ver; quien la creó también.
+  async ver(q: Quien, id: number, escribir = false) {
     const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true } });
     if (!s) throw new NotFoundException(`No existe la solicitud ${id}`);
-    if (s.usuarioId !== usuarioId) throw new ForbiddenException('Esta solicitud no es tuya');
+    const { id: u, rol } = deQuien(q);
+    const puede = s.usuarioId === u || (rol === 'DOCENTE' && s.docenteId === u) || (rol === 'COORDINADOR' && !escribir);
+    if (!puede) throw new ForbiddenException(rol === 'DOCENTE' ? 'Esta solicitud no está asignada a ti' : 'Esta solicitud no es tuya');
     return s;
   }
 
+  // El coordinador registra la solicitud que el estudiante entregó en papel y, si ya sabe, asigna el docente
+  async crearPorCoordinador(coordinador: { id: number; nombre: string }, d: NuevaSolicitud & { estudiante?: string; docenteId?: number; docente?: string }) {
+    const estudiante = d?.estudiante?.trim() ?? '';
+    if (estudiante.length < 3) throw new BadRequestException('Escribe el nombre del estudiante');
+    const error = validarSolicitud(d, 0);
+    if (error) throw new BadRequestException(error.replace('de la que vienes', 'de la que viene el estudiante'));
+    const externa = d.tipo === 'EXTERNO';
+    const docenteId = Number(d.docenteId);
+    const conDocente = Number.isInteger(docenteId) && docenteId > 0 && !!d.docente?.trim();
+    return this.prisma.solicitud.create({
+      data: {
+        usuarioId: coordinador.id,
+        tipo: externa ? 'EXTERNO' : 'INTERNO',
+        carreraOrigen: d.carreraOrigen.trim(),
+        carreraDestino: d.carreraDestino,
+        periodo: d.periodo,
+        universidadOrigen: externa ? d.universidadOrigen!.trim() : null,
+        periodosAprobados: externa ? d.periodosAprobados! : null,
+        documentosLegalizados: externa && d.documentosLegalizados === true,
+        estudiante,
+        ...(conDocente ? { docenteId, docente: d.docente!.trim(), coordinador: coordinador.nombre, asignada: new Date() } : {}),
+      },
+    });
+  }
+
+  // El docente sube el expediente del estudiante: malla y récord (y, de otra universidad, periodos y legalización)
+  async expediente(q: Quien, id: number, d: { mallaId?: number; recordId?: number; periodosAprobados?: number; documentosLegalizados?: boolean }) {
+    const s = await this.ver(q, id, true);
+    if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada al agente');
+    const externa = s.tipo === 'EXTERNO';
+    const docId = (v: unknown) => (v === undefined ? undefined : Number.isInteger(v) && (v as number) > 0 ? (v as number) : NaN);
+    const mallaId = docId(d?.mallaId);
+    const recordId = docId(d?.recordId);
+    if (Number.isNaN(mallaId) || Number.isNaN(recordId)) throw new BadRequestException('El documento no es válido; vuelve a subirlo');
+    const p = d?.periodosAprobados;
+    if (p !== undefined && (!Number.isInteger(p) || p < 1 || p > 12)) throw new BadRequestException('Indica cuántos periodos aprobó (de 1 a 12)');
+    await this.prisma.solicitud.update({
+      where: { id },
+      data: {
+        ...(recordId !== undefined ? { recordId } : {}),
+        ...(externa && mallaId !== undefined ? { mallaId } : {}),
+        ...(externa && p !== undefined ? { periodosAprobados: p } : {}),
+        ...(externa && typeof d?.documentosLegalizados === 'boolean' ? { documentosLegalizados: d.documentosLegalizados } : {}),
+      },
+    });
+    return this.ver(q, id);
+  }
+
   // T22 · Envía la solicitud al agente (evento solicitud.enviada)
-  async enviar(usuarioId: number, id: number) {
-    const s = await this.ver(usuarioId, id);
+  async enviar(q: Quien, id: number) {
+    const s = await this.ver(q, id, true);
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
     if (s.materias.length === 0) throw new BadRequestException('Registra al menos una materia antes de enviar');
+    if (s.tipo === 'EXTERNO' && (!s.mallaId || !s.recordId)) throw new BadRequestException('Sube la malla y el récord del estudiante antes de enviar');
     await this.prisma.solicitud.update({ where: { id }, data: { estado: 'ENVIADA', enviada: new Date() } });
     await this.eventos.publicar('solicitud.enviada', mensajeEnviada(s, id, s.materias));
     return { id, estado: 'ENVIADA' };
   }
 
   // T23 · Agrega una materia aprobada; el catálogo confirma que es de la carrera de origen
-  async agregarMateria(usuarioId: number, id: number, m: NuevaMateria) {
-    const s = await this.ver(usuarioId, id);
+  async agregarMateria(q: Quien, id: number, m: NuevaMateria) {
+    const s = await this.ver(q, id, true);
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
     if (s.tipo === 'EXTERNO') throw new BadRequestException('Tu solicitud es de otra universidad: registra la materia con su nombre, créditos y horas');
     const error = validarMateria(m, s.materias.map((x) => x.codigo));
@@ -148,8 +204,8 @@ export class SolicitudesService implements OnModuleInit {
   }
 
   // T38 + T41 · Agrega una materia de otra universidad; guarda la nota original y la convertida a la escala sobre 10
-  async agregarMateriaExterna(usuarioId: number, id: number, m: NuevaMateriaExterna) {
-    const s = await this.ver(usuarioId, id);
+  async agregarMateriaExterna(q: Quien, id: number, m: NuevaMateriaExterna) {
+    const s = await this.ver(q, id, true);
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
     if (s.tipo !== 'EXTERNO') throw new BadRequestException('Esta solicitud es de la UTA: elige la materia del catálogo');
     const error = validarMateriaExterna(m, s.materias.map((x) => x.codigo));
@@ -176,8 +232,8 @@ export class SolicitudesService implements OnModuleInit {
   }
 
   // T23 · Quita una materia mientras la solicitud es borrador
-  async quitarMateria(usuarioId: number, id: number, codigo: string) {
-    const s = await this.ver(usuarioId, id);
+  async quitarMateria(q: Quien, id: number, codigo: string) {
+    const s = await this.ver(q, id, true);
     if (s.estado !== 'BORRADOR') throw new BadRequestException('La solicitud ya fue enviada');
     if (!s.materias.some((x) => x.codigo === codigo)) throw new NotFoundException('Esa materia no está en la solicitud');
     await this.prisma.asignaturaAprobada.delete({ where: { solicitudId_codigo: { solicitudId: id, codigo } } });
@@ -219,8 +275,8 @@ export class SolicitudesService implements OnModuleInit {
   // T28 · Vuelve a mandar al agente solo las materias Pendiente
   // Las pendientes pasan a "en revisión" (resultado vacío) antes de mandarlas: si se pulsa otra vez
   // mientras el agente trabaja ya no hay pendientes y no se lanza una segunda revisión al mismo tiempo
-  async reintentar(usuarioId: number, id: number) {
-    const s = await this.ver(usuarioId, id);
+  async reintentar(q: Quien, id: number) {
+    const s = await this.ver(q, id, true);
     const pendientes = s.materias.filter((m) => m.resultado === 'Pendiente');
     if (pendientes.length === 0) throw new BadRequestException('No hay materias pendientes: el agente ya las está revisando');
     const tomadas = await this.prisma.asignaturaAprobada.updateMany({

@@ -32,10 +32,10 @@ const lista = (extra: object = {}) => ({
 });
 
 describe('RevisionService · coordinador', () => {
-  it('lista las solicitudes con resultado del agente', async () => {
+  it('lista todas las solicitudes (registradas, en homologación y recibidas)', async () => {
     const { s, prisma } = armar(null);
     await s.listarCoordinacion();
-    expect(prisma.solicitud.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { estado: { in: ['RESULTADO_LISTO', 'REVISADA'] } } }));
+    expect(prisma.solicitud.findMany).toHaveBeenCalledWith(expect.not.objectContaining({ where: expect.anything() }));
   });
 
   it('asigna (o cambia) el docente y guarda quién lo asignó', async () => {
@@ -47,10 +47,10 @@ describe('RevisionService · coordinador', () => {
     });
   });
 
-  it('pide el docente, no asigna sin resultado ni cuando ya está terminada', async () => {
+  it('pide el docente; asigna desde que se registra, pero no después de recibir el resultado', async () => {
     await expect(armar(lista()).s.asignar(coord, 3, {})).rejects.toThrow('Elige el docente');
-    await expect(armar(lista({ estado: 'ENVIADA' })).s.asignar(coord, 3, { docenteId: 11, docente: 'L' })).rejects.toThrow('todavía no tiene');
-    await expect(armar(lista({ estado: 'REVISADA' })).s.asignar(coord, 3, { docenteId: 11, docente: 'L' })).rejects.toThrow('ya terminó');
+    await expect(armar(lista({ estado: 'BORRADOR' })).s.asignar(coord, 3, { docenteId: 11, docente: 'L' })).resolves.toEqual(expect.objectContaining({ docenteId: 11 }));
+    await expect(armar(lista({ estado: 'REVISADA' })).s.asignar(coord, 3, { docenteId: 11, docente: 'L' })).rejects.toThrow('ya envió el resultado');
   });
 });
 
@@ -58,8 +58,9 @@ describe('RevisionService · docente', () => {
   it('ve solo sus solicitudes', async () => {
     const { s, prisma } = armar(null);
     await s.listarDelDocente(ana);
-    expect(prisma.solicitud.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { docenteId: 10, estado: { in: ['RESULTADO_LISTO', 'REVISADA'] } } }));
+    expect(prisma.solicitud.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { docenteId: 10 } }));
     await expect(armar(lista()).s.verDelDocente(luis, 3)).rejects.toThrow(ForbiddenException);
+    await expect(armar(lista({ estado: 'BORRADOR' })).s.verDelDocente(ana, 3)).rejects.toThrow('todavía no tiene');
   });
 
   it('cambia el resultado con comentario y se aplica a las materias evaluadas juntas', async () => {
@@ -99,7 +100,7 @@ describe('RevisionService · docente', () => {
     expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { estado: 'REVISADA', terminada: expect.any(Date), comentarioFinal: 'Listo' } });
     const terminada = armar(lista({ estado: 'REVISADA' }));
     await expect(terminada.s.terminar(ana, 3, {})).rejects.toThrow(BadRequestException);
-    await expect(terminada.s.cambiar(ana, 3, 'C', { resultado: 'Homologable', comentario: 'xxxxxx' })).rejects.toThrow('Ya terminaste');
+    await expect(terminada.s.cambiar(ana, 3, 'C', { resultado: 'Homologable', comentario: 'xxxxxx' })).rejects.toThrow('Ya enviaste');
   });
 
   it('no termina con materias pendientes', async () => {

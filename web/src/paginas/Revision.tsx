@@ -18,6 +18,14 @@ interface Resumen {
 }
 interface Carrera { codigo: string; nombre: string }
 
+// En qué etapa está cada homologación
+const ETAPA: Record<string, string> = {
+  BORRADOR: 'Subir expediente',
+  ENVIADA: 'Agente analizando',
+  RESULTADO_LISTO: 'Revisar análisis',
+  REVISADA: 'Enviada al coordinador',
+};
+
 export default function Revision() {
   const [lista, setLista] = useState<Resumen[] | null>(null);
   const [carreras, setCarreras] = useState<Carrera[]>([]);
@@ -37,8 +45,8 @@ export default function Revision() {
     <main>
       <h1>Mis homologaciones</h1>
       <p className="ayuda">
-        El coordinador te asignó estas solicitudes. El agente ya hizo el análisis: revísalo, cambia el resultado de una materia si no estás de acuerdo
-        (con tu comentario) y pulsa <b>Terminar homologación</b>.
+        El coordinador te asignó estas solicitudes. En cada una: sube el expediente del estudiante y sus materias, envíalas al agente, revisa el
+        análisis (cambia el resultado de una materia si no estás de acuerdo, con tu comentario) y <b>envía el resultado al coordinador</b>.
       </p>
       {error && <p role="alert">{error}</p>}
       <div className="filtros">
@@ -80,12 +88,12 @@ export default function Revision() {
                   </td>
                   <td>{s._count?.materias ?? '—'}</td>
                   <td>
-                    <span className={`etiqueta ${s.estado === 'REVISADA' ? 'homologable' : 'pendiente'}`}>{s.estado === 'REVISADA' ? 'Terminada' : 'Por hacer'}</span>
+                    <span className={`etiqueta ${s.estado === 'REVISADA' ? 'homologable' : 'pendiente'}`}>{ETAPA[s.estado] ?? s.estado}</span>
                     {s.coordinador && <small className="equivale">Asignada por {s.coordinador}</small>}
                   </td>
                   <td>
-                    <Link className="boton pequeno" to={`/revision/${s.id}`}>
-                      {s.estado === 'REVISADA' ? 'Ver' : 'Homologar'}
+                    <Link className="boton pequeno" to={`/homologacion/${s.id}`}>
+                      {s.estado === 'REVISADA' ? 'Ver' : 'Abrir'}
                     </Link>
                   </td>
                 </tr>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 
-// Coordinador: ve las solicitudes que ya tienen el análisis del agente y elige el docente que hará la homologación
+// Coordinador: registra las solicitudes que entregan los estudiantes, elige el docente y recibe el resultado
 interface Resumen {
   id: number;
   tipo?: string;
@@ -20,6 +21,13 @@ interface Resumen {
 interface Docente { id: number; nombre: string }
 interface Carrera { codigo: string; nombre: string }
 type Filtro = 'sin' | 'revision' | 'terminadas' | 'todas';
+
+// En qué etapa está cada homologación
+const ETAPA: Record<string, string> = {
+  BORRADOR: 'El docente sube el expediente',
+  ENVIADA: 'El agente está analizando',
+  RESULTADO_LISTO: 'El docente revisa el análisis',
+};
 
 const fecha = (f?: string | null) => (f ? new Date(f).toLocaleDateString('es-EC') : '');
 
@@ -72,16 +80,22 @@ export default function Coordinacion() {
 
   const FILTROS: [Filtro, string][] = [
     ['sin', 'Sin docente'],
-    ['revision', 'En revisión'],
-    ['terminadas', 'Terminadas'],
+    ['revision', 'En homologación'],
+    ['terminadas', 'Recibidas'],
     ['todas', 'Todas'],
   ];
 
   return (
     <main>
-      <h1>Coordinación de homologaciones</h1>
+      <div className="titulo-con-accion">
+        <h1>Coordinación de homologaciones</h1>
+        <Link className="boton" to="/coordinacion/nueva">
+          + Registrar solicitud
+        </Link>
+      </div>
       <p className="ayuda">
-        El agente ya analizó estas solicitudes. Elige el <b>docente</b> que hará la homologación de cada una. Puedes cambiarlo mientras no la termine.
+        Registra las solicitudes que entregan los estudiantes y elige el <b>docente</b> que hará cada homologación (puedes cambiarlo mientras no te envíe
+        el resultado). Cuando el docente termine, la verás en <b>Recibidas</b>.
       </p>
       {mensaje && <p className="aviso listo">✓ {mensaje}</p>}
       {error && <p role="alert">{error}</p>}
@@ -126,7 +140,7 @@ export default function Coordinacion() {
                   <td>
                     {s.estado === 'REVISADA' ? (
                       <>
-                        <span className="etiqueta homologable">Terminada</span>
+                        <span className="etiqueta homologable">Recibida</span>
                         <small className="equivale">
                           {s.docente ? `${s.docente} · ${fecha(s.terminada)}` : 'Revisada antes de asignar docentes'}
                         </small>
@@ -136,6 +150,8 @@ export default function Coordinacion() {
                         {s.docente && (
                           <small className="equivale">
                             Asignada a <b>{s.docente}</b> · {fecha(s.asignada)}
+                            <br />
+                            {ETAPA[s.estado]}
                           </small>
                         )}
                         <select value={elegido[s.id] ?? ''} onChange={(e) => setElegido({ ...elegido, [s.id]: e.target.value })}>
@@ -154,10 +170,17 @@ export default function Coordinacion() {
                       </div>
                     )}
                   </td>
-                  <td>
-                    <button className="pequeno" onClick={() => void descargar(s.id)}>
-                      PDF
-                    </button>
+                  <td className="botones-regla">
+                    {['RESULTADO_LISTO', 'REVISADA'].includes(s.estado) && (
+                      <>
+                        <Link className="boton pequeno" to={`/coordinacion/${s.id}`}>
+                          Ver
+                        </Link>
+                        <button className="pequeno" onClick={() => void descargar(s.id)}>
+                          PDF
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

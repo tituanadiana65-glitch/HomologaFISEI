@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import SubirPdf from '../componentes/SubirPdf';
 import LeerRecord from '../componentes/LeerRecord';
+import Expediente from '../componentes/Expediente';
 import { numero } from '../notas';
 
 interface Carrera { codigo: string; nombre: string }
@@ -27,6 +27,10 @@ interface Solicitud {
   carreraDestino: string;
   periodo: string;
   recordId?: number | null;
+  mallaId?: number | null;
+  estudiante?: string | null;
+  periodosAprobados?: number | null;
+  documentosLegalizados?: boolean | null;
   materias: Materia[];
 }
 
@@ -47,7 +51,8 @@ function vistaNota(nota: Num, escala: number): { texto: string; alerta: boolean 
     : { texto: `Equivale a ${numero(uta, 1)} / 10 en la UTA.`, alerta: false };
 }
 
-export default function Materias() {
+// El docente asignado registra el expediente y las materias que el estudiante aprobó, y lo envía al agente
+export default function Materias({ id, alEnviar }: { id: number; alEnviar: () => void }) {
   const [s, setS] = useState<Solicitud | null>(null);
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [niveles, setNiveles] = useState<string[]>([]);
@@ -59,7 +64,6 @@ export default function Materias() {
   const [claveSilabo, setClaveSilabo] = useState(0); // cambia para limpiar el campo del sílabo
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0); // cambia para volver a cargar la solicitud
-  const ir = useNavigate();
 
   const externo = s?.tipo === 'EXTERNO';
   const recargar = () => setVersion((v) => v + 1);
@@ -70,14 +74,13 @@ export default function Materias() {
     void api<Carrera[]>('/catalogo/carreras').then(setCarreras);
   }, []);
 
-  // Carga la solicitud del estudiante y, si es de la UTA, los niveles de su carrera de origen
+  // Carga la solicitud y, si es de la UTA, los niveles de la carrera de origen
   useEffect(() => {
     let activo = true;
     void (async () => {
-      const sol = await api<Solicitud | null>('/solicitudes/mia');
+      const sol = await api<Solicitud>(`/solicitudes/${id}`);
       if (!activo) return;
-      if (!sol) return ir('/solicitud');
-      if (sol.estado !== 'BORRADOR') return ir('/resultado');
+      if (sol.estado !== 'BORRADOR') return alEnviar();
       setS(sol);
       if (sol.tipo === 'EXTERNO') return;
       const lista = await api<string[]>(`/catalogo/niveles?carrera=${sol.carreraOrigen}`);
@@ -86,7 +89,7 @@ export default function Materias() {
     return () => {
       activo = false;
     };
-  }, [ir, version]);
+  }, [id, alEnviar, version]);
 
   // Carga las materias del nivel elegido (solo UTA)
   useEffect(() => {
@@ -145,7 +148,7 @@ export default function Materias() {
   const enviar = async () => {
     try {
       await api(`/solicitudes/${s!.id}/enviar`, { method: 'POST' });
-      ir('/resultado');
+      alEnviar();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -162,14 +165,14 @@ export default function Materias() {
 
   return (
     <main>
-      <h1>Tus materias aprobadas</h1>
-      <p className="ayuda">Registra una por una las materias que aprobaste. Cuando termines, envíalas a homologar.</p>
-      <Pasos actual={2} />
+      <h1>Homologación N.º {s.id} · {s.estudiante ?? 'Estudiante'}</h1>
+      <p className="ayuda">Sube el expediente que entregó el estudiante y registra las materias que aprobó. Cuando termines, envíalas al agente.</p>
+      <Pasos actual={1} />
 
       {s && (
         <div className="resumen-solicitud">
           <div>
-            <small>{externo ? 'Vienes de' : 'Carrera de origen'}</small>
+            <small>{externo ? 'Viene de' : 'Carrera de origen'}</small>
             <strong>{externo ? `${s.universidadOrigen} · ${s.carreraOrigen}` : nombreCarrera(s.carreraOrigen)}</strong>
           </div>
           <span className="flecha">→</span>
@@ -184,13 +187,15 @@ export default function Materias() {
         </div>
       )}
 
+      <Expediente s={s} alCambiar={recargar} />
+
       <LeerRecord
         key={s.id}
         solicitudId={s.id}
         externo={externo}
         recordId={s.recordId}
         carreraOrigen={s.carreraOrigen}
-        nombreCarreraOrigen={externo ? (s.carreraOrigen ?? 'tu carrera') : nombreCarrera(s.carreraOrigen)}
+        nombreCarreraOrigen={externo ? (s.carreraOrigen ?? 'su carrera') : nombreCarrera(s.carreraOrigen)}
         registradas={s.materias}
         alTerminar={recargar}
       />
@@ -199,7 +204,7 @@ export default function Materias() {
       <p className="ayuda">
         Los campos con <span className="req">*</span> son obligatorios.{' '}
         {externo
-          ? 'Copia los datos tal como aparecen en tu récord y en el sílabo.'
+          ? 'Copia los datos tal como aparecen en el récord y en el sílabo.'
           : 'Elige primero el nivel para ver las materias de ese nivel.'}
       </p>
       {externo ? (
@@ -210,7 +215,7 @@ export default function Materias() {
             </span>
             <input value={mx.nombre} placeholder="Por ejemplo: Cálculo II" onChange={(e) => setMx({ ...mx, nombre: e.target.value })} />
             <small className="pista">
-              Tal como aparece en tu récord. Si tu materia está dividida en partes (Física I y Física II), registra cada parte: el agente las evalúa juntas.
+              Tal como aparece en el récord. Si la materia está dividida en partes (Física I y Física II), registra cada parte: el agente las evalúa juntas.
             </small>
           </label>
           <label>
@@ -234,13 +239,13 @@ export default function Materias() {
             {vista && <small className={`pista ${vista.alerta ? 'alerta' : 'bien'}`}>{vista.texto}</small>}
           </label>
           <label>
-            Tu universidad califica sobre
+            Su universidad califica sobre
             <select value={mx.escala} onChange={(e) => setMx({ ...mx, escala: Number(e.target.value) })}>
               <option value={10}>10 puntos</option>
               <option value={20}>20 puntos</option>
               <option value={100}>100 puntos</option>
             </select>
-            <small className="pista">El sistema convierte tu nota a la escala de la UTA (sobre 10).</small>
+            <small className="pista">El sistema convierte la nota a la escala de la UTA (sobre 10).</small>
           </label>
           <label>
             <span>
@@ -271,7 +276,7 @@ export default function Materias() {
           </label>
           <label>
             <span>
-              Materia de {s ? nombreCarrera(s.carreraOrigen) : 'tu carrera'} <span className="req">*</span>
+              Materia de {s ? nombreCarrera(s.carreraOrigen) : 'su carrera'} <span className="req">*</span>
             </span>
             <select
               value={m.codigo}
@@ -327,7 +332,7 @@ export default function Materias() {
       )}
 
       <h2>Registradas {s.materias.length > 0 && <span className="contador">{s.materias.length}</span>}</h2>
-      {!s?.materias.length && <p className="vacio">Aún no registras materias.</p>}
+      {!s?.materias.length && <p className="vacio">Aún no hay materias registradas.</p>}
       <ul className="lista">
         {s?.materias.map((x) => (
           <li key={x.codigo}>
@@ -354,12 +359,12 @@ export default function Materias() {
       </ul>
       {s.materias.length > 0 && (
         <p className="guia corta">
-          Revisa que estén todas tus materias: <b>después de enviar ya no podrás cambiarlas</b>. El agente tarda unos minutos.
+          Revisa que estén todas las materias: <b>después de enviar ya no podrás cambiarlas</b>. El agente tarda unos minutos.
         </p>
       )}
       <div className="acciones final">
         <button onClick={() => void enviar()} disabled={!s?.materias.length}>
-          Enviar a homologar →
+          Enviar al agente →
         </button>
       </div>
     </main>

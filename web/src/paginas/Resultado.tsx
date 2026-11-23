@@ -40,6 +40,7 @@ interface Solicitud {
   carreraDestino: string;
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
   enviada?: string | null; // cuándo se mandó al agente
+  estudiante?: string | null;
   docente?: string | null; // docente que hace la homologación (lo asigna el coordinador)
   terminada?: string | null;
   comentarioFinal?: string | null;
@@ -48,7 +49,7 @@ interface Solicitud {
 
 // Qué significa cada resultado (leyenda de la página)
 const SIGNIFICADOS: [string, string][] = [
-  ['Homologable', 'Cumple todas las reglas: se te podría reconocer.'],
+  ['Homologable', 'Cumple todas las reglas: se le podría reconocer.'],
   ['No homologable', 'No cumple al menos una regla. Pulsa «Ver por qué» para saber cuál.'],
   ['Pendiente', 'La inteligencia artificial no alcanzó a revisarla. Pulsa «Reintentar las pendientes».'],
   ['Sin materia equivalente', 'En la nueva carrera no hay una materia igual o parecida.'],
@@ -80,7 +81,8 @@ const claseDe = (texto: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ /g, '-');
 
-export default function Resultado() {
+// Análisis del agente y resultado. Lo ve el docente mientras el agente trabaja y el coordinador cuando recibe el resultado.
+export default function Resultado({ id, alListo, soloLectura = false }: { id: number; alListo?: () => void; soloLectura?: boolean }) {
   const [s, setS] = useState<Solicitud | null>(null);
   const [abierta, setAbierta] = useState('');
   const [version, setVersion] = useState(0); // cambia para volver a cargar
@@ -101,8 +103,10 @@ export default function Resultado() {
   useEffect(() => {
     let activo = true;
     const cargar = () =>
-      api<Solicitud>('/solicitudes/mia').then(sol => {
-        if (activo) setS(sol);
+      api<Solicitud>(`/solicitudes/${id}`).then(sol => {
+        if (!activo) return;
+        setS(sol);
+        if (alListo && ['RESULTADO_LISTO', 'REVISADA'].includes(sol.estado)) alListo();
       });
     void cargar();
     const t = setInterval(() => void cargar(), 5000);
@@ -110,7 +114,7 @@ export default function Resultado() {
       activo = false;
       clearInterval(t);
     };
-  }, [version]);
+  }, [id, alListo, version]);
 
   // Reloj de la espera: avanza cada segundo mientras el agente trabaja
   const esperando = !!s && !['RESULTADO_LISTO', 'REVISADA'].includes(s.estado);
@@ -173,16 +177,18 @@ export default function Resultado() {
 
   return (
     <main>
-      <h1>Resultado de tu solicitud</h1>
+      <h1>
+        Homologación N.º {s.id} · {s.estudiante ?? 'Estudiante'}
+      </h1>
       <p className="ayuda">Este es un análisis previo. La decisión oficial la toma el Consejo Directivo de la Facultad.</p>
-      <Pasos actual={listo ? 4 : 3} />
+      <Pasos actual={s.estado === 'REVISADA' ? 5 : listo ? 3 : 2} />
 
       {!listo && (
         <div className="espera">
           <div className="espera-titulo">
             <span className="girando" aria-hidden="true" />
             <strong>
-              El agente está revisando {s.materias.length === 1 ? 'tu materia' : `tus ${s.materias.length} materias`}
+              El agente está revisando {s.materias.length === 1 ? 'la materia' : `las ${s.materias.length} materias`}
             </strong>
             {transcurrido !== null && <span className="reloj">{reloj(transcurrido)}</span>}
           </div>
@@ -193,10 +199,10 @@ export default function Resultado() {
             <li>Busca la materia equivalente en {nombreCarrera(s.carreraDestino)}</li>
             <li>Compara los temas con inteligencia artificial (RN-01)</li>
             <li>Revisa créditos, horas, nota y años (RN-02 a RN-05)</li>
-            <li>Arma tu informe</li>
+            <li>Arma el informe</li>
           </ol>
           <p>
-            Suele tardar unos {estimado} minutos. Esta página se actualiza sola; también puedes cerrarla y volver después: tu resultado queda
+            Suele tardar unos {estimado} minutos. Esta página se actualiza sola; también puedes cerrarla y volver después: el resultado queda
             guardado.
           </p>
           {transcurrido !== null && transcurrido > estimado * 60 * 2 && (
@@ -212,8 +218,8 @@ export default function Resultado() {
         <div className="resumen-final">
           <strong>
             {reconocidas > 0
-              ? `Se te podrían reconocer ${reconocidas} ${reconocidas === 1 ? 'materia' : 'materias'} de ${nombreCarrera(s.carreraDestino)}.`
-              : `Por ahora no se te reconocería ninguna materia de ${nombreCarrera(s.carreraDestino)}.`}
+              ? `Se le podrían reconocer ${reconocidas} ${reconocidas === 1 ? 'materia' : 'materias'} de ${nombreCarrera(s.carreraDestino)}.`
+              : `No se le reconocería ninguna materia de ${nombreCarrera(s.carreraDestino)}.`}
           </strong>
           <span>
             {[
@@ -222,7 +228,7 @@ export default function Resultado() {
               pendientes > 0 && `${pendientes} ${pendientes === 1 ? 'quedó pendiente' : 'quedaron pendientes'}`,
             ]
               .filter(Boolean)
-              .join(' · ') || 'Todas tus materias cumplen las reglas.'}
+              .join(' · ') || 'Todas las materias cumplen las reglas.'}
           </span>
         </div>
       )}
@@ -231,15 +237,15 @@ export default function Resultado() {
         <div className={`aviso ${s.estado === 'REVISADA' ? 'listo' : ''}`}>
           {s.estado === 'REVISADA' ? (
             <>
-              ✓ <b>Homologación terminada</b> por {s.docente}
+              ✓ <b>Resultado enviado al coordinador</b> por {s.docente}
               {s.terminada && ` el ${new Date(s.terminada).toLocaleDateString('es-EC')}`}.{s.comentarioFinal && <> «{s.comentarioFinal}»</>}
             </>
           ) : s.docente ? (
             <>
-              👩‍🏫 <b>{s.docente}</b> está revisando tu homologación. Lo que veas aquí puede cambiar hasta que termine.
+              👩‍🏫 <b>{s.docente}</b> está revisando la homologación.
             </>
           ) : (
-            <>👩‍🏫 Este es el análisis del agente. El coordinador asignará un docente para que haga tu homologación.</>
+            <>👩‍🏫 Este es el análisis del agente. Falta asignar un docente.</>
           )}
         </div>
       )}
@@ -281,9 +287,9 @@ export default function Resultado() {
       <table className="tabla-resultado">
         <thead>
           <tr>
-            <th>Tu materia ({origen})</th>
+            <th>Materia aprobada ({origen})</th>
             <th>Se homologa por ({nombreCarrera(s.carreraDestino)})</th>
-            {externo && <th title="Qué tanto se parecen los temas de tu sílabo a los de la materia de la FISEI">Parecido</th>}
+            {externo && <th title="Qué tanto se parecen los temas del sílabo a los de la materia de la FISEI">Parecido</th>}
             <th>Resultado</th>
             <th></th>
           </tr>
@@ -373,7 +379,7 @@ export default function Resultado() {
       {error && <p role="alert">{error}</p>}
 
       <div className="acciones">
-        {hayPendientes && (
+        {hayPendientes && !soloLectura && (
           <button className="pequeno" onClick={() => void reintentar()} disabled={reintentando}>
             {reintentando ? 'Enviando…' : 'Reintentar las pendientes'}
           </button>

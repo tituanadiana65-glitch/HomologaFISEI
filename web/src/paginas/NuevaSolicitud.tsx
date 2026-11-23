@@ -1,11 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import Pasos from '../componentes/Pasos';
-import SubirPdf from '../componentes/SubirPdf';
 
 interface Carrera { codigo: string; nombre: string }
-interface Solicitud { id: number; estado: string }
 
 // Carreras afines más comunes en otras universidades. Si no está la suya, el estudiante elige "Otra carrera" y la escribe.
 const CARRERAS_OTRA_UNIVERSIDAD = [
@@ -43,45 +40,46 @@ const UNIVERSIDADES = [
   'Universidad Tecnológica Indoamérica',
 ];
 
+interface Docente { id: number; nombre: string }
+
+// El coordinador registra la solicitud que el estudiante entregó en papel y elige el docente que hará la homologación
 export default function NuevaSolicitud() {
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [externo, setExterno] = useState(false); // false: de la UTA · true: de otra universidad
   const [d, setD] = useState({ carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' });
   const [x, setX] = useState({ universidadOrigen: '', carreraOrigen: '', periodosAprobados: 1, documentosLegalizados: false });
   const [otraCarrera, setOtraCarrera] = useState(false); // la carrera de otra universidad no está en la lista
-  const [mallaId, setMallaId] = useState<number>();
-  const [recordId, setRecordId] = useState<number>();
+  const [estudiante, setEstudiante] = useState('');
+  const [docentes, setDocentes] = useState<Docente[]>([]);
+  const [docenteId, setDocenteId] = useState('');
   const [error, setError] = useState('');
   const ir = useNavigate();
 
   useEffect(() => {
     void api<Carrera[]>('/catalogo/carreras').then(setCarreras);
-    void api<Solicitud | Blob | null>('/solicitudes/mia').then((s) => {
-      if (!s || s instanceof Blob) return; // no tiene solicitud: se muestra el formulario
-      if (s.estado === 'BORRADOR') ir('/materias');
-      else if (!['RESULTADO_LISTO', 'REVISADA'].includes(s.estado)) ir('/resultado');
-    });
-  }, [ir]);
+    void api<Docente[]>('/identidad/docentes').then(setDocentes).catch(() => setDocentes([]));
+  }, []);
 
   // Lo que falta para poder crear la solicitud (el botón se activa cuando no falta nada)
-  const faltan = externo
-    ? [
-        !x.universidadOrigen.trim() && 'la universidad de origen',
-        !x.carreraOrigen.trim() && 'la carrera de origen',
-        !mallaId && 'la malla curricular',
-        !recordId && 'el récord académico',
-      ].filter(Boolean)
-    : [d.carreraOrigen === d.carreraDestino && 'una carrera de destino distinta a la de origen'].filter(Boolean);
+  const faltan = [
+    estudiante.trim().length < 3 && 'el nombre del estudiante',
+    ...(externo
+      ? [!x.universidadOrigen.trim() && 'la universidad de origen', !x.carreraOrigen.trim() && 'la carrera de origen']
+      : [d.carreraOrigen === d.carreraDestino && 'una carrera de destino distinta a la de origen']),
+  ].filter(Boolean);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
     if (faltan.length) return;
-    const cuerpo = externo
-      ? { tipo: 'EXTERNO', ...x, carreraDestino: d.carreraDestino, periodo: d.periodo, mallaId, recordId }
-      : { tipo: 'INTERNO', ...d };
+    const docente = docentes.find((x) => String(x.id) === docenteId);
+    const cuerpo = {
+      estudiante,
+      ...(externo ? { tipo: 'EXTERNO', ...x, carreraDestino: d.carreraDestino, periodo: d.periodo } : { tipo: 'INTERNO', ...d }),
+      ...(docente ? { docenteId: docente.id, docente: docente.nombre } : {}),
+    };
     try {
-      await api('/solicitudes', { method: 'POST', body: JSON.stringify(cuerpo) });
-      ir('/materias');
+      await api('/solicitudes/coordinacion', { method: 'POST', body: JSON.stringify(cuerpo) });
+      ir('/coordinacion');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -93,49 +91,47 @@ export default function NuevaSolicitud() {
 
   return (
     <main>
-      <h1>Nueva solicitud de cambio de carrera</h1>
-      <p className="ayuda">Indica de dónde vienes, a qué carrera te cambias y el periodo en que harás el trámite.</p>
-      <Pasos actual={1} />
+      <p>
+        <Link className="volver" to="/coordinacion">
+          ← Volver a coordinación
+        </Link>
+      </p>
+      <h1>Registrar una solicitud</h1>
+      <p className="ayuda">Registra la solicitud que entregó el estudiante y elige el docente que hará la homologación.</p>
 
       <div className="guia">
-        <strong>Antes de empezar</strong>
-        {externo ? (
-          <ul>
-            <li>
-              Ten listos en <b>PDF con texto</b> (que se pueda seleccionar, no escaneado): tu <b>malla curricular</b>, tu <b>récord académico</b> y el{' '}
-              <b>sílabo</b> de cada materia que quieras homologar.
-            </li>
-            <li>
-              Para cambiarte desde otra universidad necesitas al menos <b>2 periodos aprobados</b> y tus documentos <b>legalizados</b> (regla RN-08).
-            </li>
-            <li>Son 3 pasos: crear la solicitud, registrar tus materias y ver el resultado.</li>
-          </ul>
-        ) : (
-          <ul>
-            <li>Ten a mano tus materias aprobadas con su nota, paralelo, docente y periodo.</li>
-            <li>Son 3 pasos: crear la solicitud, registrar tus materias y ver el resultado.</li>
-          </ul>
-        )}
+        <strong>Cómo sigue</strong>
+        <ul>
+          <li>El docente que elijas sube el expediente del estudiante (récord{externo ? ', malla y sílabos' : ''}) y registra sus materias.</li>
+          <li>El agente hace el análisis y el docente lo revisa.</li>
+          <li>El docente te envía lo homologable y lo no homologable.</li>
+        </ul>
       </div>
 
       <div className="opciones-tipo">
         <label className={!externo ? 'activa' : ''}>
           <input type="radio" checked={!externo} onChange={() => setExterno(false)} />
           <span>
-            Soy estudiante de la UTA
-            <small>Me cambio de una carrera de la FISEI a otra</small>
+            Estudiante de la UTA
+            <small>Se cambia de una carrera de la FISEI a otra</small>
           </span>
         </label>
         <label className={externo ? 'activa' : ''}>
           <input type="radio" checked={externo} onChange={() => setExterno(true)} />
           <span>
-            Vengo de otra universidad
-            <small>Necesito subir mi malla, mi récord y los sílabos</small>
+            Viene de otra universidad
+            <small>Su expediente trae malla, récord y sílabos</small>
           </span>
         </label>
       </div>
 
       <form className="doble" onSubmit={crear}>
+        <label className="completo">
+          <span>
+            Nombre del estudiante <span className="req">*</span>
+          </span>
+          <input value={estudiante} placeholder="Nombres y apellidos" onChange={(e) => setEstudiante(e.target.value)} />
+        </label>
         {externo ? (
           <>
             <label>
@@ -145,7 +141,7 @@ export default function NuevaSolicitud() {
               <input
                 value={x.universidadOrigen}
                 list="universidades"
-                placeholder="Escribe o elige tu universidad"
+                placeholder="Escribe o elige la universidad"
                 onChange={(e) => setX({ ...x, universidadOrigen: e.target.value })}
               />
               <datalist id="universidades">
@@ -166,7 +162,7 @@ export default function NuevaSolicitud() {
                   setX({ ...x, carreraOrigen: otra ? '' : e.target.value });
                 }}
               >
-                <option value="">Elige tu carrera…</option>
+                <option value="">Elige la carrera…</option>
                 {CARRERAS_OTRA_UNIVERSIDAD.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -175,7 +171,7 @@ export default function NuevaSolicitud() {
                 <option value={OTRA}>Otra carrera (escribirla)</option>
               </select>
               {otraCarrera && (
-                <input value={x.carreraOrigen} placeholder="Escribe el nombre de tu carrera" autoFocus onChange={(e) => setX({ ...x, carreraOrigen: e.target.value })} />
+                <input value={x.carreraOrigen} placeholder="Escribe el nombre de la carrera" autoFocus onChange={(e) => setX({ ...x, carreraOrigen: e.target.value })} />
               )}
             </label>
           </>
@@ -192,7 +188,7 @@ export default function NuevaSolicitud() {
         <label>
           Periodo del trámite
           <input value={d.periodo} onChange={(e) => setD({ ...d, periodo: e.target.value })} />
-          <small className="pista">El periodo académico en que presentarás el trámite.</small>
+          <small className="pista">El periodo académico del trámite.</small>
         </label>
 
         {externo && (
@@ -201,27 +197,37 @@ export default function NuevaSolicitud() {
               Periodos aprobados
               <input type="number" min={0} value={x.periodosAprobados} onChange={(e) => setX({ ...x, periodosAprobados: Number(e.target.value) })} />
               {x.periodosAprobados < 2 ? (
-                <small className="pista alerta">Con menos de 2 periodos no cumples RN-08, pero igual puedes ver qué materias se homologarían.</small>
+                <small className="pista alerta">Con menos de 2 periodos no cumple RN-08, pero igual se puede ver qué materias se homologarían.</small>
               ) : (
-                <small className="pista">Semestres completos que aprobaste en tu universidad.</small>
+                <small className="pista">Semestres completos que aprobó en su universidad.</small>
               )}
             </label>
-            <SubirPdf etiqueta="Malla curricular (PDF)" tipo="MALLA" alSubir={setMallaId} obligatorio pista="La lista de materias de tu carrera." />
-            <SubirPdf etiqueta="Récord académico (PDF)" tipo="RECORD" alSubir={setRecordId} obligatorio pista="El documento con tus notas." />
             <label className="casilla">
               <input type="checkbox" checked={x.documentosLegalizados} onChange={(e) => setX({ ...x, documentosLegalizados: e.target.checked })} />
               <span>
-                Mis documentos están legalizados
-                <small className="pista">Márcalo solo si tu malla y tu récord tienen el sello de legalización.</small>
+                Los documentos están legalizados
+                <small className="pista">Márcalo solo si la malla y el récord tienen el sello de legalización (el docente lo puede corregir).</small>
               </span>
             </label>
           </>
         )}
 
+        <label className="completo">
+          Docente que hará la homologación
+          <select value={docenteId} onChange={(e) => setDocenteId(e.target.value)}>
+            <option value="">Lo elijo después</option>
+            {docentes.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+
         {error && <p role="alert">{error}</p>}
         {faltan.length > 0 && <p className="falta completo">Para continuar falta: {faltan.join(', ')}.</p>}
         <button type="submit" disabled={faltan.length > 0}>
-          Crear solicitud y seguir →
+          Registrar solicitud
         </button>
       </form>
     </main>
