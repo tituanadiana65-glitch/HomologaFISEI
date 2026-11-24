@@ -33,7 +33,7 @@ Abre la dirección de HomologaFISEI en tu navegador (en la computadora del equip
 
 1. En **Coordinación de homologaciones**, pulsa **+ Registrar solicitud**.
 2. Elige si el estudiante es **de la UTA** (se cambia entre carreras de la FISEI) o **viene de otra universidad**.
-3. Escribe el **nombre del estudiante** y su **cédula** (o su **pasaporte**, si es extranjero). El sistema revisa que la cédula sea válida y no deja registrar dos solicitudes en trámite del mismo estudiante para la misma carrera. Luego escribe la carrera (y universidad) de origen, la **carrera de destino** y el **periodo**. Si viene de otra universidad, indica también sus **periodos aprobados** y si sus documentos están **legalizados**.
+3. Escribe el **nombre del estudiante** y su **cédula** (o su **pasaporte**, si es extranjero). La cédula debe tener 10 números. El sistema no deja registrar dos solicitudes en trámite del mismo estudiante para la misma carrera. Luego escribe la carrera (y universidad) de origen, la **carrera de destino** y el **periodo**. Si viene de otra universidad, indica también sus **periodos aprobados** y si sus documentos están **legalizados**.
 4. Elige el **docente que hará la homologación** (o déjalo para después) y pulsa **Registrar solicitud**.
 
 ### Asignar o cambiar el docente

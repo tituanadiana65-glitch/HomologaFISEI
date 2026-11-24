@@ -138,18 +138,9 @@ export function revisarRequisitos(
 // Cédula o pasaporte del estudiante (observación del 24/11/2026: dos estudiantes pueden llamarse igual)
 export type TipoDocumento = 'CEDULA' | 'PASAPORTE';
 
-// Cédula ecuatoriana: 10 dígitos, provincia 01-24 (o 30, ecuatorianos en el exterior), tercer dígito menor a 6 y dígito verificador (módulo 10)
+// Cédula: 10 números. No se revisa el dígito verificador: el coordinador debe poder registrar cualquier cédula (pedido del 24/11/2026)
 export function cedulaValida(cedula: string): boolean {
-  if (!/^\d{10}$/.test(cedula)) return false;
-  const provincia = Number(cedula.slice(0, 2));
-  if (!((provincia >= 1 && provincia <= 24) || provincia === 30)) return false;
-  if (Number(cedula[2]) >= 6) return false;
-  const suma = cedula.slice(0, 9).split('').reduce((s, c, i) => {
-    let n = Number(c) * (i % 2 === 0 ? 2 : 1);
-    if (n > 9) n -= 9;
-    return s + n;
-  }, 0);
-  return (10 - (suma % 10)) % 10 === Number(cedula[9]);
+  return /^\d{10}$/.test(cedula);
 }
 
 // Devuelve el documento limpio o el error para mostrar
@@ -157,7 +148,7 @@ export function validarDocumento(tipo: unknown, documento: unknown): { tipo: Tip
   const t: TipoDocumento = tipo === 'PASAPORTE' ? 'PASAPORTE' : 'CEDULA';
   const d = (typeof documento === 'string' ? documento : '').replace(/[\s-]/g, '').toUpperCase();
   if (!d) return { error: t === 'CEDULA' ? 'Escribe la cédula del estudiante' : 'Escribe el pasaporte del estudiante' };
-  if (t === 'CEDULA' && !cedulaValida(d)) return { error: 'La cédula no es válida: revisa que tenga los 10 dígitos correctos' };
+  if (t === 'CEDULA' && !cedulaValida(d)) return { error: 'La cédula debe tener 10 números' };
   if (t === 'PASAPORTE' && !/^[A-Z0-9]{5,20}$/.test(d)) return { error: 'El pasaporte debe tener de 5 a 20 letras o números' };
   return { tipo: t, documento: d };
 }

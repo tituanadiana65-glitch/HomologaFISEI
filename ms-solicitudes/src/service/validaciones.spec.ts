@@ -191,11 +191,11 @@ describe('materiasHomologables', () => {
 });
 
 describe('cédula o pasaporte del estudiante', () => {
-  it('valida la cédula ecuatoriana con su dígito verificador', () => {
+  it('acepta cualquier cédula de 10 números', () => {
     expect(cedulaValida('1801234566')).toBe(true);
-    expect(cedulaValida('1801234560')).toBe(false); // dígito verificador
-    expect(cedulaValida('9901234567')).toBe(false); // provincia
+    expect(cedulaValida('1802365478')).toBe(true); // sin revisar el dígito verificador
     expect(cedulaValida('18012345')).toBe(false);
+    expect(cedulaValida('18012345AB')).toBe(false);
   });
   it('limpia espacios y guiones; el pasaporte acepta letras y números', () => {
     expect(validarDocumento('CEDULA', '180123456-6')).toEqual({ tipo: 'CEDULA', documento: '1801234566' });

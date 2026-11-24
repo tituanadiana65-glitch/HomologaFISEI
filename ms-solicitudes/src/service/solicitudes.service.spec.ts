@@ -302,7 +302,7 @@ describe('SolicitudesService · coordinador y docente', () => {
   it('pide la cédula o el pasaporte y no deja dos solicitudes en trámite del mismo estudiante', async () => {
     const { servicio, prisma } = armar();
     await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez' })).rejects.toThrow('cédula');
-    await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez', documento: '1801234560' })).rejects.toThrow('no es válida');
+    await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez', documento: '18012345' })).rejects.toThrow('10 números');
     prisma.solicitud.findFirst.mockResolvedValueOnce({ id: 42, estudiante: 'Juanito Pérez' });
     await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez', documento: '1801234566' })).rejects.toThrow('N.º 42');
     // otro Juanito Pérez con otra cédula sí se registra

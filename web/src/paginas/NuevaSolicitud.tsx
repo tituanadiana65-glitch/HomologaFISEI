@@ -162,7 +162,7 @@ export default function NuevaSolicitud() {
           />
           {doc && !docValido && (
             <small className="pista alerta">
-              {tipoDocumento === 'CEDULA' ? 'Revisa la cédula: no es válida (10 dígitos con su dígito verificador).' : 'De 5 a 20 letras o números.'}
+              {tipoDocumento === 'CEDULA' ? 'La cédula debe tener 10 números.' : 'De 5 a 20 letras o números.'}
             </small>
           )}
           {!doc && <small className="pista">Así no se confunde con otro estudiante del mismo nombre.</small>}
