@@ -5,7 +5,7 @@ import { BadRequestException } from '@nestjs/common';
 import { readdir, readFile, stat } from 'fs/promises';
 import { basename, join, resolve, sep } from 'path';
 import type { PlanAnalitico } from '../dto/plan-analitico.dto';
-import { carreraDesdeCodigo, leerPlan, textoPdf, validarPlan } from './lector-pdf';
+import { carreraDesdeCodigo, interpretar, textoPdf, validarPlan } from './lector-pdf';
 import type { PlanesRepository } from '../repository/planes.repository';
 import type { EventosService } from '../events/eventos.service';
 
@@ -40,16 +40,24 @@ export class Importador {
     private readonly eventos: EventosService,
     private readonly buscar: Buscar = (u, i) => fetch(u, i),
     private readonly carpeta = CARPETA_PLANES,
+    private readonly leerTexto: (b: Buffer) => Promise<string> = textoPdf, // en las pruebas se reemplaza
   ) {}
 
   // Un PDF: con el lector de la FISEI y, si no tiene ese formato y se indicó la carrera, con IA
   async importarBuffer(nombre: string, buffer: Buffer, carrera?: string) {
     if (!esPdf(nombre)) throw new BadRequestException(`${nombre} no es un PDF`);
-    let plan: PlanAnalitico;
+    let texto: string;
     try {
-      plan = await leerPlan(buffer);
+      texto = await this.leerTexto(buffer);
     } catch {
       throw new BadRequestException(`${nombre} no se pudo leer como PDF`);
+    }
+    // Un PDF con otro formato puede hacer fallar al lector de la FISEI: entonces se trata como "sin datos" y lo lee la IA
+    let plan: PlanAnalitico;
+    try {
+      plan = interpretar(texto);
+    } catch {
+      plan = { codigo: '', nombre: '', carrera: '', nivel: '', periodo: '', docente: '', unidadOrganizacional: '', creditos: 0, horasTotales: 0, prerrequisitos: [], correquisitos: [], objetivoGeneral: '', unidades: [] };
     }
     let conIA = false;
     const faltan = validarPlan(plan);
@@ -59,7 +67,7 @@ export class Importador {
           `${nombre} no parece un plan analítico de la FISEI (falta ${faltan.join(', ')}). Indica la carrera para leerlo con inteligencia artificial.`,
         );
       }
-      plan = await this.leerConIA(nombre, await textoPdf(buffer), carrera);
+      plan = await this.leerConIA(nombre, texto, carrera);
       conIA = true;
     }
     const codigoCarrera = (carrera || carreraDesdeCodigo(plan.codigo) || '').toUpperCase();

@@ -16,10 +16,10 @@ const respuesta = (cuerpo: unknown, tipo = 'application/json', ok = true) =>
     arrayBuffer: () => Promise.resolve(Buffer.isBuffer(cuerpo) ? cuerpo : Buffer.from(String(cuerpo))),
   }) as unknown as Response;
 
-function armar(buscar: jest.Mock = jest.fn(), carpeta = '/no-existe') {
+function armar(buscar: jest.Mock = jest.fn(), carpeta = '/no-existe', leerTexto?: (b: Buffer) => Promise<string>) {
   const repo = { guardar: jest.fn((p: { codigo: string; nombre: string }, c: string) => Promise.resolve({ codigo: p.codigo, nombre: p.nombre, carrera: c, unidades: 4 })) };
   const eventos = { publicar: jest.fn().mockResolvedValue(true) };
-  return { repo, imp: new Importador(repo as unknown as PlanesRepository, eventos as unknown as EventosService, buscar, carpeta) };
+  return { repo, imp: new Importador(repo as unknown as PlanesRepository, eventos as unknown as EventosService, buscar, carpeta, leerTexto) };
 }
 
 describe('Importador · por URL o ruta', () => {
@@ -76,11 +76,15 @@ describe('Importador · por URL o ruta', () => {
   });
 
   it('un plan con otro formato se lee con IA si se indica la carrera', async () => {
-    const otro = readFileSync(join(__dirname, '../../test/fixtures/otro-formato.pdf')); // sílabo de otra universidad (no es formato FISEI)
+    // Sílabo de otra universidad (no es formato FISEI). El texto se da directo: la librería de PDF falla con PDF pequeños dentro de Jest
+    const otro = Buffer.from('pdf');
+    const texto = () => Promise.resolve('Universidad X - Syllabus\nAsignatura: Robotica Basica\nUnidad 1: Sensores\nUnidad 2: Actuadores');
     const { imp, repo } = armar(
       jest.fn().mockResolvedValue(
         respuesta({ nombre: 'Robótica Básica', nivel: 'PRIMERO', creditos: 3, horasTotales: 144, unidades: [{ contenido: 'Sensores', horas: 72 }, { contenido: 'Actuadores', horas: 72 }] }),
       ),
+      '/no-existe',
+      texto,
     );
     await expect(imp.importarBuffer('robotica.pdf', otro)).rejects.toThrow('Indica la carrera');
     const r = await imp.importarBuffer('robotica.pdf', otro, 'ro');
