@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EventosService } from '../events/eventos.service';
 import { ClientesService } from './clientes.service';
 import { HomologacionService } from './homologacion.service';
-import { AgenteService, textoMateria } from './agente.service';
+import { AgenteService, AVISO_SIN_SILABO, textoMateria, textoSinSilabo } from './agente.service';
 import { buscarEquivalente, buscarPorNombre, nombreBase } from './equivalencia';
 import type { Informe, MateriaCatalogo, MateriaTexto, ParteJunta, Resultado } from '../dto/tipos';
 
@@ -44,6 +44,7 @@ interface Asignacion {
   aprobada?: MateriaCatalogo; // UTA
   aviso?: string; // HU-26 · es una parte de la materia nueva
   porTemasUta?: boolean; // UTA con otro nombre: se evalúa sola (no se junta con otras)
+  sinSilabo?: boolean; // otra universidad sin sílabo: temas estimados por el nombre
 }
 
 // Pausa entre materias por el límite de consultas por minuto de Gemini (en las pruebas: IA_PAUSA_MS=0)
@@ -178,14 +179,11 @@ export class SolicitudesAgenteService implements OnModuleInit {
     candidatas: () => Promise<MateriaTexto[]>,
     pausar: () => Promise<void>,
   ): Promise<Asignacion | null> {
-    // Sin sílabo no hay con qué comparar. No se deja Pendiente: reintentar nunca lo arreglaría y la solicitud no terminaría.
-    if (!m.silaboId) {
-      this.log.warn(`La materia ${m.codigo} no trae sílabo: se marca sin materia equivalente`);
-      return null;
-    }
-    const silabo = await this.clientes.textoSilabo(m.silaboId);
+    // El sílabo es opcional: sin él se compara por el nombre contra la matriz de la carrera (con aviso para el docente)
     const nombre = m.nombre ?? m.codigo;
-    const base = { m, nombre, silabo };
+    const sinSilabo = !m.silaboId;
+    const silabo = sinSilabo ? textoSinSilabo(nombre) : await this.clientes.textoSilabo(m.silaboId!);
+    const base = { m, nombre, silabo, sinSilabo };
     const n = buscarPorNombre(nombre, destino);
     if (n.exacta) return { ...base, principal: { codigo: n.exacta.codigo, parecido: 100 }, exacta: true };
     if (n.base) {
@@ -202,6 +200,7 @@ export class SolicitudesAgenteService implements OnModuleInit {
   private async evaluarSola(a: Asignacion, externa: boolean): Promise<ResultadoMateria> {
     const informe = await this.evaluarUna(a, a.principal!.codigo, a.principal!.parecido, externa);
     if (a.aviso && informe.resultado !== 'Homologable') informe.aviso = a.aviso;
+    if (a.sinSilabo) informe.aviso = [AVISO_SIN_SILABO, informe.aviso].filter(Boolean).join(' ');
     return { codigoAprobada: a.m.codigo, codigoNueva: a.principal!.codigo, resultado: informe.resultado, informe };
   }
 
@@ -237,6 +236,7 @@ export class SolicitudesAgenteService implements OnModuleInit {
     }));
     const parecido = externa ? Math.min(...grupo.map((a) => a.principal!.parecido)) : undefined;
     const informe = await this.homologacion.homologarJuntas({ partes, codigoNueva, ...(parecido !== undefined ? { parecido } : {}) });
+    if (grupo.some((a) => a.sinSilabo)) informe.aviso = [AVISO_SIN_SILABO, informe.aviso].filter(Boolean).join(' ');
     return grupo.map((a) => ({
       codigoAprobada: a.m.codigo,
       codigoNueva,

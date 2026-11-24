@@ -71,9 +71,8 @@ export function validarMateriaExterna(
   if (!ESCALAS.includes(m.escala as never)) return 'La nota debe ser sobre 10, sobre 20 o sobre 100';
   if (typeof m.nota !== 'number' || m.nota < 0 || m.nota > m.escala!) return `La nota debe estar entre 0 y ${m.escala}`;
   if (!entero(m.anio) || m.anio! < 1990 || m.anio! > anioActual) return 'Revisa el año de aprobación';
-  // Sin sílabo el agente no puede comparar los contenidos (RN-01): la materia quedaría Pendiente para siempre
-  if (m.silaboId === undefined || m.silaboId === null) return 'Sube el sílabo de la materia en PDF';
-  if (!entero(m.silaboId) || m.silaboId <= 0) return 'El sílabo no es válido; vuelve a subirlo';
+  // El sílabo es opcional (observación del 24/11/2026): sin él, el agente compara por el nombre contra la matriz de la carrera
+  if (m.silaboId !== undefined && m.silaboId !== null && (!entero(m.silaboId) || m.silaboId <= 0)) return 'El sílabo no es válido; vuelve a subirlo';
   if (yaRegistradas.includes(codigoExterno(m.nombre))) return 'Esa materia ya está registrada en la solicitud';
   return null;
 }

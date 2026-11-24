@@ -29,7 +29,10 @@ export class ClientesService {
   }
 
   // T43 · Materias de una carrera con sus unidades (para elegir la más parecida a un sílabo)
+  // Usa la matriz de la carrera (una sola consulta: materia, nivel, unidades, créditos); si ms-catalogo es antiguo, va materia por materia
   async candidatas(carrera: string): Promise<MateriaTexto[]> {
+    const r = await fetch(`${this.catalogo}/matriz?carrera=${encodeURIComponent(carrera)}`).catch(() => null);
+    if (r?.ok) return (await r.json()) as MateriaTexto[];
     const lista = await this.asignaturas(carrera);
     return Promise.all(lista.map((a) => this.materia(a.codigo)));
   }

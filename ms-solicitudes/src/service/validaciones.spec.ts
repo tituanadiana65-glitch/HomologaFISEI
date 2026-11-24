@@ -109,8 +109,8 @@ describe('validarMateriaExterna', () => {
     expect(validarMateriaExterna(calculo, [], 2026)).toBeNull();
   });
 
-  it('pide el sílabo: sin él no se pueden comparar los contenidos', () => {
-    expect(validarMateriaExterna({ ...calculo, silaboId: undefined }, [], 2026)).toMatch(/sílabo/);
+  it('el sílabo es opcional, pero si viene debe ser válido', () => {
+    expect(validarMateriaExterna({ ...calculo, silaboId: undefined }, [], 2026)).toBeNull();
     expect(validarMateriaExterna({ ...calculo, silaboId: 0 }, [], 2026)).toMatch(/sílabo/);
   });
 

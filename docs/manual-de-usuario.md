@@ -53,10 +53,10 @@ En **Mis homologaciones** están solo las solicitudes que te asignó el coordina
 ### Paso 1 · Expediente y materias
 
 1. En **Expediente del estudiante**, sube en PDF (con texto, no escaneado) el **récord académico**. Si viene de otra universidad, sube también la **malla curricular** y revisa los **periodos aprobados** y si los documentos están **legalizados**.
-2. **Lo más rápido: llena las materias desde el récord.** Pulsa **Leer el récord**: la inteligencia artificial arma la lista de materias que cursó, con las **aprobadas** y las **reprobadas** (las reprobadas no se pueden homologar). Marca las que quieras, revisa créditos y horas y, si viene de otra universidad, sube el **sílabo** de cada una. Pulsa **Agregar**.
+2. **Lo más rápido: llena las materias desde el récord.** Pulsa **Leer el récord**: la inteligencia artificial arma la lista de materias que cursó, con las **aprobadas** y las **reprobadas** (las reprobadas no se pueden homologar). Marca las que quieras, revisa créditos y horas y, si viene de otra universidad, sube el **sílabo** de cada una si lo tienes (es opcional). Pulsa **Agregar**.
 3. También puedes agregarlas **a mano**:
    - **Estudiante de la UTA:** elige el **Nivel** y la **Materia**, y completa paralelo, docente, periodo, año, nota (de 0 a 10) y matrícula.
-   - **De otra universidad:** escribe el nombre tal como aparece en el récord, créditos, horas, la nota y sobre cuánto califica su universidad (10, 20 o 100: el sistema la convierte a la escala de la UTA), el año y sube el **sílabo** (obligatorio).
+   - **De otra universidad:** escribe el nombre tal como aparece en el récord, créditos, horas, la nota y sobre cuánto califica su universidad (10, 20 o 100: el sistema la convierte a la escala de la UTA), el año y, si lo tienes, sube el **sílabo** (opcional). Sin sílabo, el agente compara la materia por su nombre contra la matriz de la carrera y te muestra el aviso «Sin sílabo…» para que la revises con más cuidado.
 4. Cuando estén todas, pulsa **Enviar al agente**. Después ya no se pueden cambiar las materias.
 
 ### Paso 2 · Análisis del agente
@@ -66,7 +66,9 @@ Verás cuánto tiempo lleva el agente revisando y qué está haciendo. Suele tar
 ### Paso 3 · Revisión y envío al coordinador
 
 1. Verás cada materia con el resultado del **agente** y el **resultado final**. Pulsa **Ver por qué** para ver las reglas.
-2. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** (obligatorio).
+2. Si no estás de acuerdo con una materia, pulsa **Cambiar**, elige el nuevo resultado y escribe un **comentario** de al menos 5 letras. Si el botón **Guardar** no se activa, debajo dice qué falta.
+   - Si la cambias a **Homologable** y el agente no encontró materia equivalente, elige en **Se homologa por** la materia de la nueva carrera.
+   - Si tu cambio contradice las reglas (por ejemplo, la marcas Homologable pero no cumple RN-02), el sistema te lo dice y te pide **confirmarlo** con una casilla. Así no se homologa algo «no homologable» por error, ni al revés.
 3. Cuando todo esté bien, pulsa **Enviar al coordinador** (puedes dejar un comentario). Después ya no se puede cambiar.
 
 ---
@@ -114,10 +116,23 @@ El administrador prepara el sistema: carreras, planes analíticos y reglas. Entr
 
 ### Importar planes analíticos
 
-1. En **Plan analítico (PDF)**, elige uno o varios PDF de planes analíticos oficiales.
-2. Pulsa **Importar plan**.
+Hay dos formas; elige la pestaña:
 
-El sistema lee del PDF el nombre, los créditos, las horas, las unidades y los prerrequisitos. Si el plan es de una carrera nueva, la carrera se crea sola. Si subes dos veces el mismo plan, la materia no se repite.
+- **Subir archivos:** elige uno o varios PDF y pulsa **Importar plan**.
+- **Desde URL o carpeta:** escribe dónde están los planes y pulsa **Traer e importar**. El sistema trae todos los PDF de una vez (hasta 80). Sirve:
+  - una carpeta de GitHub, por ejemplo `https://github.com/tituanadiana65-glitch/HomologaFISEI/tree/main/planes/SW`;
+  - una página web con enlaces a los PDF, o la dirección de un solo PDF;
+  - una carpeta dentro de la carpeta `planes` del proyecto, por ejemplo `planes/SW` o `planes/TI`.
+
+  Al terminar verás la lista de planes importados y, si alguno falló, el motivo.
+
+El sistema lee del PDF el nombre, el nivel, los créditos, las horas, las unidades y los prerrequisitos. Si el plan es de una carrera nueva, la carrera se crea sola. Si importas dos veces el mismo plan, la materia no se repite.
+
+**Planes con otro formato:** si los PDF no tienen el formato de los planes de la FISEI, elige la **Carrera** antes de importar. La inteligencia artificial los lee y los convierte a la matriz (aparecen como «leído con IA»).
+
+### Ver la matriz de una carrera
+
+En la lista de carreras, pulsa **Ver matriz**. Verás cada materia con su **nivel**, sus **contenidos o unidades**, sus **créditos** y sus **horas**. El agente compara las materias aprobadas del récord contra esta matriz, sin volver a abrir los PDF. Pulsa **Descargar CSV (Excel)** para tenerla en una hoja de cálculo.
 
 ### Cambiar las reglas
 

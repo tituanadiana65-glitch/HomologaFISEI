@@ -189,6 +189,11 @@ export default function RevisionDetalle() {
                         )}
                       </ul>
                     )}
+                    {inf?.aviso && (
+                      <small className="pista alerta">
+                        <b>Ojo:</b> {inf.aviso}
+                      </small>
+                    )}
                     {f.docenteCambio && f.resultado !== f.resultadoAgente && (
                       <small className="cambio-docente">
                         <b>Cambiado por {f.docenteCambio}:</b> {f.comentarioDocente}

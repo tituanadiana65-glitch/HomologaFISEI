@@ -1426,3 +1426,36 @@ a.volver {
     grid-template-columns: 1fr;
   }
 }
+
+/* Matriz de la carrera e importación por URL (observación 24/11/2026) */
+.matriz-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.matriz .resumen-unidades {
+  display: block;
+  font-size: 13px;
+  color: var(--gris);
+}
+.matriz ol.unidades {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.matriz td button.enlace {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.resultado-ruta {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+}
+.ver-matriz {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 12px;
+}

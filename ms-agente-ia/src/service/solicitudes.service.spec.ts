@@ -146,12 +146,26 @@ describe('SolicitudesAgenteService', () => {
       });
     });
 
-    it('si la materia no trae sílabo sale sin materia equivalente (no Pendiente, para que la solicitud termine)', async () => {
-      const elegirParecida = jest.fn();
-      const { s, publicar } = armar({ elegirParecida });
+    it('sin sílabo compara por el nombre contra la matriz y avisa al docente (observación 24/11)', async () => {
+      const elegirParecida = jest.fn().mockResolvedValue({ codigo: 'SW-CI', parecido: 75 });
+      const homologacion = { homologarExterna: jest.fn().mockResolvedValue({ resultado: 'Homologable' }) };
+      const { s, clientes, publicar } = armar({ elegirParecida }, {}, homologacion);
       await enviar(s, [{ ...calculoII, silaboId: undefined }]);
+      expect(clientes.textoSilabo).not.toHaveBeenCalled();
+      expect(elegirParecida).toHaveBeenCalledWith(expect.stringContaining('SIN SÍLABO'), expect.any(Array));
+      expect(homologacion.homologarExterna).toHaveBeenCalledWith(expect.objectContaining({ codigoNueva: 'SW-CI', silabo: expect.stringContaining('Cálculo II') }));
+      const r = publicar.mock.calls[0][1].resultados[0];
+      expect(r.resultado).toBe('Homologable');
+      expect(r.informe.aviso).toMatch(/^Sin sílabo/);
+    });
+
+    it('sin sílabo y con el mismo nombre no gasta IA para elegir', async () => {
+      const elegirParecida = jest.fn();
+      const homologacion = { homologarExterna: jest.fn().mockResolvedValue({ resultado: 'Homologable' }) };
+      const { s } = armar({ elegirParecida }, {}, homologacion);
+      await enviar(s, [{ ...calculoII, nombre: 'Física', silaboId: undefined }]);
       expect(elegirParecida).not.toHaveBeenCalled();
-      expect(publicar).toHaveBeenCalledWith('solicitud.homologada', { solicitudId: 12, resultados: [expect.objectContaining({ resultado: 'Sin materia equivalente' })] });
+      expect(homologacion.homologarExterna).toHaveBeenCalledWith(expect.objectContaining({ codigoNueva: 'SW-FIS' }));
     });
 
     it('pide las candidatas al catálogo una sola vez aunque haya varias materias', async () => {

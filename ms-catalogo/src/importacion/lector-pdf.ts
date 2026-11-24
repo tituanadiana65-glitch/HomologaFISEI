@@ -79,8 +79,12 @@ export function interpretar(texto: string): PlanAnalitico {
 }
 
 export async function leerPlan(buffer: Buffer): Promise<PlanAnalitico> {
-  const datos = await pdf(buffer);
-  return interpretar(datos.text);
+  return interpretar(await textoPdf(buffer));
+}
+
+// Texto del PDF (para leer con IA los planes que no tienen el formato de la FISEI)
+export async function textoPdf(buffer: Buffer): Promise<string> {
+  return (await pdf(buffer)).text;
 }
 
 // Siglas del plan que se guardan con otro código de carrera (SF = Software -> SW).

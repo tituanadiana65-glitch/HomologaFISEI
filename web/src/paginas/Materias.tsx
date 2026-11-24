@@ -108,7 +108,6 @@ export default function Materias({ id, alEnviar }: { id: number; alEnviar: () =>
     mx.horas === '' && 'las horas',
     mx.nota === '' && 'la nota',
     mx.anio === '' && 'el año',
-    !silaboId && 'el sílabo en PDF',
   ].filter(Boolean);
   const vista = vistaNota(mx.nota, mx.escala);
 
@@ -256,7 +255,7 @@ export default function Materias({ id, alEnviar }: { id: number; alEnviar: () =>
               <small className="pista alerta">Hace más de 10 años: no cumpliría la regla RN-05.</small>
             )}
           </label>
-          <SubirPdf key={claveSilabo} etiqueta="Sílabo de la materia (PDF)" tipo="SILABO" alSubir={setSilaboId} obligatorio pista="Sin el sílabo el agente no puede comparar los temas." />
+          <SubirPdf key={claveSilabo} etiqueta="Sílabo de la materia (PDF, opcional)" tipo="SILABO" alSubir={setSilaboId} pista="Con el sílabo el agente compara los temas; sin él compara por el nombre de la materia y te avisa para que lo revises." />
           {error && <p role="alert">{error}</p>}
           {faltanExterna.length > 0 && <p className="falta completo">Para agregarla falta: {faltanExterna.join(', ')}.</p>}
           <button type="submit" disabled={faltanExterna.length > 0}>
