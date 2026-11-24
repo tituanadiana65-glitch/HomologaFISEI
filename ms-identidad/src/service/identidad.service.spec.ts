@@ -14,35 +14,36 @@ function armar(existente: object | null = null) {
 }
 
 describe('IdentidadService', () => {
-  it('registra con la contraseña cifrada y devuelve un token de 8 horas', async () => {
+  it('el administrador crea un docente con la contraseña cifrada; al entrar recibe un token de 8 horas con su correo y nombre', async () => {
     const { s, usuario } = armar();
-    const r = await s.registrar({ nombre: 'Ana', correo: 'Ana@uta.edu.ec', clave: 'Clave2026*' });
+    const creado = await s.crearPersonal({ nombre: 'Ing. Ana', correo: 'Ana@uta.edu.ec', clave: 'Clave2026*', rol: 'DOCENTE' });
     const guardado = usuario.create.mock.calls[0][0].data;
     expect(guardado.claveHash).not.toBe('Clave2026*');
     expect(guardado.correo).toBe('ana@uta.edu.ec');
+    expect(creado).toEqual({ id: 1, nombre: 'Ing. Ana', correo: 'ana@uta.edu.ec', rol: 'DOCENTE' }); // sin la contraseña
+    usuario.findUnique.mockResolvedValue({ ...guardado, id: 1 });
+    const r = await s.entrar({ correo: 'ana@uta.edu.ec', clave: 'Clave2026*' });
     const datos = jwt.verify(r.token, 'homologa-sprint2-secreto') as jwt.JwtPayload;
-    expect(datos.rol).toBe('ESTUDIANTE');
+    expect(datos).toEqual(expect.objectContaining({ rol: 'DOCENTE', correo: 'ana@uta.edu.ec', nombre: 'Ing. Ana' }));
     expect(datos.exp! - datos.iat!).toBe(8 * 3600);
-  });
-
-  it('devuelve el usuario (sin la contraseña) y el token lleva el correo', async () => {
-    const { s } = armar();
-    const r = await s.registrar({ nombre: 'Ana', correo: 'ana@uta.edu.ec', clave: 'Clave2026*' });
-    expect(r.usuario).toEqual({ id: 1, nombre: 'Ana', correo: 'ana@uta.edu.ec', rol: 'ESTUDIANTE' });
-    expect((jwt.verify(r.token, 'homologa-sprint2-secreto') as jwt.JwtPayload).correo).toBe('ana@uta.edu.ec');
-    expect((jwt.verify(r.token, 'homologa-sprint2-secreto') as jwt.JwtPayload).nombre).toBe('Ana'); // para el informe PDF
   });
 
   it('rechaza un correo repetido', async () => {
     const { s } = armar({ id: 9 });
-    await expect(s.registrar({ nombre: 'Ana', correo: 'ana@uta.edu.ec', clave: 'Clave2026*' })).rejects.toThrow(BadRequestException);
+    await expect(s.crearPersonal({ nombre: 'Ana', correo: 'ana@uta.edu.ec', clave: 'Clave2026*', rol: 'DOCENTE' })).rejects.toThrow(BadRequestException);
   });
 
-  it('login correcto y login con clave equivocada', async () => {
+  it('ya no hay registro de estudiantes', () => {
+    expect((IdentidadService.prototype as unknown as Record<string, unknown>).registrar).toBeUndefined();
+  });
+
+  it('login correcto, con clave equivocada y de una cuenta de estudiante antigua', async () => {
     const claveHash = await bcrypt.hash('Clave2026*', 4);
-    const { s } = armar({ id: 1, nombre: 'Ana', correo: 'ana@uta.edu.ec', rol: 'ESTUDIANTE', claveHash });
+    const { s } = armar({ id: 1, nombre: 'Ana', correo: 'ana@uta.edu.ec', rol: 'DOCENTE', claveHash });
     expect((await s.entrar({ correo: 'ana@uta.edu.ec', clave: 'Clave2026*' })).token).toBeTruthy();
     await expect(s.entrar({ correo: 'ana@uta.edu.ec', clave: 'otra' })).rejects.toThrow(UnauthorizedException);
+    const viejo = armar({ id: 2, nombre: 'Luis', correo: 'luis@uta.edu.ec', rol: 'ESTUDIANTE', claveHash });
+    await expect(viejo.s.entrar({ correo: 'luis@uta.edu.ec', clave: 'Clave2026*' })).rejects.toThrow('ya no usan el sistema');
   });
 
   describe('administrador inicial', () => {

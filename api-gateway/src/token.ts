@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 
-const PUBLICAS = ['/api/identidad/registro', '/api/identidad/login'];
+const PUBLICAS = ['/api/identidad/login']; // sin registro: las cuentas las crea el administrador
 const SOLO_ADMIN = [
   { metodo: 'POST', ruta: '/api/catalogo/planes' },
   { metodo: 'POST', ruta: '/api/catalogo/carreras' }, // T51

@@ -39,6 +39,12 @@ Las pruebas se hicieron contra la página http://localhost:5173 y su API (`/api/
 | CP-25 | HU-20 | Descargar el informe | `GET /api/documentos/informes/3004` | PDF completo y evento `informe.generado` | **200**, `application/pdf`, 5616 bytes, empieza con `%PDF-`. En RabbitMQ la cola `homologafisei.auditoria` tiene el evento `informe.generado` de `ms-documentos` con `solicitudId: 3004` | OK |
 | CP-26 | HU-20 | Informe de otra cuenta | Con `final2.t54`: `GET /api/documentos/informes/3004` | 403 | **403**: «Esta solicitud no es tuya» | OK |
 
+> **Nota (24/11/2026): flujo anterior.** Estas pruebas se hicieron cuando el estudiante usaba el sistema. Desde el 23/11/2026 el estudiante **no** tiene cuenta: entrega sus papeles, el **coordinador** registra la solicitud y asigna un **docente**, y el docente hace la homologación. Por eso:
+> - **CP-12 y CP-13** (crear cuenta) ya no aplican: no hay registro. `POST /api/identidad/registro` responde **401** y las cuentas del coordinador y los docentes las crea el administrador (ver CP-45 en `pruebas-sprint3.md`). Las cuentas de estudiante que ya existían tampoco pueden entrar.
+> - **CP-14 y CP-15** (contraseña incorrecta y página privada sin sesión) siguen valiendo, ahora con las cuentas del personal.
+> - **CP-16 a CP-18** (crear la solicitud) los hace el coordinador. «Una segunda solicitud abierta» ahora se controla por la **cédula** del estudiante: «Ya hay una solicitud en trámite para ese estudiante» (CP-57).
+> - **CP-22** cambió: Fundamentos de Programación (TI) ahora sale **Homologable** con Algoritmos y Lógica de Programación (SW), porque el agente busca por temas cuando los nombres son distintos (CP-56).
+
 ### Casos extra encontrados en esta revisión
 
 | Caso | Obtenido | OK |
@@ -77,6 +83,8 @@ Fecha: 15/11/2026. Cuentas `srv1.t53@uta.edu.ec` y `srv2.t53@uta.edu.ec`. Base d
 | CP-25 | **200**, `application/pdf`, 5823 bytes, empieza con `%PDF-` | OK |
 | CP-26 | Con `srv2.t53`: **403** «Esta solicitud no es tuya» | OK |
 | S1-3 (E-2) | `POST /api/agente/homologar` por la página: **504 a los 100 s**. El arreglo de nginx funcionó (antes cortaba a los 60 s), pero el reenvío de puertos de Codespaces corta a unos 100 s. Queda abierto con E-1 | Ver E-1 |
+
+> Estos resultados también son del flujo anterior (el estudiante con cuenta propia). Ver la nota de arriba.
 
 ### Errores encontrados en el servidor
 

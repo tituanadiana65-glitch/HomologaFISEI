@@ -38,10 +38,15 @@ describe('revisarToken', () => {
     expect(req.headers['x-usuario-id']).toBe('5');
     expect(req.headers['x-usuario-rol']).toBe('ESTUDIANTE');
   });
-  it('login, registro, health y consultas GET al catálogo no piden token', () => {
-    for (const [m, u] of [['POST', '/api/identidad/login'], ['POST', '/api/identidad/registro'], ['GET', '/api/agente/health'], ['GET', '/api/catalogo/carreras']]) {
+  it('login, health y consultas GET al catálogo no piden token', () => {
+    for (const [m, u] of [['POST', '/api/identidad/login'], ['GET', '/api/agente/health'], ['GET', '/api/catalogo/carreras']]) {
       expect(llamar(m, u).next).toHaveBeenCalled();
     }
+  });
+  it('el registro ya no es público: sin token responde 401', () => {
+    const { next, res } = llamar('POST', '/api/identidad/registro');
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
   });
   it('deja pasar el OPTIONS del navegador (CORS)', () => {
     expect(llamar('OPTIONS', '/api/solicitudes/mia').next).toHaveBeenCalled();

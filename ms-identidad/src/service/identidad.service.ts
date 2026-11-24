@@ -24,21 +24,6 @@ export class IdentidadService implements OnModuleInit {
     this.log.log(`Administrador creado: ${correo}`);
   }
 
-  async registrar(d: Registro) {
-    const error = validarRegistro(d);
-    if (error) throw new BadRequestException(error);
-    const correo = d.correo.trim().toLowerCase();
-           if (await this.prisma.usuario.findUnique({ where: { correo } })) throw new BadRequestException('Ese correo ya está registrado');
-       try {
-         const u = await this.prisma.usuario.create({ data: { nombre: d.nombre.trim(), correo, claveHash: await bcrypt.hash(d.clave, 10) } });
-         return this.sesion(u);
-       } catch (e) {
-         // dos registros a la vez con el mismo correo: la base de datos rechaza el segundo
-         if ((e as { code?: string }).code === 'P2002') throw new BadRequestException('Ese correo ya está registrado');
-         throw e;
-       }
-     }
-
   // El administrador crea las cuentas del personal: COORDINADOR (asigna docentes) y DOCENTE (hace la homologación)
   async crearPersonal(d: Registro & { rol?: string }) {
     const rol = d?.rol ?? 'DOCENTE';
@@ -67,6 +52,8 @@ export class IdentidadService implements OnModuleInit {
   async entrar(d: { correo?: string; clave?: string }) {
     const u = await this.prisma.usuario.findUnique({ where: { correo: (d.correo ?? '').trim().toLowerCase() } });
     if (!u || !(await bcrypt.compare(d.clave ?? '', u.claveHash))) throw new UnauthorizedException('Correo o contraseña incorrectos');
+    // Las cuentas de estudiante del flujo anterior ya no entran: el estudiante entrega sus papeles al coordinador
+    if (u.rol === 'ESTUDIANTE') throw new UnauthorizedException('Los estudiantes ya no usan el sistema: entrega tu solicitud en la coordinación de la carrera');
     return this.sesion(u);
   }
 

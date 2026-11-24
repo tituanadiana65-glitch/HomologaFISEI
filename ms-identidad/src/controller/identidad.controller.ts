@@ -6,10 +6,8 @@ import type { Registro } from '../service/validaciones';
 export class IdentidadController {
   constructor(private readonly servicio: IdentidadService) {}
 
-  @Post('registro')
-  registrar(@Body() d: Registro) {
-    return this.servicio.registrar(d);
-  }
+  // Ya no hay registro de estudiantes (desde el 23/11/2026 el estudiante no usa el sistema):
+  // las cuentas las crea el administrador en POST /personal
 
   // Solo el administrador (lo controla el api-gateway): crea coordinadores y docentes
   @Post('personal')
