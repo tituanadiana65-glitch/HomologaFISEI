@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { cedulaValida, limpiarDocumento } from '../documento';
 import { api } from '../api';
 
 interface Carrera { codigo: string; nombre: string }
@@ -50,6 +51,10 @@ export default function NuevaSolicitud() {
   const [x, setX] = useState({ universidadOrigen: '', carreraOrigen: '', periodosAprobados: 1, documentosLegalizados: false });
   const [otraCarrera, setOtraCarrera] = useState(false); // la carrera de otra universidad no está en la lista
   const [estudiante, setEstudiante] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState<'CEDULA' | 'PASAPORTE'>('CEDULA');
+  const [documento, setDocumento] = useState('');
+  const doc = limpiarDocumento(documento);
+  const docValido = tipoDocumento === 'CEDULA' ? cedulaValida(doc) : /^[A-Z0-9]{5,20}$/.test(doc);
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [docenteId, setDocenteId] = useState('');
   const [error, setError] = useState('');
@@ -63,6 +68,7 @@ export default function NuevaSolicitud() {
   // Lo que falta para poder crear la solicitud (el botón se activa cuando no falta nada)
   const faltan = [
     estudiante.trim().length < 3 && 'el nombre del estudiante',
+    !doc ? (tipoDocumento === 'CEDULA' ? 'la cédula' : 'el pasaporte') : !docValido && (tipoDocumento === 'CEDULA' ? 'una cédula válida' : 'un pasaporte válido'),
     ...(externo
       ? [!x.universidadOrigen.trim() && 'la universidad de origen', !x.carreraOrigen.trim() && 'la carrera de origen']
       : [d.carreraOrigen === d.carreraDestino && 'una carrera de destino distinta a la de origen']),
@@ -74,6 +80,8 @@ export default function NuevaSolicitud() {
     const docente = docentes.find((x) => String(x.id) === docenteId);
     const cuerpo = {
       estudiante,
+      documento: doc,
+      tipoDocumento,
       ...(externo ? { tipo: 'EXTERNO', ...x, carreraDestino: d.carreraDestino, periodo: d.periodo } : { tipo: 'INTERNO', ...d }),
       ...(docente ? { docenteId: docente.id, docente: docente.nombre } : {}),
     };
@@ -131,6 +139,33 @@ export default function NuevaSolicitud() {
             Nombre del estudiante <span className="req">*</span>
           </span>
           <input value={estudiante} placeholder="Nombres y apellidos" onChange={(e) => setEstudiante(e.target.value)} />
+        </label>
+        <label>
+          <span>
+            Documento <span className="req">*</span>
+          </span>
+          <select value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value as 'CEDULA' | 'PASAPORTE')}>
+            <option value="CEDULA">Cédula</option>
+            <option value="PASAPORTE">Pasaporte (estudiante extranjero)</option>
+          </select>
+        </label>
+        <label>
+          <span>
+            {tipoDocumento === 'CEDULA' ? 'Número de cédula' : 'Número de pasaporte'} <span className="req">*</span>
+          </span>
+          <input
+            value={documento}
+            inputMode={tipoDocumento === 'CEDULA' ? 'numeric' : 'text'}
+            maxLength={tipoDocumento === 'CEDULA' ? 11 : 20}
+            placeholder={tipoDocumento === 'CEDULA' ? '1801234566' : 'AB123456'}
+            onChange={(e) => setDocumento(e.target.value)}
+          />
+          {doc && !docValido && (
+            <small className="pista alerta">
+              {tipoDocumento === 'CEDULA' ? 'Revisa la cédula: no es válida (10 dígitos con su dígito verificador).' : 'De 5 a 20 letras o números.'}
+            </small>
+          )}
+          {!doc && <small className="pista">Así no se confunde con otro estudiante del mismo nombre.</small>}
         </label>
         {externo ? (
           <>

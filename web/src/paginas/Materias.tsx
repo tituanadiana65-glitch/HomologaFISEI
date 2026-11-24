@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import SubirPdf from '../componentes/SubirPdf';
@@ -29,6 +30,8 @@ interface Solicitud {
   recordId?: number | null;
   mallaId?: number | null;
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   periodosAprobados?: number | null;
   documentosLegalizados?: boolean | null;
   materias: Materia[];
@@ -165,6 +168,7 @@ export default function Materias({ id, alEnviar }: { id: number; alEnviar: () =>
   return (
     <main>
       <h1>Homologación N.º {s.id} · {s.estudiante ?? 'Estudiante'}</h1>
+      {textoDocumento(s) && <p className="documento-estudiante">{textoDocumento(s)}</p>}
       <p className="ayuda">Sube el expediente que entregó el estudiante y registra las materias que aprobó. Cuando termines, envíalas al agente.</p>
       <Pasos actual={1} />
 

@@ -8,6 +8,7 @@ function armar(solicitud?: object, abiertas = 0) {
       count: jest.fn().mockResolvedValue(abiertas),
       create: jest.fn().mockImplementation(({ data }) => ({ id: 1, estado: 'BORRADOR', ...data })),
       findUnique: jest.fn().mockResolvedValue(solicitud ?? null),
+      findFirst: jest.fn().mockResolvedValue(null),
       update: jest.fn(),
     },
     asignaturaAprobada: {
@@ -282,9 +283,9 @@ describe('SolicitudesService · coordinador y docente', () => {
 
   it('el coordinador registra la solicitud con el nombre del estudiante y el docente', async () => {
     const { servicio, prisma } = armar();
-    await servicio.crearPorCoordinador(coord, { ...base, estudiante: ' Ana Pérez ', docenteId: 11, docente: 'Ing. Luis' });
+    await servicio.crearPorCoordinador(coord, { ...base, estudiante: ' Ana Pérez ', documento: '1801 234566', docenteId: 11, docente: 'Ing. Luis' });
     expect(prisma.solicitud.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ usuarioId: 5, estudiante: 'Ana Pérez', docenteId: 11, docente: 'Ing. Luis', coordinador: 'Ing. Coordinadora', asignada: expect.any(Date) }),
+      data: expect.objectContaining({ usuarioId: 5, estudiante: 'Ana Pérez', documento: '1801234566', tipoDocumento: 'CEDULA', docenteId: 11, docente: 'Ing. Luis', coordinador: 'Ing. Coordinadora', asignada: expect.any(Date) }),
     });
     expect(prisma.solicitud.count).not.toHaveBeenCalled(); // el coordinador registra muchas
   });
@@ -292,10 +293,21 @@ describe('SolicitudesService · coordinador y docente', () => {
   it('pide el nombre del estudiante y valida los datos; sin docente queda por asignar', async () => {
     const { servicio, prisma } = armar();
     await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: '' })).rejects.toThrow('nombre del estudiante');
-    await expect(servicio.crearPorCoordinador(coord, { ...base, tipo: 'EXTERNO', estudiante: 'Ana' })).rejects.toThrow('viene el estudiante');
-    await servicio.crearPorCoordinador(coord, { ...base, tipo: 'EXTERNO', universidadOrigen: 'UCE', periodosAprobados: 2, estudiante: 'Ana' });
+    await expect(servicio.crearPorCoordinador(coord, { ...base, tipo: 'EXTERNO', estudiante: 'Ana', documento: '1801234566' })).rejects.toThrow('viene el estudiante');
+    await servicio.crearPorCoordinador(coord, { ...base, tipo: 'EXTERNO', universidadOrigen: 'UCE', periodosAprobados: 2, estudiante: 'Ana', tipoDocumento: 'PASAPORTE', documento: 'ab123456' });
     expect(prisma.solicitud.create.mock.calls[0][0].data).not.toHaveProperty('docenteId');
     expect(prisma.solicitud.create.mock.calls[0][0].data).not.toHaveProperty('mallaId'); // la malla la sube el docente
+  });
+
+  it('pide la cédula o el pasaporte y no deja dos solicitudes en trámite del mismo estudiante', async () => {
+    const { servicio, prisma } = armar();
+    await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez' })).rejects.toThrow('cédula');
+    await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez', documento: '1801234560' })).rejects.toThrow('no es válida');
+    prisma.solicitud.findFirst.mockResolvedValueOnce({ id: 42, estudiante: 'Juanito Pérez' });
+    await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez', documento: '1801234566' })).rejects.toThrow('N.º 42');
+    // otro Juanito Pérez con otra cédula sí se registra
+    await servicio.crearPorCoordinador(coord, { ...base, estudiante: 'Juanito Pérez', documento: '1700000019' });
+    expect(prisma.solicitud.create.mock.calls[0][0].data).toEqual(expect.objectContaining({ documento: '1700000019', tipoDocumento: 'CEDULA' }));
   });
 
   it('el docente asignado trabaja la solicitud; otro docente no; el coordinador solo la ve', async () => {

@@ -26,6 +26,8 @@ model Solicitud {
   recordId              Int?                 // id del PDF en ms-documentos
   requisitos            String?              @db.NVarChar(Max) // resultado de RN-08 en JSON (T45)
   estudiante            String?              // nombre del estudiante (lo ven el coordinador y el docente)
+  documento             String?              // cédula (10 dígitos) o pasaporte: dos estudiantes pueden llamarse igual (observación 24/11/2026)
+  tipoDocumento         String?              // CEDULA o PASAPORTE
   // Coordinador y docente: el coordinador asigna un docente y el docente hace la homologación
   docenteId             Int?
   docente               String?              // nombre del docente asignado

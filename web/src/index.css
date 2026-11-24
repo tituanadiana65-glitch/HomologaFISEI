@@ -1459,3 +1459,13 @@ a.volver {
   margin: 4px 0 0;
   font-size: 12px;
 }
+.filtros input.buscar {
+  height: 34px;
+  max-width: 260px;
+  font-size: 13px;
+}
+.documento-estudiante {
+  margin: -8px 0 12px;
+  color: var(--gris);
+  font-size: 14px;
+}

@@ -1,4 +1,6 @@
-import { materiasHomologables, revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
+import {
+  cedulaValida,
+  validarDocumento, materiasHomologables, revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
 
 const datos = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
 
@@ -185,5 +187,20 @@ describe('materiasHomologables', () => {
       { resultado: 'Homologable', codigoNueva: 'SW-C' },
       { resultado: 'No homologable', codigoNueva: 'SW-Q' },
     ])).toBe(2);
+  });
+});
+
+describe('cédula o pasaporte del estudiante', () => {
+  it('valida la cédula ecuatoriana con su dígito verificador', () => {
+    expect(cedulaValida('1801234566')).toBe(true);
+    expect(cedulaValida('1801234560')).toBe(false); // dígito verificador
+    expect(cedulaValida('9901234567')).toBe(false); // provincia
+    expect(cedulaValida('18012345')).toBe(false);
+  });
+  it('limpia espacios y guiones; el pasaporte acepta letras y números', () => {
+    expect(validarDocumento('CEDULA', '180123456-6')).toEqual({ tipo: 'CEDULA', documento: '1801234566' });
+    expect(validarDocumento('PASAPORTE', 'ab 12345')).toEqual({ tipo: 'PASAPORTE', documento: 'AB12345' });
+    expect(validarDocumento('PASAPORTE', 'x1')).toEqual({ error: expect.stringMatching(/5 a 20/) });
+    expect(validarDocumento(undefined, '')).toEqual({ error: expect.stringMatching(/cédula/) });
   });
 });

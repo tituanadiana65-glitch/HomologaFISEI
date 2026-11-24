@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Pasos from '../componentes/Pasos';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 import { armarFilas } from '../filas';
 import { notaConvertida } from '../notas';
@@ -28,6 +29,8 @@ interface Solicitud {
   tipo?: string;
   estado: string;
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   universidadOrigen?: string | null;
   carreraOrigen: string;
   carreraDestino: string;
@@ -131,7 +134,8 @@ export default function RevisionDetalle() {
       </p>
       <h1>Homologación N.º {s.id}</h1>
       <p className="ayuda">
-        <b>{s.estudiante ?? 'Estudiante'}</b> ·{' '}
+        <b>{s.estudiante ?? 'Estudiante'}</b>
+        {textoDocumento(s) && ` (${textoDocumento(s)})`} ·{' '}
         {s.tipo === 'EXTERNO' ? `${s.universidadOrigen ?? ''} · ${s.carreraOrigen}` : nombre(s.carreraOrigen)} → <b>{nombre(s.carreraDestino)}</b> · {s.periodo}
         {s.coordinador && <> · Asignada por {s.coordinador}</>}
       </p>

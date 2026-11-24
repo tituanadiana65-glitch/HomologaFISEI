@@ -52,6 +52,8 @@ export function armarFilas(materias: MateriaInforme[]): FilaInforme[] {
 
 export interface SolicitudInforme {
   id: number;
+  documento?: string | null; // cédula o pasaporte del estudiante
+  tipoDocumento?: string | null;
   tipo?: 'INTERNO' | 'EXTERNO';
   universidadOrigen?: string | null;
   carreraOrigen: string;
@@ -199,8 +201,15 @@ export function crearPdf(
     const extra = s.tipo === 'EXTERNO' ? 16 : 0;
     doc.roundedRect(izq, 115, ancho, 80 + extra, 6).fill(FONDO);
     dato('Estudiante', estudiante, izq + 15, 127, true);
-    dato('Solicitud', `N.º ${s.id}`, izq + 185, 127);
-    dato('Fecha', new Date().toLocaleDateString('es-EC'), izq + 340, 127);
+    const hoy = new Date().toLocaleDateString('es-EC');
+    if (s.documento) {
+      // Cédula o pasaporte: dos estudiantes pueden llamarse igual (observación 24/11/2026)
+      dato(s.tipoDocumento === 'PASAPORTE' ? 'Pasaporte' : 'Cédula', s.documento, izq + 185, 127);
+      dato('Solicitud', `N.º ${s.id} · ${hoy}`, izq + 340, 127);
+    } else {
+      dato('Solicitud', `N.º ${s.id}`, izq + 185, 127);
+      dato('Fecha', hoy, izq + 340, 127);
+    }
     const externo = s.tipo === 'EXTERNO';
     dato(
       externo ? 'Universidad de origen' : 'Carrera de origen',

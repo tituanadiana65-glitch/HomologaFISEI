@@ -257,3 +257,11 @@ describe('homologación del docente en el informe', () => {
     expect(await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO', docente: 'Ing. Ana' }, 'Ana'))).toContain('En revisión por Ing. Ana');
   });
 });
+
+describe('cédula del estudiante en el informe', () => {
+  it('muestra la cédula junto al nombre para no confundir a dos estudiantes con el mismo nombre', async () => {
+    const texto = await leerTexto(await crearPdf({ ...solicitud, documento: '1801234566', tipoDocumento: 'CEDULA' }, 'Juanito Pérez'));
+    expect(texto).toContain('1801234566');
+    expect(texto).toMatch(/C[ÉE]DULA/i);
+  });
+});

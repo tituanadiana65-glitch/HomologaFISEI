@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 
 // Docente: las solicitudes que el coordinador le asignó
@@ -7,6 +8,8 @@ interface Resumen {
   id: number;
   tipo?: string;
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   universidadOrigen?: string | null;
   carreraOrigen: string;
   carreraDestino: string;
@@ -80,7 +83,9 @@ export default function Revision() {
                   <td>{s.id}</td>
                   <td>
                     <strong>{s.estudiante ?? `Solicitud ${s.id}`}</strong>
-                    <small className="equivale">{s.tipo === 'EXTERNO' ? 'Otra universidad' : 'Estudiante de la UTA'}</small>
+                    <small className="equivale">
+                      {[textoDocumento(s), s.tipo === 'EXTERNO' ? 'Otra universidad' : 'Estudiante de la UTA'].filter(Boolean).join(' · ')}
+                    </small>
                   </td>
                   <td className="cambio">
                     {s.tipo === 'EXTERNO' ? `${s.universidadOrigen ?? ''} · ${s.carreraOrigen}` : nombre(s.carreraOrigen)} → <b>{nombre(s.carreraDestino)}</b>
