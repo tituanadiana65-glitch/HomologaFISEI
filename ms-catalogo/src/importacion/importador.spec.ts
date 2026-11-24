@@ -16,28 +16,6 @@ const respuesta = (cuerpo: unknown, tipo = 'application/json', ok = true) =>
     arrayBuffer: () => Promise.resolve(Buffer.isBuffer(cuerpo) ? cuerpo : Buffer.from(String(cuerpo))),
   }) as unknown as Response;
 
-// PDF mínimo con una línea de texto (no tiene el formato de la FISEI)
-function pdfSimple(texto: string): Buffer {
-  const flujo = `BT /F1 12 Tf 72 720 Td (${texto}) Tj ET`;
-  const objetos = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
-    `<< /Length ${flujo.length} >>\nstream\n${flujo}\nendstream`,
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-  ];
-  let pdf = '%PDF-1.4\n';
-  const pos: number[] = [];
-  objetos.forEach((o, i) => {
-    pos.push(pdf.length);
-    pdf += `${i + 1} 0 obj\n${o}\nendobj\n`;
-  });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objetos.length + 1}\n0000000000 65535 f \n${pos.map((p) => `${String(p).padStart(10, '0')} 00000 n \n`).join('')}`;
-  pdf += `trailer\n<< /Size ${objetos.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return Buffer.from(pdf, 'latin1');
-}
-
 function armar(buscar: jest.Mock = jest.fn(), carpeta = '/no-existe') {
   const repo = { guardar: jest.fn((p: { codigo: string; nombre: string }, c: string) => Promise.resolve({ codigo: p.codigo, nombre: p.nombre, carrera: c, unidades: 4 })) };
   const eventos = { publicar: jest.fn().mockResolvedValue(true) };
@@ -98,7 +76,7 @@ describe('Importador · por URL o ruta', () => {
   });
 
   it('un plan con otro formato se lee con IA si se indica la carrera', async () => {
-    const otro = pdfSimple('Universidad X - Syllabus Robotica Basica');
+    const otro = readFileSync(join(__dirname, '../../test/fixtures/otro-formato.pdf')); // sílabo de otra universidad (no es formato FISEI)
     const { imp, repo } = armar(
       jest.fn().mockResolvedValue(
         respuesta({ nombre: 'Robótica Básica', nivel: 'PRIMERO', creditos: 3, horasTotales: 144, unidades: [{ contenido: 'Sensores', horas: 72 }, { contenido: 'Actuadores', horas: 72 }] }),
