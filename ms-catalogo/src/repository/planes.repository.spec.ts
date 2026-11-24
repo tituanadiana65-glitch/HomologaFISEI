@@ -73,4 +73,15 @@ describe('PlanesRepository', () => {
     await new PlanesRepository(prisma).listar('TI', undefined, 'PRIMERO');
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { carrera: { codigo: 'TI' }, nivel: 'PRIMERO' } }));
   });
+
+  it('matriz: materias con unidades, créditos y horas en orden de malla', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      { codigo: 'B', nombre: 'BASE DE DATOS', nivel: 'TERCERO', creditos: 3, horasTotales: 144, unidades: [] },
+      { codigo: 'A', nombre: 'ALGEBRA LINEAL', nivel: 'PRIMERO', creditos: 2, horasTotales: 96, unidades: [{ numero: 1, horas: 24, contenido: 'Matrices' }] },
+    ]);
+    const prisma = { asignatura: { findMany } } as unknown as PrismaService;
+    const m = await new PlanesRepository(prisma).matriz('SW');
+    expect(m.map((x) => x.codigo)).toEqual(['A', 'B']);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { carrera: { codigo: 'SW' } } }));
+  });
 });

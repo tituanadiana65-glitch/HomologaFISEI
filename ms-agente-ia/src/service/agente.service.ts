@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Comparacion, MateriaTexto } from '../dto/tipos';
 import { armarPedidoRecord, leerRecord, SISTEMA_RECORD, type MateriaRecord } from './record';
+import { armarPedidoPlan, leerPlanIA, SISTEMA_PLAN, type PlanLeido } from './plan';
 
 // Instrucciones del agente: solo compara contenidos (RN-01).
 // Créditos, horas, nota y vigencia los decide ms-motor-reglas, no la IA.
@@ -9,6 +10,7 @@ Comparas los contenidos de una MATERIA APROBADA por un estudiante con los de una
 Calcula qué porcentaje de los temas de la MATERIA NUEVA están cubiertos por la MATERIA APROBADA.
 Reglas:
 - Usa solo el texto que recibes; no inventes temas.
+- Excepción: si la MATERIA APROBADA dice "SIN SÍLABO", solo se conoce su nombre: considera los temas que normalmente tiene una materia universitaria con ese nombre y sé prudente con el porcentaje.
 - Un tema cuenta como cubierto si su contenido es equivalente, aunque esté redactado distinto.
 - No consideres créditos, horas, notas ni fechas: eso lo evalúa otro servicio.
 - Escribe los temas en palabras, sin fórmulas, sin LaTeX y sin barras invertidas.
@@ -22,10 +24,17 @@ Elige la candidata cuyos temas sean más parecidos a los del sílabo.
 Reglas:
 - Usa solo el texto que recibes; no inventes temas.
 - Compara por temas, no solo por el nombre de la materia.
+- Excepción: si el SÍLABO dice "SIN SÍLABO", solo se conoce el nombre: compara con los temas que normalmente tiene una materia con ese nombre.
 - "parecido" es un número de 0 a 100 que indica qué tanto se parecen los temas.
 - Si ninguna se parece, devuelve la más cercana con un "parecido" bajo.
 Responde SOLO con un objeto JSON, sin texto antes ni después:
 {"codigo": "código exacto de la candidata elegida", "parecido": número de 0 a 100}`;
+
+// Observación del 24/11/2026: el sílabo de otra universidad es opcional. Sin él, el agente compara por el nombre
+// contra la matriz de la carrera (temas estimados) y el docente ve un aviso para revisarlo con cuidado.
+export const SIN_SILABO = 'SIN SÍLABO';
+export const textoSinSilabo = (nombre: string) => `${SIN_SILABO}. Solo se conoce el nombre de la materia aprobada: ${nombre}.`;
+export const AVISO_SIN_SILABO = 'Sin sílabo: los temas se estimaron por el nombre de la materia. Revisa con cuidado antes de confirmar.';
 
 // El sílabo se recorta para no pasar el límite gratuito de la IA (T44)
 export const MAX_SILABO = 12_000;
@@ -38,7 +47,7 @@ export interface Parecida {
   parecido: number;
 }
 
-const texto = (m: MateriaTexto) =>
+export const textoMateria = (m: MateriaTexto) =>
   [
     `${m.nombre} (${m.codigo})`,
     m.objetivoGeneral ? `Objetivo: ${m.objetivoGeneral}` : '',
@@ -48,12 +57,12 @@ const texto = (m: MateriaTexto) =>
     .join('\n');
 
 export function armarPedido(aprobada: MateriaTexto, nueva: MateriaTexto): string {
-  return `MATERIA APROBADA:\n${texto(aprobada)}\n\nMATERIA NUEVA:\n${texto(nueva)}`;
+  return `MATERIA APROBADA:\n${textoMateria(aprobada)}\n\nMATERIA NUEVA:\n${textoMateria(nueva)}`;
 }
 
 // T44 · Igual que armarPedido, pero la materia aprobada es el texto de su sílabo (de otra universidad)
 export function armarPedidoSilabo(silabo: string, nueva: MateriaTexto): string {
-  return `MATERIA APROBADA (sílabo de otra universidad):\n${recortar(silabo)}\n\nMATERIA NUEVA:\n${texto(nueva)}`;
+  return `MATERIA APROBADA (sílabo de otra universidad):\n${recortar(silabo)}\n\nMATERIA NUEVA:\n${textoMateria(nueva)}`;
 }
 
 // T43 · Candidatas en una línea cada una: "código | nombre | temas de cada unidad (80 letras)"
@@ -268,6 +277,11 @@ export class AgenteService {
   // Lee el récord académico (aprobadas, reprobadas, en curso) para que el estudiante no escriba todo a mano
   async leerRecord(texto: string): Promise<MateriaRecord[]> {
     return leerRecord(await this.llamarIA(armarPedidoRecord(texto), SISTEMA_RECORD));
+  }
+
+  // Lee un plan analítico que no tiene el formato de la FISEI (para la matriz de la carrera)
+  async leerPlan(texto: string): Promise<PlanLeido> {
+    return leerPlanIA(await this.llamarIA(armarPedidoPlan(texto), SISTEMA_PLAN));
   }
 
   async elegirParecida(silabo: string, candidatas: MateriaTexto[], minimo = PARECIDO_MINIMO): Promise<Parecida | null> {

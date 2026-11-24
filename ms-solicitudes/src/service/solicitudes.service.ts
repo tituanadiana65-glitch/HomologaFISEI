@@ -9,6 +9,7 @@ import {
   revisarRequisitos,
   validarMateriaExterna,
   validarSolicitud,
+  validarDocumento,
 } from './validaciones';
 import { codigoExterno, convertirNota } from './notas';
 
@@ -116,9 +117,20 @@ export class SolicitudesService implements OnModuleInit {
   }
 
   // El coordinador registra la solicitud que el estudiante entregó en papel y, si ya sabe, asigna el docente
-  async crearPorCoordinador(coordinador: { id: number; nombre: string }, d: NuevaSolicitud & { estudiante?: string; docenteId?: number; docente?: string }) {
+  async crearPorCoordinador(
+    coordinador: { id: number; nombre: string },
+    d: NuevaSolicitud & { estudiante?: string; documento?: string; tipoDocumento?: string; docenteId?: number; docente?: string },
+  ) {
     const estudiante = d?.estudiante?.trim() ?? '';
     if (estudiante.length < 3) throw new BadRequestException('Escribe el nombre del estudiante');
+    const doc = validarDocumento(d?.tipoDocumento, d?.documento);
+    if ('error' in doc) throw new BadRequestException(doc.error);
+    // El mismo estudiante no puede tener dos solicitudes en trámite para la misma carrera
+    const repetida = await this.prisma.solicitud.findFirst({
+      where: { documento: doc.documento, carreraDestino: d.carreraDestino, estado: { not: 'REVISADA' } },
+      select: { id: true, estudiante: true },
+    });
+    if (repetida) throw new BadRequestException(`Ya hay una solicitud en trámite para ese estudiante (N.º ${repetida.id}, ${repetida.estudiante ?? 'sin nombre'})`);
     const error = validarSolicitud(d, 0);
     if (error) throw new BadRequestException(error.replace('de la que vienes', 'de la que viene el estudiante'));
     const externa = d.tipo === 'EXTERNO';
@@ -135,6 +147,8 @@ export class SolicitudesService implements OnModuleInit {
         periodosAprobados: externa ? d.periodosAprobados! : null,
         documentosLegalizados: externa && d.documentosLegalizados === true,
         estudiante,
+        documento: doc.documento,
+        tipoDocumento: doc.tipo,
         ...(conDocente ? { docenteId, docente: d.docente!.trim(), coordinador: coordinador.nombre, asignada: new Date() } : {}),
       },
     });

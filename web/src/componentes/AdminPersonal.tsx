@@ -51,7 +51,7 @@ export default function AdminPersonal({ avisar }: { avisar: (texto: string, erro
         <p className="vacio">Todavía no hay coordinador ni docentes.</p>
       )}
       <h3>Nueva cuenta</h3>
-      <form onSubmit={crear}>
+      <form onSubmit={crear} autoComplete="off">
         <label>
           Rol
           <select value={d.rol} onChange={(e) => setD({ ...d, rol: e.target.value })}>
@@ -65,11 +65,11 @@ export default function AdminPersonal({ avisar }: { avisar: (texto: string, erro
         </label>
         <label>
           Correo institucional
-          <input type="email" value={d.correo} placeholder="nombre@uta.edu.ec" onChange={(e) => setD({ ...d, correo: e.target.value })} />
+          <input type="email" name="correo-nueva-cuenta" autoComplete="off" value={d.correo} placeholder="nombre@uta.edu.ec" onChange={(e) => setD({ ...d, correo: e.target.value })} />
         </label>
         <label>
           Contraseña inicial
-          <input type="password" value={d.clave} onChange={(e) => setD({ ...d, clave: e.target.value })} />
+          <input type="password" name="clave-nueva-cuenta" autoComplete="new-password" value={d.clave} onChange={(e) => setD({ ...d, clave: e.target.value })} />
           <small className="pista">Al menos 8 caracteres.</small>
         </label>
         <button type="submit" disabled={!d.nombre.trim() || !d.correo.trim() || d.clave.length < 8}>

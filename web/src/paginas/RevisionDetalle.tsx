@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Pasos from '../componentes/Pasos';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 import { armarFilas } from '../filas';
 import { notaConvertida } from '../notas';
@@ -21,12 +22,15 @@ interface Materia {
   resultadoDocente?: string | null;
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null;
 }
 interface Solicitud {
   id: number;
   tipo?: string;
   estado: string;
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   universidadOrigen?: string | null;
   carreraOrigen: string;
   carreraDestino: string;
@@ -38,6 +42,8 @@ interface Solicitud {
   materias: Materia[];
 }
 interface Carrera { codigo: string; nombre: string }
+interface Asignatura { codigo: string; nombre: string; nivel?: string }
+interface Edicion { codigo: string; resultado: string; comentario: string; codigoNueva: string; confirmo: boolean }
 
 const RESULTADOS = ['Homologable', 'No homologable', 'Sin materia equivalente'];
 const claseDe = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-');
@@ -47,7 +53,8 @@ export default function RevisionDetalle() {
   const [s, setS] = useState<Solicitud | null>(null);
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [abierta, setAbierta] = useState('');
-  const [editando, setEditando] = useState<{ codigo: string; resultado: string; comentario: string } | null>(null);
+  const [editando, setEditando] = useState<Edicion | null>(null);
+  const [destino, setDestino] = useState<Asignatura[]>([]); // matriz de la carrera de destino, para elegir la materia nueva
   const [comentario, setComentario] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
@@ -61,13 +68,23 @@ export default function RevisionDetalle() {
   }, [cargar]);
 
   const nombre = (codigo: string) => carreras.find((c) => c.codigo === codigo)?.nombre ?? codigo;
+  useEffect(() => {
+    if (s?.carreraDestino) void api<Asignatura[]>(`/catalogo/asignaturas?carrera=${s.carreraDestino}`).then(setDestino).catch(() => setDestino([]));
+  }, [s?.carreraDestino]);
 
   const guardarCambio = async () => {
     if (!editando) return;
     try {
       await api(`/solicitudes/revision/${id}/materias/${encodeURIComponent(editando.codigo)}`, {
         method: 'PUT',
-        body: JSON.stringify({ resultado: editando.resultado, comentario: editando.comentario }),
+        body: JSON.stringify({
+          resultado: editando.resultado,
+          comentario: editando.comentario,
+          confirmo: editando.confirmo,
+          ...(editando.resultado === 'Homologable' && editando.codigoNueva
+            ? { codigoNueva: editando.codigoNueva, nombreNueva: destino.find((a) => a.codigo === editando.codigoNueva)?.nombre }
+            : {}),
+        }),
       });
       setEditando(null);
       setError('');
@@ -117,7 +134,8 @@ export default function RevisionDetalle() {
       </p>
       <h1>Homologación N.º {s.id}</h1>
       <p className="ayuda">
-        <b>{s.estudiante ?? 'Estudiante'}</b> ·{' '}
+        <b>{s.estudiante ?? 'Estudiante'}</b>
+        {textoDocumento(s) && ` (${textoDocumento(s)})`} ·{' '}
         {s.tipo === 'EXTERNO' ? `${s.universidadOrigen ?? ''} · ${s.carreraOrigen}` : nombre(s.carreraOrigen)} → <b>{nombre(s.carreraDestino)}</b> · {s.periodo}
         {s.coordinador && <> · Asignada por {s.coordinador}</>}
       </p>
@@ -175,43 +193,41 @@ export default function RevisionDetalle() {
                         )}
                       </ul>
                     )}
+                    {inf?.aviso && (
+                      <small className="pista alerta">
+                        <b>Ojo:</b> {inf.aviso}
+                      </small>
+                    )}
                     {f.docenteCambio && f.resultado !== f.resultadoAgente && (
                       <small className="cambio-docente">
                         <b>Cambiado por {f.docenteCambio}:</b> {f.comentarioDocente}
                       </small>
                     )}
                     {enEdicion && (
-                      <div className="editar-resultado">
-                        <label>
-                          Nuevo resultado
-                          <select value={editando.resultado} onChange={(e) => setEditando({ ...editando, resultado: e.target.value })}>
-                            {RESULTADOS.map((r) => (
-                              <option key={r}>{r}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Comentario (obligatorio)
-                          <textarea
-                            rows={2}
-                            value={editando.comentario}
-                            placeholder="Por ejemplo: revisé el sílabo y la unidad 3 no se cubre"
-                            onChange={(e) => setEditando({ ...editando, comentario: e.target.value })}
-                          />
-                        </label>
-                        <div className="acciones">
-                          <button className="pequeno" disabled={editando.comentario.trim().length < 5} onClick={() => void guardarCambio()}>
-                            Guardar cambio
-                          </button>
-                          <button className="enlace" onClick={() => setEditando(null)}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
+                      <EditarResultado
+                        e={editando}
+                        inf={inf}
+                        resultadoAgente={f.resultadoAgente}
+                        nuevaAgente={f.codigoNueva}
+                        destino={destino}
+                        carrera={nombre(s.carreraDestino)}
+                        cambiar={(c) => setEditando({ ...editando, ...c })}
+                        guardar={() => void guardarCambio()}
+                        cancelar={() => setEditando(null)}
+                      />
                     )}
                   </td>
                   <td>
-                    {inf ? <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong> : '—'}
+                    {f.nuevaDocente ? (
+                      <>
+                        <strong>{f.nuevaDocente.replace(/ \(.*\)$/, '')}</strong>
+                        <small className="equivale">Elegida por el docente</small>
+                      </>
+                    ) : inf ? (
+                      <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong>
+                    ) : (
+                      '—'
+                    )}
                     {inf?.parecido !== undefined && <small className="equivale">Parecido {inf.parecido} %</small>}
                   </td>
                   <td>
@@ -229,7 +245,15 @@ export default function RevisionDetalle() {
                     {!revisada && !enEdicion && (
                       <button
                         className="pequeno"
-                        onClick={() => setEditando({ codigo: f.clave, resultado: f.resultado && f.resultado !== 'Pendiente' ? f.resultado : 'Homologable', comentario: '' })}
+                        onClick={() =>
+                          setEditando({
+                            codigo: f.clave,
+                            resultado: f.resultado && f.resultado !== 'Pendiente' ? f.resultado : 'Homologable',
+                            comentario: '',
+                            codigoNueva: '',
+                            confirmo: false,
+                          })
+                        }
                       >
                         Cambiar
                       </button>
@@ -270,5 +294,101 @@ export default function RevisionDetalle() {
         <button onClick={() => void descargar()}>Descargar informe en PDF</button>
       </div>
     </main>
+  );
+}
+
+// Formulario para cambiar el resultado de una materia (corrección 24/11/2026):
+// si se marca homologable sin materia nueva, se elige; si contradice las reglas del análisis, se confirma.
+function EditarResultado({
+  e,
+  inf,
+  resultadoAgente,
+  nuevaAgente,
+  destino,
+  carrera,
+  cambiar,
+  guardar,
+  cancelar,
+}: {
+  e: Edicion;
+  inf: Informe | null;
+  resultadoAgente: string | null;
+  nuevaAgente: string | null;
+  destino: Asignatura[];
+  carrera: string;
+  cambiar: (c: Partial<Edicion>) => void;
+  guardar: () => void;
+  cancelar: () => void;
+}) {
+  const incumplidas = (inf?.causas ?? []).filter((c) => !c.cumple);
+  const homologa = e.resultado === 'Homologable';
+  const pideNueva = homologa && !nuevaAgente;
+  const contradice = (homologa && incumplidas.length > 0) || (e.resultado === 'No homologable' && resultadoAgente === 'Homologable');
+  const letras = e.comentario.trim().length;
+  const falta = [
+    pideNueva && !e.codigoNueva && `la materia de ${carrera}`,
+    letras < 5 && `el comentario (${5 - letras} ${5 - letras === 1 ? 'letra' : 'letras'} más)`,
+    contradice && !e.confirmo && 'confirmar el cambio',
+  ].filter(Boolean);
+
+  return (
+    <div className="editar-resultado">
+      <label>
+        Nuevo resultado
+        <select value={e.resultado} onChange={(x) => cambiar({ resultado: x.target.value, confirmo: false })}>
+          {RESULTADOS.map((r) => (
+            <option key={r}>{r}</option>
+          ))}
+        </select>
+      </label>
+      {homologa && (
+        <label>
+          Se homologa por {pideNueva && <span className="req">*</span>}
+          <select value={e.codigoNueva} onChange={(x) => cambiar({ codigoNueva: x.target.value })}>
+            <option value="">{nuevaAgente ? 'La que encontró el agente' : `Elige la materia de ${carrera}`}</option>
+            {destino.map((a) => (
+              <option key={a.codigo} value={a.codigo}>
+                {a.nivel ? `${a.nivel} · ` : ''}
+                {a.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {contradice && (
+        <div className="aviso alerta">
+          {homologa ? (
+            <>
+              El análisis dice que <b>no cumple {incumplidas.map((c) => c.regla).join(', ')}</b>
+              {incumplidas[0]?.causa && <>: {incumplidas[0].causa}</>}.
+            </>
+          ) : (
+            <>El análisis dice que <b>cumple todas las reglas</b>.</>
+          )}
+          <label className="casilla">
+            <input type="checkbox" checked={e.confirmo} onChange={(x) => cambiar({ confirmo: x.target.checked })} />
+            <span>Confirmo que {homologa ? 'igual la homologo' : 'igual no la homologo'} y explico por qué en el comentario</span>
+          </label>
+        </div>
+      )}
+      <label>
+        Comentario (obligatorio)
+        <textarea
+          rows={2}
+          value={e.comentario}
+          placeholder="Por ejemplo: revisé el sílabo y los temas coinciden al 100 %"
+          onChange={(x) => cambiar({ comentario: x.target.value })}
+        />
+      </label>
+      {falta.length > 0 && <small className="pista alerta">Para guardar falta: {falta.join(', ')}.</small>}
+      <div className="acciones">
+        <button className="pequeno" disabled={falta.length > 0} onClick={guardar}>
+          Guardar cambio
+        </button>
+        <button className="enlace" onClick={cancelar}>
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }

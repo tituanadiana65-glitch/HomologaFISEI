@@ -100,7 +100,7 @@ export default function LeerRecord({
   // Lo que falta en una fila elegida para poder agregarla
   const falta = (f: Fila) =>
     externo
-      ? [!f.silaboId && 'sílabo', !(Number(f.creditosTxt) > 0) && 'créditos', !(Number(f.horasTxt) > 0) && 'horas', f.nota === null && 'nota', !f.anio && 'año'].filter(Boolean)
+      ? [!(Number(f.creditosTxt) > 0) && 'créditos', !(Number(f.horasTxt) > 0) && 'horas', f.nota === null && 'nota', !f.anio && 'año'].filter(Boolean)
       : [f.nota === null && 'nota', !f.anio && 'año'].filter(Boolean);
 
   const elegidas = (filas ?? []).filter((f) => f.elegida);
@@ -161,7 +161,7 @@ export default function LeerRecord({
       <h2>Llenar desde el récord académico</h2>
       <p className="ayuda">
         La inteligencia artificial lee el récord del estudiante y arma la lista de materias que <b>cursó</b>, con las que <b>aprobó</b> y las que{' '}
-        <b>reprobó</b>. Solo revisas y agregas{externo ? ' (y subes el sílabo de cada una)' : ''}. Si prefieres, más abajo puedes registrarlas una
+        <b>reprobó</b>. Solo revisas y agregas{externo ? ' (el sílabo de cada una es opcional, pero con él la comparación es más precisa)' : ''}. Si prefieres, más abajo puedes registrarlas una
         por una.
       </p>
       <div className="leer-record-accion">
@@ -188,7 +188,7 @@ export default function LeerRecord({
                     <>
                       <th>Créditos</th>
                       <th>Horas</th>
-                      <th>Sílabo (PDF)</th>
+                      <th title="Opcional: sin sílabo el agente compara por el nombre de la materia">Sílabo (opcional)</th>
                     </>
                   ) : (
                     <th>En la malla de {nombreCarreraOrigen}</th>
@@ -258,7 +258,7 @@ export default function LeerRecord({
             </button>
             {elegidas.length > listas.length && (
               <small className="pista alerta">
-                {elegidas.length - listas.length} elegidas aún no tienen todos sus datos{externo ? ' (por ejemplo, el sílabo)' : ''}.
+                {elegidas.length - listas.length} elegidas aún no tienen todos sus datos{externo ? ' (por ejemplo, créditos u horas)' : ''}.
               </small>
             )}
           </div>

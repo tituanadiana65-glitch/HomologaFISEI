@@ -141,6 +141,15 @@ export class HomologacionService {
     };
   }
 
+  async leerPlan(texto: string) {
+    if (!texto.trim()) throw new BadRequestException('El plan no tiene texto que se pueda leer');
+    try {
+      return await this.agente.leerPlan(texto);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
   // Guarda el informe, publica el evento y devuelve el informe con su id y fecha
   private async guardar(p: { codigoAprobada: string; codigoNueva: string; nota?: number; anio?: number }, informe: Informe): Promise<Informe> {
     const guardado = await this.prisma.homologacion.create({

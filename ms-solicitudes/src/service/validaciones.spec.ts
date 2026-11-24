@@ -1,4 +1,6 @@
-import { materiasHomologables, revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
+import {
+  cedulaValida,
+  validarDocumento, materiasHomologables, revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
 
 const datos = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
 
@@ -109,8 +111,8 @@ describe('validarMateriaExterna', () => {
     expect(validarMateriaExterna(calculo, [], 2026)).toBeNull();
   });
 
-  it('pide el sílabo: sin él no se pueden comparar los contenidos', () => {
-    expect(validarMateriaExterna({ ...calculo, silaboId: undefined }, [], 2026)).toMatch(/sílabo/);
+  it('el sílabo es opcional, pero si viene debe ser válido', () => {
+    expect(validarMateriaExterna({ ...calculo, silaboId: undefined }, [], 2026)).toBeNull();
     expect(validarMateriaExterna({ ...calculo, silaboId: 0 }, [], 2026)).toMatch(/sílabo/);
   });
 
@@ -185,5 +187,20 @@ describe('materiasHomologables', () => {
       { resultado: 'Homologable', codigoNueva: 'SW-C' },
       { resultado: 'No homologable', codigoNueva: 'SW-Q' },
     ])).toBe(2);
+  });
+});
+
+describe('cédula o pasaporte del estudiante', () => {
+  it('acepta cualquier cédula de 10 números', () => {
+    expect(cedulaValida('1801234566')).toBe(true);
+    expect(cedulaValida('1802365478')).toBe(true); // sin revisar el dígito verificador
+    expect(cedulaValida('18012345')).toBe(false);
+    expect(cedulaValida('18012345AB')).toBe(false);
+  });
+  it('limpia espacios y guiones; el pasaporte acepta letras y números', () => {
+    expect(validarDocumento('CEDULA', '180123456-6')).toEqual({ tipo: 'CEDULA', documento: '1801234566' });
+    expect(validarDocumento('PASAPORTE', 'ab 12345')).toEqual({ tipo: 'PASAPORTE', documento: 'AB12345' });
+    expect(validarDocumento('PASAPORTE', 'x1')).toEqual({ error: expect.stringMatching(/5 a 20/) });
+    expect(validarDocumento(undefined, '')).toEqual({ error: expect.stringMatching(/cédula/) });
   });
 });

@@ -1,11 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../api';
 import AdminPersonal from '../componentes/AdminPersonal';
+import MatrizCarrera from '../componentes/MatrizCarrera';
 
 interface Carrera {
   codigo: string;
   nombre: string;
   _count?: { asignaturas: number };
+}
+
+interface ResultadoRuta {
+  total: number;
+  importados: number;
+  resultados: { archivo: string; ok: boolean; nombre?: string; conIA?: boolean; error?: string }[];
 }
 
 interface Regla {
@@ -30,6 +37,11 @@ export default function Administracion() {
   const [nuevoCodigo, setNuevoCodigo] = useState('');
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [subiendo, setSubiendo] = useState(false);
+  const [modo, setModo] = useState<'archivo' | 'ruta'>('archivo');
+  const [ruta, setRuta] = useState('');
+  const [carreraPlan, setCarreraPlan] = useState('');
+  const [informeRuta, setInformeRuta] = useState<ResultadoRuta | null>(null);
+  const [matriz, setMatriz] = useState<Carrera | null>(null);
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
@@ -81,7 +93,8 @@ export default function Administracion() {
       const form = new FormData();
       form.append('archivo', archivo);
       try {
-        const r = await api<{ nombre: string }>('/catalogo/planes/importar', { method: 'POST', body: form });
+        const consulta = carreraPlan ? `?carrera=${encodeURIComponent(carreraPlan)}` : '';
+        const r = await api<{ nombre: string }>(`/catalogo/planes/importar${consulta}`, { method: 'POST', body: form });
         guardados.push(r.nombre);
       } catch (err) {
         fallidos.push((err as Error).message);
@@ -93,6 +106,29 @@ export default function Administracion() {
     await cargarCarreras();
     if (fallidos.length) avisar(`No se pudo importar: ${fallidos.join(' · ')}`, true);
     else avisar(`Se importaron ${guardados.length} plan(es): ${guardados.join(', ')}`);
+  };
+
+  // Observación del 24/11/2026: traer todos los planes desde una URL o carpeta en vez de subirlos uno por uno
+  const importarRuta = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!ruta.trim()) return avisar('Escribe la URL o la ruta donde están los planes analíticos', true);
+    setSubiendo(true);
+    setInformeRuta(null);
+    try {
+      const r = await api<ResultadoRuta>('/catalogo/planes/importar-ruta', {
+        method: 'POST',
+        body: JSON.stringify({ ruta: ruta.trim(), carrera: carreraPlan || undefined }),
+      });
+      setInformeRuta(r);
+      await cargarCarreras();
+      const fallidos = r.total - r.importados;
+      if (r.importados === 0) avisar(`No se pudo importar ninguno de los ${r.total} PDF. Mira el detalle abajo.`, true);
+      else avisar(`Se importaron ${r.importados} de ${r.total} planes${fallidos ? `; ${fallidos} no se pudieron leer (detalle abajo)` : ''}.`);
+    } catch (err) {
+      avisar((err as Error).message, true);
+    } finally {
+      setSubiendo(false);
+    }
   };
 
   const guardar = async (r: Regla, cambios: { valor?: number; activa?: boolean }) => {
@@ -130,7 +166,14 @@ export default function Administracion() {
                 <tr key={c.codigo}>
                   <td>{c.codigo}</td>
                   <td>{c.nombre}</td>
-                  <td>{c._count?.asignaturas ?? '—'}</td>
+                  <td>
+                    {c._count?.asignaturas ?? '—'}
+                    {(c._count?.asignaturas ?? 0) > 0 && (
+                      <button className="enlace ver-matriz" onClick={() => setMatriz(c)}>
+                        Ver matriz
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {carreras.length === 0 && (
@@ -154,16 +197,64 @@ export default function Administracion() {
             <button type="submit">Crear carrera</button>
           </form>
 
-          <form onSubmit={importar}>
-            <label>
-              Plan analítico (PDF)
-              <input type="file" accept="application/pdf" multiple onChange={(e) => setArchivos(e.target.files)} />
-            </label>
-            <small className="nota">Si el plan es de una carrera nueva, la carrera se crea sola.</small>
-            <button type="submit" disabled={subiendo}>
-              {subiendo ? 'Importando…' : 'Importar plan'}
+          <h3>Importar planes analíticos</h3>
+          <div className="pestanas" role="tablist">
+            <button type="button" role="tab" className={modo === 'archivo' ? 'activa' : ''} onClick={() => setModo('archivo')}>
+              Subir archivos
             </button>
-          </form>
+            <button type="button" role="tab" className={modo === 'ruta' ? 'activa' : ''} onClick={() => setModo('ruta')}>
+              Desde URL o carpeta
+            </button>
+          </div>
+
+          <label>
+            Carrera (opcional)
+            <select value={carreraPlan} onChange={(e) => setCarreraPlan(e.target.value)}>
+              <option value="">La saca el sistema del código del plan</option>
+              {carreras.map((c) => (
+                <option key={c.codigo} value={c.codigo}>
+                  {c.codigo} · {c.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <small className="nota">Elígela si los planes no tienen el formato de la FISEI: así la inteligencia artificial los lee y arma la matriz.</small>
+
+          {modo === 'archivo' ? (
+            <form onSubmit={importar}>
+              <label>
+                Plan analítico (PDF)
+                <input type="file" accept="application/pdf" multiple onChange={(e) => setArchivos(e.target.files)} />
+              </label>
+              <small className="nota">Puedes elegir varios a la vez. Si el plan es de una carrera nueva, la carrera se crea sola.</small>
+              <button type="submit" disabled={subiendo}>
+                {subiendo ? 'Importando…' : 'Importar plan'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={importarRuta}>
+              <label>
+                URL o ruta de los planes
+                <input value={ruta} placeholder="planes/SW  o  https://github.com/…/tree/main/planes/SW" onChange={(e) => setRuta(e.target.value)} />
+              </label>
+              <small className="nota">
+                Sirve una carpeta de GitHub, una página con enlaces a los PDF, un PDF suelto o una carpeta dentro de «planes» del proyecto (por ejemplo{' '}
+                <code>planes/SW</code>). Se importan hasta 80 PDF.
+              </small>
+              <button type="submit" disabled={subiendo}>
+                {subiendo ? 'Trayendo los planes… (puede tardar un minuto)' : 'Traer e importar'}
+              </button>
+              {informeRuta && (
+                <ul className="detalle resultado-ruta">
+                  {informeRuta.resultados.map((r) => (
+                    <li key={r.archivo} className={r.ok ? 'cumple' : 'no-cumple'}>
+                      {r.ok ? `${r.nombre}${r.conIA ? ' (leído con IA)' : ''}` : `${r.archivo}: ${r.error}`}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </form>
+          )}
         </section>
 
         <section className="admin-tarjeta">
@@ -210,6 +301,11 @@ export default function Administracion() {
           </table>
         </section>
         <AdminPersonal avisar={avisar} />
+        {matriz && (
+          <div className="completo">
+            <MatrizCarrera key={matriz.codigo} codigo={matriz.codigo} nombre={matriz.nombre} cerrar={() => setMatriz(null)} />
+          </div>
+        )}
       </div>
 
       <p className="aviso">🔒 Solo el administrador puede entrar a esta pantalla.</p>

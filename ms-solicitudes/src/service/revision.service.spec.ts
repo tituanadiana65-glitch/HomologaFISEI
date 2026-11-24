@@ -65,10 +65,16 @@ describe('RevisionService · docente', () => {
 
   it('cambia el resultado con comentario y se aplica a las materias evaluadas juntas', async () => {
     const { s, prisma } = armar(lista());
-    await s.cambiar(ana, 3, 'A', { resultado: 'No homologable', comentario: 'Los temas de laboratorio no coinciden' });
+    await s.cambiar(ana, 3, 'A', { resultado: 'No homologable', comentario: 'Los temas de laboratorio no coinciden', confirmo: true });
     expect(prisma.asignaturaAprobada.updateMany).toHaveBeenCalledWith({
       where: { solicitudId: 3, codigo: { in: ['A', 'B'] } },
-      data: { resultadoDocente: 'No homologable', comentarioDocente: 'Los temas de laboratorio no coinciden', docenteCambio: 'Ing. Ana' },
+      data: {
+        resultadoDocente: 'No homologable',
+        comentarioDocente: 'Los temas de laboratorio no coinciden',
+        docenteCambio: 'Ing. Ana',
+        codigoNuevaDocente: null,
+        nuevaDocente: null,
+      },
     });
   });
 
@@ -76,7 +82,7 @@ describe('RevisionService · docente', () => {
     const { s, prisma } = armar(lista());
     await s.cambiar(ana, 3, 'C', { resultado: 'No homologable', comentario: 'Queda como dijo el agente' });
     expect(prisma.asignaturaAprobada.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { resultadoDocente: null, comentarioDocente: null, docenteCambio: null } }),
+      expect.objectContaining({ data: { resultadoDocente: null, comentarioDocente: null, docenteCambio: null, codigoNuevaDocente: null, nuevaDocente: null } }),
     );
   });
 
@@ -90,7 +96,7 @@ describe('RevisionService · docente', () => {
 
   it('otra universidad: RN-08 se vuelve a revisar con el resultado del docente', async () => {
     const { s, prisma } = armar(lista({ tipo: 'EXTERNO', periodosAprobados: 2, documentosLegalizados: true }));
-    await s.cambiar(ana, 3, 'C', { resultado: 'Homologable', comentario: 'Revisé el sílabo: sí cumple' });
+    await s.cambiar(ana, 3, 'C', { resultado: 'Homologable', comentario: 'Revisé el sílabo: sí cumple', codigoNueva: 'SW-Q', nombreNueva: 'QUIMICA' });
     expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { requisitos: expect.stringContaining('"cumple"') } });
   });
 
@@ -114,3 +120,46 @@ describe('RevisionService · docente', () => {
     expect(() => personaDe('COORDINADOR', '10', 'DOCENTE')).toThrow(ForbiddenException);
   });
 });
+
+// Corrección 24/11/2026: forzar "sí homologa" / "no homologa" con validaciones
+describe('RevisionService · validaciones al cambiar el resultado', () => {
+  const inf = (resultado: string, fallan: string[] = []) =>
+    JSON.stringify({ resultado, causas: ['RN-01', 'RN-02', 'RN-04'].map((r) => ({ regla: r, cumple: !fallan.includes(r), causa: '' })) });
+  const sol = (m: object) => lista({ materias: [{ codigo: 'X', juntoCon: null, ...m }] });
+
+  it('un comentario corto explica cuántas letras pide', async () => {
+    await expect(armar(sol({ resultado: 'No homologable' })).s.cambiar(ana, 3, 'X', { resultado: 'Homologable', comentario: 'sí' })).rejects.toThrow('al menos 5 letras');
+  });
+
+  it('sin materia equivalente: para marcarla homologable hay que elegir la materia nueva', async () => {
+    const { s, prisma } = armar(sol({ resultado: 'Sin materia equivalente', codigoNueva: null, informe: null }));
+    await expect(s.cambiar(ana, 3, 'X', { resultado: 'Homologable', comentario: 'Mismo contenido' })).rejects.toThrow('Elige la materia');
+    await s.cambiar(ana, 3, 'X', { resultado: 'Homologable', comentario: 'Mismo contenido', codigoNueva: 'SW-AL', nombreNueva: 'ALGORITMOS' });
+    expect(prisma.asignaturaAprobada.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ resultadoDocente: 'Homologable', codigoNuevaDocente: 'SW-AL', nuevaDocente: 'ALGORITMOS (SW-AL)' }) }),
+    );
+  });
+
+  it('si no cumple reglas, marcarla homologable pide confirmación y dice cuáles', async () => {
+    const m = { resultado: 'No homologable', codigoNueva: 'SW-F', informe: inf('No homologable', ['RN-01', 'RN-04']) };
+    await expect(armar(sol(m)).s.cambiar(ana, 3, 'X', { resultado: 'Homologable', comentario: 'Revisé los temas' })).rejects.toThrow('No cumple RN-01, RN-04');
+    await expect(armar(sol(m)).s.cambiar(ana, 3, 'X', { resultado: 'Homologable', comentario: 'Revisé los temas', confirmo: true })).resolves.toEqual(
+      expect.objectContaining({ resultado: 'Homologable' }),
+    );
+  });
+
+  it('si cumple todas las reglas, marcarla no homologable pide confirmación', async () => {
+    const m = { resultado: 'Homologable', codigoNueva: 'SW-F', informe: inf('Homologable') };
+    await expect(armar(sol(m)).s.cambiar(ana, 3, 'X', { resultado: 'No homologable', comentario: 'Falta laboratorio' })).rejects.toThrow('cumple todas las reglas');
+  });
+
+  it('RN-08 cuenta la materia nueva que eligió el docente', async () => {
+    const { s, prisma } = armar(lista({ tipo: 'EXTERNO', periodosAprobados: 2, documentosLegalizados: true, materias: [{ codigo: 'X', resultado: 'Sin materia equivalente', codigoNueva: null, informe: null }] }));
+    prisma.solicitud.findUnique
+      .mockResolvedValueOnce(lista({ materias: [{ codigo: 'X', resultado: 'Sin materia equivalente', codigoNueva: null, informe: null }] }))
+      .mockResolvedValueOnce({ tipo: 'EXTERNO', periodosAprobados: 2, documentosLegalizados: true, materias: [{ codigo: 'X', resultado: 'Sin materia equivalente', resultadoDocente: 'Homologable', codigoNuevaDocente: 'SW-AL' }] });
+    await s.cambiar(ana, 3, 'X', { resultado: 'Homologable', comentario: 'Mismo contenido', codigoNueva: 'SW-AL' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { requisitos: expect.stringContaining('Tiene 1 materia homologable') } });
+  });
+});
+

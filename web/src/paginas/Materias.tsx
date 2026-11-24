@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import SubirPdf from '../componentes/SubirPdf';
@@ -29,6 +30,8 @@ interface Solicitud {
   recordId?: number | null;
   mallaId?: number | null;
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   periodosAprobados?: number | null;
   documentosLegalizados?: boolean | null;
   materias: Materia[];
@@ -108,7 +111,6 @@ export default function Materias({ id, alEnviar }: { id: number; alEnviar: () =>
     mx.horas === '' && 'las horas',
     mx.nota === '' && 'la nota',
     mx.anio === '' && 'el año',
-    !silaboId && 'el sílabo en PDF',
   ].filter(Boolean);
   const vista = vistaNota(mx.nota, mx.escala);
 
@@ -166,6 +168,7 @@ export default function Materias({ id, alEnviar }: { id: number; alEnviar: () =>
   return (
     <main>
       <h1>Homologación N.º {s.id} · {s.estudiante ?? 'Estudiante'}</h1>
+      {textoDocumento(s) && <p className="documento-estudiante">{textoDocumento(s)}</p>}
       <p className="ayuda">Sube el expediente que entregó el estudiante y registra las materias que aprobó. Cuando termines, envíalas al agente.</p>
       <Pasos actual={1} />
 
@@ -256,7 +259,7 @@ export default function Materias({ id, alEnviar }: { id: number; alEnviar: () =>
               <small className="pista alerta">Hace más de 10 años: no cumpliría la regla RN-05.</small>
             )}
           </label>
-          <SubirPdf key={claveSilabo} etiqueta="Sílabo de la materia (PDF)" tipo="SILABO" alSubir={setSilaboId} obligatorio pista="Sin el sílabo el agente no puede comparar los temas." />
+          <SubirPdf key={claveSilabo} etiqueta="Sílabo de la materia (PDF, opcional)" tipo="SILABO" alSubir={setSilaboId} pista="Con el sílabo el agente compara los temas; sin él compara por el nombre de la materia y te avisa para que lo revises." />
           {error && <p role="alert">{error}</p>}
           {faltanExterna.length > 0 && <p className="falta completo">Para agregarla falta: {faltanExterna.join(', ')}.</p>}
           <button type="submit" disabled={faltanExterna.length > 0}>

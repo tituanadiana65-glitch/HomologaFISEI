@@ -98,6 +98,25 @@ export class PlanesRepository implements OnModuleInit {
     });
   }
 
+  // Matriz de la carrera (observación del 24/11/2026): Materia | Nivel | Unidades | Créditos | Horas, en orden de malla.
+  // El agente compara contra esta matriz (una sola consulta) en vez de abrir materia por materia.
+  async matriz(codigoCarrera: string) {
+    const filas = await this.prisma.asignatura.findMany({
+      where: { carrera: { codigo: codigoCarrera } },
+      select: {
+        codigo: true,
+        nombre: true,
+        nivel: true,
+        creditos: true,
+        horasTotales: true,
+        objetivoGeneral: true,
+        unidades: { select: { numero: true, horas: true, contenido: true }, orderBy: { numero: 'asc' } },
+      },
+      orderBy: { nombre: 'asc' },
+    });
+    return filas.sort((a, b) => puesto(a.nivel) - puesto(b.nivel));
+  }
+
   // T24 · Niveles de una carrera, sin repetir y en el orden de la malla
   async niveles(codigoCarrera: string) {
     const filas = await this.prisma.asignatura.findMany({

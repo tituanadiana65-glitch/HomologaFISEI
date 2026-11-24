@@ -11,6 +11,13 @@ export class AsignaturasController {
     return this.repo.listar(carrera?.toUpperCase(), buscar, nivel?.toUpperCase());
   }
 
+  // GET /matriz?carrera=SW  · Carrera | Materia | Nivel | Unidades | Créditos | Horas
+  @Get('matriz')
+  matriz(@Query('carrera') carrera?: string) {
+    if (!carrera) throw new BadRequestException('Indica la carrera, por ejemplo ?carrera=SW');
+    return this.repo.matriz(carrera.toUpperCase());
+  }
+
   // GET /niveles?carrera=TI
   @Get('niveles')
   niveles(@Query('carrera') carrera = 'TI') {

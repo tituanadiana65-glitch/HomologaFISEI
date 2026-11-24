@@ -69,3 +69,19 @@ Prueba en la PC de Diana, rama `feature/HU-26-HU-29`, todos los servicios recons
 
 > **Actualización 23/11/2026 (2):** el estudiante ya no usa el sistema. El coordinador registra la solicitud y asigna el docente; el docente sube el expediente, registra las materias, las envía al agente, revisa el análisis y envía el resultado al coordinador.
 
+
+## Observaciones del ingeniero (24/11/2026)
+
+Pruebas automáticas en la rama `feature/mejoras-ing`. La prueba en la PC de Diana se anota abajo cuando se reconstruyan los servicios.
+
+| # | Observación | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|---|
+| CP-49 | Planes por URL o ruta | Importar una carpeta | `POST /api/catalogo/planes/importar-ruta {ruta: "planes/SW"}` y `"planes/TI"` | Se importan todos los PDF de la carpeta | 40 de 40 (SW) y 40 de 40 (TI) con los planes del repositorio | OK |
+| CP-50 | Planes por URL o ruta | Carpeta de GitHub, página con enlaces, PDF suelto | Pruebas automáticas con respuestas simuladas | Se listan solo los PDF; un archivo dañado no detiene a los demás; rutas fuera de «planes» se rechazan | Como se esperaba | OK |
+| CP-51 | Planes con otro formato | PDF que no es de la FISEI | Sin carrera, y con carrera «RO» | Sin carrera pide indicarla; con carrera la IA arma la fila (código `RO-…`, unidades numeradas) | Como se esperaba | OK |
+| CP-52 | Matriz por carrera | `GET /api/catalogo/matriz?carrera=SW` y botón **Ver matriz** | Materia, nivel, unidades, créditos y horas en orden de malla; descarga en CSV | Como se esperaba; el agente ahora pide la matriz en una sola consulta en vez de materia por materia | OK |
+| CP-53 | Comparar contra la matriz | Materia de otra universidad **sin sílabo** | Registrar «Cálculo II» sin sílabo y enviar | Se acepta; el agente compara por el nombre contra la matriz y deja el aviso «Sin sílabo…» | Como se esperaba (pruebas automáticas) | OK |
+| CP-54 | «Sí puede homologar» no dejaba avanzar | Docente cambia «Sin materia equivalente» a Homologable | Sin comentario, sin materia elegida, y luego completo | Mensaje claro de lo que falta; con materia elegida y comentario se guarda | «Para guardar falta: …»; se guarda con la materia elegida y aparece en el PDF «(elegida por el docente)» | OK |
+| CP-55 | Inconsistencias | Homologable sin cumplir reglas / No homologable cumpliendo todas | Guardar sin confirmar y luego confirmando | Sin confirmar → 400 con la regla incumplida; confirmando se guarda | Como se esperaba | OK |
+| CP-56 | Fundamentos de Programación (TI) → Algoritmos y Lógica de Programación (SW) | Estudiante UTA de TI a SW | Pruebas automáticas: nombres distintos, mismos temas | El agente busca por temas en la matriz y los compara | Se elige la materia por temas y se evalúa sola | OK |
+| CP-57 | Dos estudiantes con el mismo nombre | Cédula o pasaporte | Registrar «Juanito Pérez» sin cédula, con una cédula de menos de 10 números, con la cédula de una solicitud en trámite y con otra cédula | Pide la cédula; rechaza la que no tiene 10 números (cualquier cédula de 10 números vale); avisa «Ya hay una solicitud en trámite… N.º»; con otra cédula se registra; la cédula sale en listas, buscador y PDF | Como se esperaba (pruebas automáticas y capturas) | OK |

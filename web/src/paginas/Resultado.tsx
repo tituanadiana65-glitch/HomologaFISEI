@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import { notaConvertida } from '../notas';
@@ -30,6 +31,7 @@ interface Materia {
   resultadoDocente?: string | null; // revisión docente
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null;
 }
 interface Solicitud {
   id: number;
@@ -41,6 +43,8 @@ interface Solicitud {
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
   enviada?: string | null; // cuándo se mandó al agente
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   docente?: string | null; // docente que hace la homologación (lo asigna el coordinador)
   terminada?: string | null;
   comentarioFinal?: string | null;
@@ -180,6 +184,7 @@ export default function Resultado({ id, alListo, soloLectura = false }: { id: nu
       <h1>
         Homologación N.º {s.id} · {s.estudiante ?? 'Estudiante'}
       </h1>
+      {textoDocumento(s) && <p className="documento-estudiante">{textoDocumento(s)}</p>}
       <p className="ayuda">Este es un análisis previo. La decisión oficial la toma el Consejo Directivo de la Facultad.</p>
       <Pasos actual={s.estado === 'REVISADA' ? 5 : listo ? 3 : 2} />
 
@@ -339,7 +344,12 @@ export default function Resultado({ id, alListo, soloLectura = false }: { id: nu
                   )}
                 </td>
                 <td>
-                  {inf ? (
+                  {f.nuevaDocente ? (
+                    <>
+                      <strong>{f.nuevaDocente.replace(/ \(.*\)$/, '')}</strong>
+                      <small className="equivale">Elegida por el docente</small>
+                    </>
+                  ) : inf ? (
                     <>
                       <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong>
                       <small className="equivale">{f.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>

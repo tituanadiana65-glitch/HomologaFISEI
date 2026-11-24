@@ -61,7 +61,11 @@ services:
       SERVICIO: ms-catalogo
       DATABASE_URL: "sqlserver://sqlserver:1433;database=catalogo_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MS_AGENTE: http://ms-agente-ia:3005 # lee con IA los planes que no tienen el formato de la FISEI
+      PLANES_DIR: /planes
     ports: ["3002:3002"]
+    volumes:
+      - ./planes:/planes:ro # importar planes por ruta: escribir "planes/SW" en Administración
 
   ms-motor-reglas:
     <<: *servicio

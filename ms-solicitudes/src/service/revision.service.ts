@@ -64,22 +64,51 @@ export class RevisionService {
     return s;
   }
 
-  // El docente cambia el resultado de una materia (y de las que se evaluaron junto con ella), con su comentario
-  async cambiar(docente: Persona, id: number, codigo: string, d: { resultado?: string; comentario?: string }) {
+  // El docente cambia el resultado de una materia (y de las que se evaluaron junto con ella), con su comentario.
+  // Corrección (24/11/2026): para marcarla homologable debe haber una materia nueva (la del agente o la que elija el
+  // docente) y, si el resultado contradice las reglas del análisis, el docente lo confirma.
+  async cambiar(
+    docente: Persona,
+    id: number,
+    codigo: string,
+    d: { resultado?: string; comentario?: string; codigoNueva?: string; nombreNueva?: string; confirmo?: boolean },
+  ) {
     const s = await this.verDelDocente(docente, id);
     if (s.estado === 'REVISADA') throw new BadRequestException('Ya enviaste el resultado al coordinador');
     if (!d?.resultado || !RESULTADOS.includes(d.resultado)) throw new BadRequestException(`El resultado debe ser: ${RESULTADOS.join(', ')}`);
     const comentario = (d.comentario ?? '').trim();
-    if (comentario.length < 5) throw new BadRequestException('Explica en un comentario por qué cambias el resultado');
+    if (comentario.length < 5) throw new BadRequestException('Explica en un comentario (al menos 5 letras) por qué cambias el resultado');
     const m = s.materias.find((x) => x.codigo === codigo);
     if (!m) throw new NotFoundException(`La materia ${codigo} no está en la solicitud`);
+
+    const elegida = d.codigoNueva?.trim() || null;
+    if (d.resultado === 'Homologable' && !elegida && !m.codigoNueva) {
+      throw new BadRequestException('Elige la materia de la nueva carrera por la que se homologa');
+    }
+    const incumplidas = reglasIncumplidas(m.informe);
+    if (!d.confirmo) {
+      if (d.resultado === 'Homologable' && incumplidas.length) {
+        throw new BadRequestException(`No cumple ${incumplidas.join(', ')}. Si igual la homologas, confírmalo.`);
+      }
+      if (d.resultado === 'No homologable' && m.resultado === 'Homologable') {
+        throw new BadRequestException('El análisis dice que cumple todas las reglas. Si igual no la homologas, confírmalo.');
+      }
+    }
+
     const grupo = [codigo, ...(m.juntoCon ?? '').split(',').filter(Boolean)];
-    const vuelveAlAgente = d.resultado === m.resultado; // si deja el resultado del agente, se quita el cambio
+    const otraNueva = d.resultado === 'Homologable' && elegida && elegida !== m.codigoNueva;
+    const vuelveAlAgente = d.resultado === m.resultado && !otraNueva; // si deja el resultado del agente, se quita el cambio
     await this.prisma.asignaturaAprobada.updateMany({
       where: { solicitudId: id, codigo: { in: grupo } },
       data: vuelveAlAgente
-        ? { resultadoDocente: null, comentarioDocente: null, docenteCambio: null }
-        : { resultadoDocente: d.resultado, comentarioDocente: comentario, docenteCambio: docente.nombre },
+        ? { resultadoDocente: null, comentarioDocente: null, docenteCambio: null, codigoNuevaDocente: null, nuevaDocente: null }
+        : {
+            resultadoDocente: d.resultado,
+            comentarioDocente: comentario,
+            docenteCambio: docente.nombre,
+            codigoNuevaDocente: otraNueva ? elegida : null,
+            nuevaDocente: otraNueva ? `${d.nombreNueva?.trim() || elegida} (${elegida})` : null,
+          },
     });
     await this.actualizarRequisitos(id);
     return { codigo, resultado: d.resultado };
@@ -101,8 +130,22 @@ export class RevisionService {
   private async actualizarRequisitos(id: number) {
     const s = await this.prisma.solicitud.findUnique({ where: { id }, include: { materias: true } });
     if (s?.tipo !== 'EXTERNO') return;
-    const requisitos = revisarRequisitos(s, s.materias.map((m) => ({ ...m, resultado: resultadoFinal(m) })));
+    const requisitos = revisarRequisitos(
+      s,
+      s.materias.map((m) => ({ ...m, resultado: resultadoFinal(m), codigoNueva: m.codigoNuevaDocente ?? m.codigoNueva })),
+    );
     await this.prisma.solicitud.update({ where: { id }, data: { requisitos: JSON.stringify(requisitos) } });
+  }
+}
+
+// Reglas que el análisis del agente marcó como no cumplidas (RN-01, RN-02…)
+export function reglasIncumplidas(informe?: string | null): string[] {
+  if (!informe) return [];
+  try {
+    const i = JSON.parse(informe) as { causas?: { regla: string; cumple: boolean }[] };
+    return (i.causas ?? []).filter((c) => !c.cumple).map((c) => c.regla);
+  } catch {
+    return [];
   }
 }
 

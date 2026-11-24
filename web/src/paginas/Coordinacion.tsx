@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { textoDocumento } from '../documento';
 import { api } from '../api';
 
 // Coordinador: registra las solicitudes que entregan los estudiantes, elige el docente y recibe el resultado
@@ -7,6 +8,8 @@ interface Resumen {
   id: number;
   tipo?: string;
   estudiante?: string | null;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   universidadOrigen?: string | null;
   carreraOrigen: string;
   carreraDestino: string;
@@ -37,6 +40,7 @@ export default function Coordinacion() {
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [elegido, setElegido] = useState<Record<number, string>>({});
   const [filtro, setFiltro] = useState<Filtro>('sin');
+  const [buscar, setBuscar] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
@@ -50,7 +54,11 @@ export default function Coordinacion() {
   const nombre = (codigo: string) => carreras.find((c) => c.codigo === codigo)?.nombre ?? codigo;
   const grupo = (s: Resumen): Filtro => (s.estado === 'REVISADA' ? 'terminadas' : s.docenteId ? 'revision' : 'sin');
   const cuantas = (f: Filtro) => (lista ?? []).filter((s) => f === 'todas' || grupo(s) === f).length;
-  const visibles = (lista ?? []).filter((s) => filtro === 'todas' || grupo(s) === filtro);
+  // Con texto en el buscador se busca en todas por nombre, cédula o número (dos estudiantes pueden llamarse igual)
+  const texto = buscar.trim().toLowerCase().replace(/[\s-]/g, '');
+  const coincide = (s: Resumen) =>
+    [s.estudiante ?? '', s.documento ?? '', String(s.id)].some((v) => v.toLowerCase().replace(/[\s-]/g, '').includes(texto));
+  const visibles = (lista ?? []).filter((s) => (texto ? coincide(s) : filtro === 'todas' || grupo(s) === filtro));
 
   const asignar = async (s: Resumen) => {
     const d = docentes.find((x) => String(x.id) === elegido[s.id]);
@@ -101,6 +109,7 @@ export default function Coordinacion() {
       {error && <p role="alert">{error}</p>}
       {docentes.length === 0 && <p className="aviso alerta">No hay docentes. Pide al administrador que cree sus cuentas.</p>}
       <div className="filtros">
+        <input className="buscar" type="search" value={buscar} placeholder="Buscar por nombre, cédula o N.º" onChange={(e) => setBuscar(e.target.value)} />
         {FILTROS.map(([f, texto]) => (
           <button key={f} className={filtro === f ? '' : 'pequeno'} onClick={() => setFiltro(f)}>
             {texto} ({cuantas(f)})
@@ -130,7 +139,7 @@ export default function Coordinacion() {
                   <td>
                     <strong>{s.estudiante ?? `Solicitud ${s.id}`}</strong>
                     <small className="equivale">
-                      {s.tipo === 'EXTERNO' ? 'Otra universidad' : 'Estudiante de la UTA'} · {s._count?.materias ?? 0} materias
+                      {[textoDocumento(s), s.tipo === 'EXTERNO' ? 'Otra universidad' : 'Estudiante de la UTA', `${s._count?.materias ?? 0} materias`].filter(Boolean).join(' · ')}
                     </small>
                   </td>
                   <td className="cambio">

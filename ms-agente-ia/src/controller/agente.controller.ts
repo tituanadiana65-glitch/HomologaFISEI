@@ -30,6 +30,12 @@ export class AgenteController {
     return this.servicio.leerRecord(p);
   }
 
+  // Lo usa ms-catalogo para importar planes que no tienen el formato de la FISEI
+  @Post('leer-plan')
+  leerPlan(@Body() p: { texto?: string }) {
+    return this.servicio.leerPlan(p?.texto ?? '');
+  }
+
   @Get('homologaciones')
   listar() {
     return this.servicio.listar();

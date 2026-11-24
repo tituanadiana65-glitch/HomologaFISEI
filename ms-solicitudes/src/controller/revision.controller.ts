@@ -22,7 +22,7 @@ export class CoordinacionController {
     @Headers('x-usuario-rol') rol: string,
     @Headers('x-usuario-nombre') nombre: string,
     @Headers('x-usuario-correo') correo: string,
-    @Body() d: NuevaSolicitud & { estudiante?: string; docenteId?: number; docente?: string },
+    @Body() d: NuevaSolicitud & { estudiante?: string; documento?: string; tipoDocumento?: string; docenteId?: number; docente?: string },
   ) {
     return this.solicitudes.crearPorCoordinador(personaDe('COORDINADOR', u, rol, nombreDe(nombre), correo), d);
   }
@@ -77,7 +77,7 @@ export class RevisionController {
     @Headers('x-usuario-correo') correo: string,
     @Param('id', ParseIntPipe) id: number,
     @Param('codigo') codigo: string,
-    @Body() d: { resultado?: string; comentario?: string },
+    @Body() d: { resultado?: string; comentario?: string; codigoNueva?: string; nombreNueva?: string; confirmo?: boolean },
   ) {
     return this.servicio.cambiar(personaDe('DOCENTE', u, rol, nombreDe(nombre), correo), id, codigo, d);
   }
