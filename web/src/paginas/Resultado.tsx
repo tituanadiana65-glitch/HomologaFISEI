@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import Pasos from '../componentes/Pasos';
 import { notaConvertida } from '../notas';
+import { armarFilas } from '../filas';
 
 interface Causa {
   regla: string;
@@ -13,6 +14,8 @@ interface Informe {
   causas: Causa[];
   temasFaltan: string[];
   parecido?: number;
+  juntas?: string[]; // HU-26
+  aviso?: string; // HU-26 · falta registrar la otra parte
 }
 interface Materia {
   codigo: string;
@@ -23,6 +26,10 @@ interface Materia {
   nota: number;
   notaOriginal?: number | null;
   escala?: number | null;
+  juntoCon?: string | null; // HU-26
+  resultadoDocente?: string | null; // revisión docente
+  comentarioDocente?: string | null;
+  docenteCambio?: string | null;
 }
 interface Solicitud {
   id: number;
@@ -32,8 +39,24 @@ interface Solicitud {
   carreraOrigen: string;
   carreraDestino: string;
   requisitos?: string | null; // T45 · revisión de RN-08 (solo EXTERNO)
+  enviada?: string | null; // cuándo se mandó al agente
+  estudiante?: string | null;
+  docente?: string | null; // docente que hace la homologación (lo asigna el coordinador)
+  terminada?: string | null;
+  comentarioFinal?: string | null;
   materias: Materia[];
 }
+
+// Qué significa cada resultado (leyenda de la página)
+const SIGNIFICADOS: [string, string][] = [
+  ['Homologable', 'Cumple todas las reglas: se le podría reconocer.'],
+  ['No homologable', 'No cumple al menos una regla. Pulsa «Ver por qué» para saber cuál.'],
+  ['Pendiente', 'La inteligencia artificial no alcanzó a revisarla. Pulsa «Reintentar las pendientes».'],
+  ['Sin materia equivalente', 'En la nueva carrera no hay una materia igual o parecida.'],
+];
+
+// 95 → "1:35"
+const reloj = (segundos: number) => `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, '0')}`;
 interface Requisitos {
   cumple: boolean;
   causas: { requisito: string; cumple: boolean; causa: string }[];
@@ -58,13 +81,15 @@ const claseDe = (texto: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ /g, '-');
 
-export default function Resultado() {
+// Análisis del agente y resultado. Lo ve el docente mientras el agente trabaja y el coordinador cuando recibe el resultado.
+export default function Resultado({ id, alListo, soloLectura = false }: { id: number; alListo?: () => void; soloLectura?: boolean }) {
   const [s, setS] = useState<Solicitud | null>(null);
   const [abierta, setAbierta] = useState('');
   const [version, setVersion] = useState(0); // cambia para volver a cargar
   const [error, setError] = useState('');
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [reintentando, setReintentando] = useState(false); // evita lanzar dos revisiones con dos clics
+  const [ahora, setAhora] = useState(() => Date.now()); // para el reloj de la espera
 
   // Nombres de las carreras ("Software" en vez de "SW")
   useEffect(() => {
@@ -78,8 +103,10 @@ export default function Resultado() {
   useEffect(() => {
     let activo = true;
     const cargar = () =>
-      api<Solicitud>('/solicitudes/mia').then(sol => {
-        if (activo) setS(sol);
+      api<Solicitud>(`/solicitudes/${id}`).then(sol => {
+        if (!activo) return;
+        setS(sol);
+        if (alListo && ['RESULTADO_LISTO', 'REVISADA'].includes(sol.estado)) alListo();
       });
     void cargar();
     const t = setInterval(() => void cargar(), 5000);
@@ -87,7 +114,15 @@ export default function Resultado() {
       activo = false;
       clearInterval(t);
     };
-  }, [version]);
+  }, [id, alListo, version]);
+
+  // Reloj de la espera: avanza cada segundo mientras el agente trabaja
+  const esperando = !!s && !['RESULTADO_LISTO', 'REVISADA'].includes(s.estado);
+  useEffect(() => {
+    if (!esperando) return;
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [esperando]);
 
   const reintentar = async () => {
     if (reintentando) return;
@@ -123,8 +158,18 @@ export default function Resultado() {
     );
   }
 
-  const listo = s.estado === 'RESULTADO_LISTO';
+  const listo = s.estado === 'RESULTADO_LISTO' || s.estado === 'REVISADA';
   const hayPendientes = s.materias.some(m => m.resultado === 'Pendiente');
+  // HU-26 · una fila por cada materia nueva evaluada
+  const filas = armarFilas(s.materias);
+  // Resumen en una frase: cuántas materias de la nueva carrera se le reconocerían
+  const reconocidas = new Set(filas.filter(f => f.resultado === 'Homologable').map(f => f.codigoNueva ?? f.clave)).size;
+  const noCumplen = filas.filter(f => f.resultado === 'No homologable').length;
+  const sinEquivalente = filas.filter(f => f.resultado === 'Sin materia equivalente').length;
+  const pendientes = filas.filter(f => f.resultado === 'Pendiente').length;
+  // Espera: desde cuándo revisa el agente y cuánto suele tardar (aprox. 1 minuto y medio por materia)
+  const transcurrido = s.enviada ? Math.max(0, Math.round((ahora - new Date(s.enviada).getTime()) / 1000)) : null;
+  const estimado = Math.max(2, Math.ceil(s.materias.length * 1.5));
   // T49 · Solicitud de otra universidad: columna "Parecido" y aviso de RN-08
   const externo = s.tipo === 'EXTERNO';
   const requisitos = externo && s.requisitos ? (JSON.parse(s.requisitos) as Requisitos) : null;
@@ -132,12 +177,78 @@ export default function Resultado() {
 
   return (
     <main>
-      <h1>Resultado de tu solicitud</h1>
+      <h1>
+        Homologación N.º {s.id} · {s.estudiante ?? 'Estudiante'}
+      </h1>
       <p className="ayuda">Este es un análisis previo. La decisión oficial la toma el Consejo Directivo de la Facultad.</p>
-      <Pasos actual={listo ? 4 : 3} />
+      <Pasos actual={s.estado === 'REVISADA' ? 5 : listo ? 3 : 2} />
 
-      {!listo && <p className="aviso">⏳ El agente está revisando tus materias. Esta página se actualiza sola.</p>}
-      {listo && <p className="aviso listo">✓ Tu resultado está listo. Puedes descargar el informe en PDF.</p>}
+      {!listo && (
+        <div className="espera">
+          <div className="espera-titulo">
+            <span className="girando" aria-hidden="true" />
+            <strong>
+              El agente está revisando {s.materias.length === 1 ? 'la materia' : `las ${s.materias.length} materias`}
+            </strong>
+            {transcurrido !== null && <span className="reloj">{reloj(transcurrido)}</span>}
+          </div>
+          <div className="barra-espera" aria-hidden="true">
+            <span />
+          </div>
+          <ol className="espera-pasos">
+            <li>Busca la materia equivalente en {nombreCarrera(s.carreraDestino)}</li>
+            <li>Compara los temas con inteligencia artificial (RN-01)</li>
+            <li>Revisa créditos, horas, nota y años (RN-02 a RN-05)</li>
+            <li>Arma el informe</li>
+          </ol>
+          <p>
+            Suele tardar unos {estimado} minutos. Esta página se actualiza sola; también puedes cerrarla y volver después: el resultado queda
+            guardado.
+          </p>
+          {transcurrido !== null && transcurrido > estimado * 60 * 2 && (
+            <p className="alerta-texto">
+              Está tardando más de lo normal: la inteligencia artificial puede estar muy ocupada. Espera un poco más; si alguna materia queda
+              «Pendiente», pulsa «Reintentar las pendientes».
+            </p>
+          )}
+        </div>
+      )}
+
+      {listo && (
+        <div className="resumen-final">
+          <strong>
+            {reconocidas > 0
+              ? `Se le podrían reconocer ${reconocidas} ${reconocidas === 1 ? 'materia' : 'materias'} de ${nombreCarrera(s.carreraDestino)}.`
+              : `No se le reconocería ninguna materia de ${nombreCarrera(s.carreraDestino)}.`}
+          </strong>
+          <span>
+            {[
+              noCumplen > 0 && `${noCumplen} no ${noCumplen === 1 ? 'cumple' : 'cumplen'} alguna regla`,
+              sinEquivalente > 0 && `${sinEquivalente} sin materia equivalente`,
+              pendientes > 0 && `${pendientes} ${pendientes === 1 ? 'quedó pendiente' : 'quedaron pendientes'}`,
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'Todas las materias cumplen las reglas.'}
+          </span>
+        </div>
+      )}
+
+      {listo && (
+        <div className={`aviso ${s.estado === 'REVISADA' ? 'listo' : ''}`}>
+          {s.estado === 'REVISADA' ? (
+            <>
+              ✓ <b>Resultado enviado al coordinador</b> por {s.docente}
+              {s.terminada && ` el ${new Date(s.terminada).toLocaleDateString('es-EC')}`}.{s.comentarioFinal && <> «{s.comentarioFinal}»</>}
+            </>
+          ) : s.docente ? (
+            <>
+              👩‍🏫 <b>{s.docente}</b> está revisando la homologación.
+            </>
+          ) : (
+            <>👩‍🏫 Este es el análisis del agente. Falta asignar un docente.</>
+          )}
+        </div>
+      )}
 
       {listo && requisitos && (
         <div className={`aviso ${requisitos.cumple ? 'listo' : 'alerta'}`}>
@@ -163,7 +274,7 @@ export default function Resultado() {
           ['Pendiente', 'pendiente'],
           ['Sin materia equivalente', 'sin-materia-equivalente'],
         ].map(([texto, clase]) => {
-          const n = s.materias.filter(m => m.resultado === texto).length;
+          const n = filas.filter(f => f.resultado === texto).length;
           return n > 0 ? (
             <div key={clase} className={`conteo-item ${clase}`}>
               <strong>{n}</strong>
@@ -176,24 +287,38 @@ export default function Resultado() {
       <table className="tabla-resultado">
         <thead>
           <tr>
-            <th>Tu materia ({origen})</th>
+            <th>Materia aprobada ({origen})</th>
             <th>Se homologa por ({nombreCarrera(s.carreraDestino)})</th>
-            {externo && <th title="Qué tanto se parecen los temas de tu sílabo a los de la materia de la FISEI">Parecido</th>}
+            {externo && <th title="Qué tanto se parecen los temas del sílabo a los de la materia de la FISEI">Parecido</th>}
             <th>Resultado</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {s.materias.map(m => {
-            const inf = m.informe ? (JSON.parse(m.informe) as Informe) : null;
-            const resultado = m.resultado ?? 'En revisión';
+          {filas.map(f => {
+            const inf = f.informe ? (JSON.parse(f.informe) as Informe) : null;
+            const resultado = f.resultado ?? 'En revisión';
+            const juntas = f.materias.length > 1;
             return (
-              <tr key={m.codigo}>
+              <tr key={f.clave}>
                 <td>
-                  <strong>{m.nombre}</strong>
-                  <small className="equivale">{m.codigo}</small>
-                  {notaConvertida(m) && <small className="nota-convertida">Nota: {notaConvertida(m)}</small>}
-                  {abierta === m.codigo && inf && (
+                  {juntas && <small className="etiqueta-fila">Evaluadas juntas</small>}
+                  {f.docenteCambio && f.resultado !== f.resultadoAgente && (
+                    <small className="cambio-docente">
+                      <b>Cambiado por {f.docenteCambio}</b> (el agente dijo «{f.resultadoAgente}»): {f.comentarioDocente}
+                    </small>
+                  )}
+                  {f.materias.map((m, i) => (
+                    <div key={m.codigo} className="materia-de-fila">
+                      <strong>
+                        {i > 0 && '+ '}
+                        {m.nombre}
+                      </strong>
+                      <small className="equivale">{m.codigo}</small>
+                      {notaConvertida(m) && <small className="nota-convertida">Nota: {notaConvertida(m)}</small>}
+                    </div>
+                  ))}
+                  {abierta === f.clave && inf && (
                     <ul className="detalle">
                       {inf.causas.map(c => (
                         <li key={c.regla} className={c.cumple ? 'cumple' : 'no-cumple'}>
@@ -205,6 +330,11 @@ export default function Resultado() {
                           <b>Temas que faltan:</b> {inf.temasFaltan.join(', ')}
                         </li>
                       )}
+                      {inf.aviso && (
+                        <li className="faltan">
+                          <b>Ojo:</b> {inf.aviso}
+                        </li>
+                      )}
                     </ul>
                   )}
                 </td>
@@ -212,10 +342,10 @@ export default function Resultado() {
                   {inf ? (
                     <>
                       <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong>
-                      <small className="equivale">{m.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>
+                      <small className="equivale">{f.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>
                     </>
                   ) : (
-                    <span className="sin-equivalente">{equivalente(m.resultado, nombreCarrera(s.carreraDestino))}</span>
+                    <span className="sin-equivalente">{equivalente(f.resultado, nombreCarrera(s.carreraDestino))}</span>
                   )}
                 </td>
                 {externo && <td className="parecido">{inf?.parecido !== undefined ? `${inf.parecido} %` : '—'}</td>}
@@ -224,8 +354,8 @@ export default function Resultado() {
                 </td>
                 <td>
                   {inf && (
-                    <button className="pequeno" onClick={() => setAbierta(abierta === m.codigo ? '' : m.codigo)}>
-                      {abierta === m.codigo ? 'Ocultar' : 'Ver detalle'}
+                    <button className="pequeno" onClick={() => setAbierta(abierta === f.clave ? '' : f.clave)}>
+                      {abierta === f.clave ? 'Ocultar' : 'Ver por qué'}
                     </button>
                   )}
                 </td>
@@ -235,10 +365,21 @@ export default function Resultado() {
         </tbody>
       </table>
 
+      <details className="leyenda">
+        <summary>¿Qué significa cada resultado?</summary>
+        <ul>
+          {SIGNIFICADOS.map(([texto, significado]) => (
+            <li key={texto}>
+              <span className={`etiqueta ${claseDe(texto)}`}>{texto}</span> {significado}
+            </li>
+          ))}
+        </ul>
+      </details>
+
       {error && <p role="alert">{error}</p>}
 
       <div className="acciones">
-        {hayPendientes && (
+        {hayPendientes && !soloLectura && (
           <button className="pequeno" onClick={() => void reintentar()} disabled={reintentando}>
             {reintentando ? 'Enviando…' : 'Reintentar las pendientes'}
           </button>

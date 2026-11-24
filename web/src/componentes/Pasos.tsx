@@ -1,9 +1,10 @@
-const PASOS = ['Solicitud', 'Materias', 'Resultado'];
+// Pasos de la homologación que hace el docente
+const PASOS_DOCENTE = ['Expediente y materias', 'Análisis del agente', 'Revisión del docente', 'Enviada al coordinador'];
 
-export default function Pasos({ actual }: { actual: number }) {
+export default function Pasos({ actual, pasos = PASOS_DOCENTE }: { actual: number; pasos?: string[] }) {
   return (
     <ol className="pasos">
-      {PASOS.map((nombre, i) => {
+      {pasos.map((nombre, i) => {
         const n = i + 1;
         const clase = n < actual ? 'hecho' : n === actual ? 'actual' : '';
         return (

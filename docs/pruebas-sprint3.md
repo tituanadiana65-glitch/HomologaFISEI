@@ -27,3 +27,45 @@ Datos: cuenta de prueba `ext1.t47@uta.edu.ec`, solicitud **3002**, de la *Univer
 | E-7 | CP-32, CP-33 | Cada clic en **«Reintentar las pendientes»** lanza otra revisión completa en paralelo; llegaron a correr 5 a la vez y saturaron a Gemini, por eso la evaluación tardó unos 15 minutos | Al reintentar, las materias pasan a «En revisión» y el botón desaparece hasta que el agente responda; mientras se envía el pedido el botón queda desactivado. Si llegan dos clics a la vez, solo uno lanza la revisión | Corregido |
 | E-8 | CP-36 | El PDF muestra el correo del estudiante en lugar de su nombre, y la carrera de destino como «SW» en lugar de «Software» | El informe muestra el nombre completo del estudiante (en una línea, achicando la letra si es largo) y el nombre de las carreras. Una sesión abierta antes del cambio sigue mostrando el correo hasta volver a iniciar sesión | Corregido |
 | E-9 | CP-29 | Al abrir «Tus materias aprobadas» aparecía un instante el formulario de la UTA antes del de otra universidad | La página muestra «Cargando…» hasta tener la solicitud | Corregido |
+
+## HU-26 y HU-29 · materias divididas en partes
+
+> **Actualización 22/11/2026:** en la revisión el docente indicó que una materia aprobada **no** puede homologar dos materias nuevas («caso contrario no»). Se quitó HU-29; CP-38 queda como registro de lo probado y ya no aplica. HU-26 (Física I + Física II → Física) se mantiene.
+
+Prueba en la PC de Diana el 19/11/2026, rama `feature/HU-26-HU-29`, solicitud **3003** de otra universidad (Universidad del Pacífico Andino, institución ficticia → Software). Se usaron sílabos de prueba: Física I y Física II (cada una con la mitad de los temas de FÍSICA de Software) y un Cálculo anual (temas de Cálculo Diferencial y de Cálculo Integral).
+
+| # | HU | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|---|
+| CP-37 | HU-26 | Dos materias para una | Registrar Física I (3 cr, 144 h, 16/20, 2024) y Física II (3 cr, 144 h, 15/20, 2025) y enviar | Se evalúan juntas frente a FÍSICA | Una fila «Evaluadas juntas · Física I + Física II» → **FÍSICA, Homologable**. RN-01 contenidos 100 % de las dos juntas; RN-02 créditos sumados 6 de 3; RN-03 horas sumadas 288 de 144; RN-04 «Promedio 7,8/10 según créditos (Física I 16/20 y Física II 15/20)»; RN-05 se toma la más antigua (2024) ([captura](evidencias/CP-37-juntas.jpg)) | OK |
+| CP-38 | HU-29 | Una materia para dos | Registrar Cálculo (8 cr, 320 h, 17/20, 2025) | Se evalúa con cada materia que cubre | **CÁLCULO DIFERENCIAL, Homologable** (parecido 95 %) y una fila «También cubre» **CÁLCULO INTEGRAL, Homologable** (95 %) ([captura](evidencias/CP-38-tambien-cubre.jpg)) | OK |
+| CP-39 | HU-26 / HU-29 | RN-08 cuenta materias de la nueva carrera | Al terminar | Las dos Físicas cuentan como una y Cálculo como dos | «Tiene 3 materias homologables (mínimo 2)»: FÍSICA, Cálculo Diferencial y Cálculo Integral | OK |
+| CP-40 | HU-26 / HU-29 | Informe PDF | Descargar el informe | Mismas filas que en la página | 200, 2 páginas: «Física I + Física II · Evaluadas juntas» y «También cubre · Cálculo» con sus reglas | OK |
+
+El agente terminó en unos 4 minutos. Los casos de una sola parte («Física I» sola: aviso de que falta la otra) y de la UTA («FISICA» frente a «FISICA I» y «FISICA II») están cubiertos con pruebas automáticas, porque las mallas de TI y Software no tienen materias divididas en partes.
+
+## Observaciones de la revisión del 22/11/2026
+
+Prueba en la PC de Diana el 22/11/2026, rama `feature/HU-26-HU-29`, con todos los servicios reconstruidos.
+
+| # | Observación | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|---|
+| CP-41 | «Caso contrario no» | Una materia no homologa dos | Pruebas automáticas: «FISICA» frente a «FISICA I» y «FISICA II» | Sin materia equivalente; nunca dos resultados para una materia | Sin materia equivalente; HU-29 quitada del agente, la página y el PDF | OK |
+| CP-42 | Récord y «no meter todo a mano» | Leer el récord con IA | `POST /api/agente/leer-record` con el récord de prueba | Lista con nota, escala, año, créditos, horas y estado | 10 materias leídas en 28 s, todas con nota, escala, año, créditos, horas y estado «Aprobada» (el récord de prueba no tenía reprobadas) | OK |
+| CP-43 | Dos docentes en un mismo informe | Revisión de la solicitud 3004 | El administrador crea dos docentes; el docente 1 cambia «Fisica» de No homologable a Homologable sin comentario y luego con comentario; aprueba dos veces; el docente 2 aprueba; luego intenta cambiar | Sin comentario se rechaza; no aprueba dos veces; con dos aprobaciones queda REVISADA y ya no se cambia | 400 «Explica en un comentario…»; cambio guardado; 400 «Ya aprobaste este informe»; 2 de 2 → **REVISADA**; 400 «ya fue aprobado por dos docentes». El estudiante ve el resultado final y los dos docentes; el PDF (estudiante y docente) muestra «Cambiado por…» y «Revisado por dos docentes» ([captura](evidencias/CP-43-revision-docente.jpg)) | OK |
+| CP-44 | Permisos | Estudiante en rutas de docentes y administrador | Crear docente y ver la revisión con la cuenta de un estudiante | 403 | 403 y 403 | OK |
+
+> **Actualización 23/11/2026:** el equipo definió que trabajan **un coordinador y un docente**: el coordinador elige al docente y el docente hace la homologación. La aprobación de dos docentes (CP-43) se reemplazó por ese flujo.
+
+## Coordinador y docente (23/11/2026)
+
+Prueba en la PC de Diana, rama `feature/HU-26-HU-29`, todos los servicios reconstruidos, con la solicitud **3003** (otra universidad: Física I + Física II y Cálculo).
+
+| # | Caso | Pasos | Esperado | Obtenido | OK |
+|---|---|---|---|---|---|
+| CP-45 | Cuentas | El administrador crea un coordinador de prueba | Se crea con rol COORDINADOR y ve la lista de docentes | 201; la lista muestra al coordinador y a los dos docentes | OK |
+| CP-46 | Asignar y cambiar docente | El coordinador asigna el docente 2 y luego lo cambia por el docente 1 | El estudiante ve quién revisa; el docente 2 ya no la ve | 200 y 200; el estudiante vio «Docente Prueba Dos» y luego «Docente Prueba Uno»; el docente 2 recibe 403 | OK |
+| CP-47 | El docente homologa | El docente 1 cambia Cálculo a No homologable con comentario; cambia Física I (se aplica también a Física II) y la devuelve al resultado del agente; termina con comentario | Cambios guardados; el grupo cambia junto; RN-08 se vuelve a revisar; queda REVISADA y ya no se cambia | Física I y II cambiaron juntas; resultado final: Cálculo No homologable, Física I y II Homologable; RN-08 «1 materia homologable»; REVISADA; cambiar o reasignar después → 400 | OK |
+| CP-48 | PDF y permisos | Descargar el informe como estudiante, docente 1, coordinador y docente 2; entrar a las rutas de otros roles | Estudiante, docente asignado y coordinador sí; el otro docente no; roles cruzados 403 | 200, 200, 200 y 403; el PDF dice «Homologación hecha por Ing. Docente Prueba Uno», «Docente asignado por Ing. Coordinador Prueba» y el comentario final; estudiante, docente y coordinador en rutas ajenas → 403 | OK |
+
+> **Actualización 23/11/2026 (2):** el estudiante ya no usa el sistema. El coordinador registra la solicitud y asigna el docente; el docente sube el expediente, registra las materias, las envía al agente, revisa el análisis y envía el resultado al coordinador.
+

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Comparacion, MateriaTexto } from '../dto/tipos';
+import { armarPedidoRecord, leerRecord, SISTEMA_RECORD, type MateriaRecord } from './record';
 
 // Instrucciones del agente: solo compara contenidos (RN-01).
 // Créditos, horas, nota y vigencia los decide ms-motor-reglas, no la IA.
@@ -32,6 +33,10 @@ export const recortar = (t: string, max = MAX_SILABO) => (t.length > max ? `${t.
 
 // Porcentaje mínimo de parecido para aceptar la materia elegida (T43)
 export const PARECIDO_MINIMO = 50;
+export interface Parecida {
+  codigo: string;
+  parecido: number;
+}
 
 const texto = (m: MateriaTexto) =>
   [
@@ -61,7 +66,7 @@ export function armarPedidoParecida(silabo: string, candidatas: MateriaTexto[]):
 }
 
 // T43 · Lee { codigo, parecido }. Si la IA inventa un código que no está en la lista, falla (queda Pendiente).
-export function leerParecida(respuesta: string, candidatas: { codigo: string }[]): { codigo: string; parecido: number } {
+export function leerParecida(respuesta: string, candidatas: { codigo: string }[]): Parecida {
   let json: { codigo?: unknown; parecido?: unknown };
   try {
     json = JSON.parse(limpiarJson(respuesta)) as { codigo?: unknown; parecido?: unknown };
@@ -260,7 +265,12 @@ export class AgenteService {
 
   // T43 · Elige la materia de la FISEI más parecida al sílabo. Devuelve null si el parecido es menor a 50.
   // Si la IA falla, lanza el error (la solicitud deja esa materia en "Pendiente").
-  async elegirParecida(silabo: string, candidatas: MateriaTexto[], minimo = PARECIDO_MINIMO) {
+  // Lee el récord académico (aprobadas, reprobadas, en curso) para que el estudiante no escriba todo a mano
+  async leerRecord(texto: string): Promise<MateriaRecord[]> {
+    return leerRecord(await this.llamarIA(armarPedidoRecord(texto), SISTEMA_RECORD));
+  }
+
+  async elegirParecida(silabo: string, candidatas: MateriaTexto[], minimo = PARECIDO_MINIMO): Promise<Parecida | null> {
     const r = leerParecida(await this.llamarIA(armarPedidoParecida(silabo, candidatas), SISTEMA_PARECIDA), candidatas);
     return r.parecido < minimo ? null : r;
   }

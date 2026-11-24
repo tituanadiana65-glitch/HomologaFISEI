@@ -1,4 +1,4 @@
-import { conNombresDeCarrera, crearPdf, leerRequisitos, nombreEstudiante, textoNota } from './informe-pdf';
+import { armarFilas, conNombresDeCarrera, crearPdf, leerRequisitos, nombreEstudiante, textoNota } from './informe-pdf';
 import { leerTexto } from './lector-texto';
 
 const solicitud = {
@@ -166,5 +166,83 @@ describe('nombre del estudiante y de las carreras', () => {
     const texto = await leerTexto(pdf);
     expect(texto).toContain(largo);
     expect(texto).toContain('Software');
+  });
+});
+
+// HU-26 · filas del informe
+describe('materias juntas', () => {
+  const base = { nota: 8, codigoNueva: null, informe: null };
+  const informeDe = (nueva: string, resultado: string) => JSON.stringify({ nueva, resultado, causas: [{ regla: 'RN-01', cumple: true, causa: 'Contenidos 90 %' }], temasFaltan: [] });
+
+  it('las materias juntas forman una fila', () => {
+    const filas = armarFilas([
+      { ...base, codigo: 'A', nombre: 'Física I', resultado: 'Homologable', juntoCon: 'B' },
+      { ...base, codigo: 'B', nombre: 'Física II', resultado: 'Homologable', juntoCon: 'A' },
+      { ...base, codigo: 'C', nombre: 'Química', resultado: 'Sin materia equivalente' },
+    ]);
+    expect(filas.map((f) => [f.materias.map((m) => m.codigo).join('+'), f.resultado])).toEqual([
+      ['A+B', 'Homologable'],
+      ['C', 'Sin materia equivalente'],
+    ]);
+  });
+
+  it('el PDF muestra las materias juntas y el aviso', async () => {
+    const aviso = JSON.stringify({ nueva: 'FÍSICA (SW-F)', resultado: 'No homologable', causas: [], temasFaltan: [], aviso: 'Esta materia es una parte de FÍSICA.' });
+    const pdf = await crearPdf(
+      {
+        ...solicitud,
+        materias: [
+          { ...base, codigo: 'A', nombre: 'Física I', resultado: 'Homologable', juntoCon: 'B', informe: informeDe('FÍSICA (SW-F)', 'Homologable') },
+          { ...base, codigo: 'B', nombre: 'Física II', resultado: 'Homologable', juntoCon: 'A', informe: informeDe('FÍSICA (SW-F)', 'Homologable') },
+          { ...base, codigo: 'D', nombre: 'Química I', resultado: 'No homologable', informe: aviso },
+        ],
+      },
+      'Ana',
+    );
+    const texto = await leerTexto(pdf);
+    expect(texto).toContain('Física I + Física II');
+    expect(texto).toContain('Evaluadas juntas');
+    expect(texto).toContain('Esta materia es una parte de FÍSICA.');
+  });
+});
+
+// Coordinador y docente en el PDF
+describe('homologación del docente en el informe', () => {
+  const base = { nota: 8, codigoNueva: null, informe: null };
+  it('usa el resultado del docente, muestra su comentario, quién la hizo y quién lo asignó', async () => {
+    const pdf = await crearPdf(
+      {
+        ...solicitud,
+        estado: 'REVISADA',
+        docente: 'Ing. Ana Pérez',
+        coordinador: 'Ing. Luis Mora',
+        terminada: '2026-11-23T10:00:00Z',
+        comentarioFinal: 'Revisado con los sílabos',
+        materias: [
+          {
+            ...base,
+            codigo: 'A',
+            nombre: 'Química',
+            resultado: 'Homologable',
+            resultadoDocente: 'No homologable',
+            comentarioDocente: 'No tiene laboratorio',
+            docenteCambio: 'Ing. Ana Pérez',
+            informe: JSON.stringify({ nueva: 'QUIMICA (Q)', resultado: 'Homologable', causas: [], temasFaltan: [] }),
+          },
+        ],
+      },
+      'Ana',
+    );
+    const texto = await leerTexto(pdf);
+    expect(texto).toContain('Homologación hecha por Ing. Ana Pérez');
+    expect(texto).toContain('Docente asignado por Ing. Luis Mora');
+    expect(texto).toContain('Revisado con los sílabos');
+    expect(texto).toContain('Cambiado por Ing. Ana Pérez');
+    expect(texto).toContain('No tiene laboratorio');
+  });
+
+  it('sin docente dice que el coordinador lo asignará; con docente, que está en revisión', async () => {
+    expect(await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO' }, 'Ana'))).toContain('el coordinador asignará un docente');
+    expect(await leerTexto(await crearPdf({ ...solicitud, estado: 'RESULTADO_LISTO', docente: 'Ing. Ana' }, 'Ana'))).toContain('En revisión por Ing. Ana');
   });
 });

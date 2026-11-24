@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../api';
+import AdminPersonal from '../componentes/AdminPersonal';
 
 interface Carrera {
   codigo: string;
@@ -108,7 +109,7 @@ export default function Administracion() {
   return (
     <main className="admin">
       <h1>Administración</h1>
-      <p className="ayuda">Aquí se agregan carreras con sus planes analíticos y se cambian las reglas de homologación.</p>
+      <p className="ayuda">Aquí se agregan carreras con sus planes analíticos, se cambian las reglas de homologación y se crean las cuentas del coordinador y los docentes.</p>
 
       {mensaje && <p className="aviso listo" role="status">✓ {mensaje}</p>}
       {error && <p role="alert">{error}</p>}
@@ -208,6 +209,7 @@ export default function Administracion() {
             </tbody>
           </table>
         </section>
+        <AdminPersonal avisar={avisar} />
       </div>
 
       <p className="aviso">🔒 Solo el administrador puede entrar a esta pantalla.</p>

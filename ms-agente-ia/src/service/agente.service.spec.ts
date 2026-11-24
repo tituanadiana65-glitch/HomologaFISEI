@@ -168,6 +168,7 @@ describe('AgenteService', () => {
     expect(() => leerParecida('{"codigo":"SW-CI"}', candidatas)).toThrow('parecido');
   });
 
+
   it('T43: elige bien (Cálculo II -> Cálculo Integral)', async () => {
     jest.spyOn(s, 'llamarIA').mockResolvedValue('{"codigo":"SW-CI","parecido":82}');
     expect(await s.elegirParecida('Cálculo II: integrales', candidatas)).toEqual({ codigo: 'SW-CI', parecido: 82 });

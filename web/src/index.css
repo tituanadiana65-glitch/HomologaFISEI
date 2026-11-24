@@ -722,6 +722,23 @@ tbody tr:hover td {
   font-size: 12px;
   margin-top: 2px;
 }
+/* HU-26 · materias evaluadas juntas */
+.etiqueta-fila {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #eef2f8;
+  color: var(--gris);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.materia-de-fila + .materia-de-fila {
+  margin-top: 6px;
+}
+
 .sin-equivalente {
   color: var(--gris);
   font-style: italic;
@@ -980,4 +997,432 @@ input[type='file'] {
 .tabla-resultado td.parecido {
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ---------- Interfaz más intuitiva: guías, pistas, campos obligatorios, espera y resumen ---------- */
+.req {
+  color: var(--guinda);
+  font-weight: 700;
+}
+.pista {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--gris-claro);
+  line-height: 1.35;
+}
+.pista.alerta {
+  color: var(--naranja);
+  font-weight: 600;
+}
+.pista.bien {
+  color: var(--verde);
+  font-weight: 600;
+}
+.casilla > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.falta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris);
+  background: #f6f7f9;
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.completo {
+  grid-column: 1 / -1;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+.guia {
+  background: #f5f8ff;
+  border: 1px solid #d9e3fb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--texto);
+}
+.guia > strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #1a4fa8;
+}
+.guia ul,
+.guia ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.guia.corta {
+  margin: 16px 0 0;
+}
+.contador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--guinda-claro);
+  color: var(--guinda);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+/* Espera del resultado */
+.espera {
+  border: 1px solid #f5ddb0;
+  background: var(--naranja-claro);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--texto);
+}
+.espera-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+.espera-titulo .reloj {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--naranja);
+  font-size: 18px;
+}
+.girando {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid #f5ddb0;
+  border-top-color: var(--naranja);
+  animation: girar 0.9s linear infinite;
+  flex: 0 0 auto;
+}
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.barra-espera {
+  height: 6px;
+  border-radius: 999px;
+  background: #f5ddb0;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.barra-espera span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--naranja);
+  animation: avanzar 1.6s ease-in-out infinite;
+}
+@keyframes avanzar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.espera-pasos {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--gris);
+}
+.espera p {
+  margin: 0;
+}
+.alerta-texto {
+  margin-top: 8px !important;
+  color: var(--naranja);
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .girando,
+  .barra-espera span {
+    animation: none;
+  }
+}
+
+/* Resumen del resultado y leyenda */
+.resumen-final {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--verde-claro);
+  border: 1px solid #c8e6c9;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 0 0 18px;
+}
+.resumen-final strong {
+  font-size: 18px;
+  color: var(--verde);
+}
+.resumen-final span {
+  font-size: 14px;
+  color: var(--gris);
+}
+.leyenda {
+  margin: 16px 0;
+  font-size: 14px;
+}
+.leyenda summary {
+  cursor: pointer;
+  color: var(--guinda);
+  font-weight: 600;
+}
+.leyenda ul {
+  list-style: none;
+  padding: 10px 0 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--gris);
+}
+
+/* Inicio de sesión: cómo funciona en 3 pasos */
+.como-funciona {
+  list-style: none;
+  counter-reset: paso;
+  margin: 22px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.como-funciona li {
+  counter-increment: paso;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  column-gap: 10px;
+  font-size: 13px;
+}
+.como-funciona li::before {
+  content: counter(paso);
+  grid-row: span 2;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--guinda-claro);
+  color: var(--guinda);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.como-funciona span {
+  color: var(--gris);
+}
+
+/* Llenar las materias desde el récord académico */
+.leer-record {
+  border: 1px solid var(--guinda-borde);
+  background: #fffafb;
+  border-radius: var(--radio);
+  padding: 4px 20px 18px;
+  margin: 0 0 26px;
+}
+.leer-record-accion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+.leer-record-accion > label {
+  flex: 1 1 280px;
+}
+.tabla-record {
+  overflow-x: auto;
+  margin: 14px 0;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: #fff;
+}
+.tabla-record table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.tabla-record th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gris);
+  background: #f8f9fa;
+  padding: 10px;
+}
+.tabla-record td {
+  padding: 10px;
+  border-top: 1px solid var(--borde);
+  vertical-align: top;
+}
+.tabla-record td strong,
+.tabla-record td small {
+  display: block;
+}
+.tabla-record tr.apagada td {
+  color: var(--gris-claro);
+  background: #fbfbfc;
+}
+.tabla-record input.corto {
+  width: 76px;
+}
+.tabla-record td label {
+  min-width: 190px;
+}
+.tabla-record input[type='file'] {
+  max-width: 210px;
+  font-size: 12px;
+  padding: 6px;
+}
+.tabla-record td:nth-child(3) {
+  white-space: nowrap;
+}
+
+/* Revisión docente */
+.cambio-docente {
+  display: block;
+  margin: 4px 0 6px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--guinda);
+  background: var(--guinda-claro);
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--texto);
+}
+a.boton {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 9px;
+  background: var(--guinda);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.filtros {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.filtros button {
+  height: 34px;
+  font-size: 13px;
+}
+.editar-resultado {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--guinda-borde);
+  border-radius: 10px;
+  background: #fffafb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+textarea {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 9px;
+  resize: vertical;
+}
+.aprobar {
+  margin: 24px 0 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: #fff;
+}
+.aprobar ul {
+  margin: 0 0 12px;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+.aprobar label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tabla-record td.cambio {
+  width: 34%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tabla-record td:last-child {
+  width: 1%;
+}
+a.volver {
+  color: var(--guinda);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 14px;
+}
+.asignar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+.asignar select {
+  height: 34px;
+  font-size: 13px;
+}
+.asignar button {
+  align-self: flex-start;
+}
+.titulo-con-accion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.titulo-con-accion a.boton {
+  height: 40px;
+  font-size: 14px;
+  padding: 0 16px;
+}
+.volver-arriba {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.leer-record > .doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .leer-record > .doble {
+    grid-template-columns: 1fr;
+  }
 }

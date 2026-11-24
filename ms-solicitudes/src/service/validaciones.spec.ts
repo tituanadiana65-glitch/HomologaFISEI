@@ -1,4 +1,4 @@
-import { revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
+import { materiasHomologables, revisarRequisitos, validarMateria, validarMateriaExterna, validarSolicitud } from './validaciones';
 
 const datos = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
 
@@ -173,5 +173,17 @@ describe('revisarRequisitos (RN-08)', () => {
     const r = revisarRequisitos({ ...ok, documentosLegalizados: false }, dos);
     expect(r.cumple).toBe(false);
     expect(r.causas[2].causa).toBe('Falta legalizar la malla y el récord académico');
+  });
+});
+
+// HU-26 · RN-08 cuenta materias de la nueva carrera
+describe('materiasHomologables', () => {
+  it('varias materias aprobadas juntas cuentan como una', () => {
+    expect(materiasHomologables([
+      { resultado: 'Homologable', codigoNueva: 'SW-F' },
+      { resultado: 'Homologable', codigoNueva: 'SW-F' },
+      { resultado: 'Homologable', codigoNueva: 'SW-C' },
+      { resultado: 'No homologable', codigoNueva: 'SW-Q' },
+    ])).toBe(2);
   });
 });

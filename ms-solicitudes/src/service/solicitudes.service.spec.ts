@@ -80,8 +80,9 @@ describe('SolicitudesService', () => {
   });
 
   it('al enviar publica solicitud.enviada con las materias', async () => {
-    const { servicio, eventos } = armar({ id: 1, usuarioId: 7, estado: 'BORRADOR', carreraDestino: 'SW', materias: [fisica] });
+    const { servicio, eventos, prisma } = armar({ id: 1, usuarioId: 7, estado: 'BORRADOR', carreraDestino: 'SW', materias: [fisica] });
     await expect(servicio.enviar(7, 1)).resolves.toEqual({ id: 1, estado: 'ENVIADA' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'ENVIADA', enviada: expect.any(Date) } });
     expect(eventos.publicar).toHaveBeenCalledWith('solicitud.enviada', {
       solicitudId: 1,
       carreraDestino: 'SW',
@@ -141,7 +142,7 @@ describe('SolicitudesService · resultado del agente (T28)', () => {
     expect(prisma.asignaturaAprobada.update).toHaveBeenCalledTimes(2);
     expect(prisma.asignaturaAprobada.update).toHaveBeenCalledWith({
       where: { solicitudId_codigo: { solicitudId: 1, codigo: 'FIS-TI' } },
-      data: { resultado: 'Homologable', codigoNueva: 'FIS-SW', informe: JSON.stringify({ resultado: 'Homologable' }) },
+      data: { resultado: 'Homologable', codigoNueva: 'FIS-SW', informe: JSON.stringify({ resultado: 'Homologable' }), juntoCon: null },
     });
     expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'RESULTADO_LISTO' } });
   });
@@ -243,10 +244,80 @@ describe('SolicitudesService · otra universidad (T38)', () => {
 
   it('al enviar publica el tipo y los datos de cada materia', async () => {
     const guardada = { codigo: 'EXT-CALCULO-II', nombre: 'Cálculo II', creditos: 4, horas: 160, nota: 8, notaOriginal: 16, escala: 20, anio: 2025, silaboId: 7 };
-    const { servicio, eventos } = armar({ ...externa, materias: [guardada] });
+    const { servicio, eventos } = armar({ ...externa, mallaId: 3, recordId: 4, materias: [guardada] });
     await servicio.enviar(7, 2);
     expect(eventos.publicar).toHaveBeenCalledWith('solicitud.enviada', {
       solicitudId: 2, tipo: 'EXTERNO', carreraDestino: 'SW', materias: [guardada],
     });
   });
 });
+
+// HU-26 · se guardan las materias evaluadas juntas
+describe('SolicitudesService · materias juntas', () => {
+  it('guarda juntoCon', async () => {
+    const { servicio, prisma } = armar();
+    prisma.solicitud.findUnique.mockResolvedValue({ id: 3, tipo: 'INTERNO' });
+    await servicio.guardarResultado({
+      solicitudId: 3,
+      resultados: [{ codigoAprobada: 'A', codigoNueva: 'SW-F', resultado: 'Homologable', informe: null, juntoCon: ['B', 'C'] }],
+    });
+    expect(prisma.asignaturaAprobada.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ juntoCon: 'B,C' }) }));
+  });
+});
+
+// Revisión docente: la solicitud guarda el nombre del estudiante y una ya revisada no cuenta como abierta
+describe('SolicitudesService · nombre del estudiante', () => {
+  it('guarda el nombre y no cuenta como abiertas las REVISADAS', async () => {
+    const { servicio, prisma } = armar();
+    await servicio.crear(7, { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' }, 'Ana Tituaña');
+    expect(prisma.solicitud.count).toHaveBeenCalledWith({ where: { usuarioId: 7, estado: { notIn: ['RESULTADO_LISTO', 'REVISADA'] } } });
+    expect(prisma.solicitud.create).toHaveBeenCalledWith({ data: expect.objectContaining({ estudiante: 'Ana Tituaña' }) });
+  });
+});
+
+// Coordinador y docente (23/11/2026): el coordinador registra la solicitud y el docente asignado la trabaja
+describe('SolicitudesService · coordinador y docente', () => {
+  const coord = { id: 5, nombre: 'Ing. Coordinadora' };
+  const base = { carreraOrigen: 'TI', carreraDestino: 'SW', periodo: 'NOVIEMBRE 2026 - MARZO 2027' };
+
+  it('el coordinador registra la solicitud con el nombre del estudiante y el docente', async () => {
+    const { servicio, prisma } = armar();
+    await servicio.crearPorCoordinador(coord, { ...base, estudiante: ' Ana Pérez ', docenteId: 11, docente: 'Ing. Luis' });
+    expect(prisma.solicitud.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ usuarioId: 5, estudiante: 'Ana Pérez', docenteId: 11, docente: 'Ing. Luis', coordinador: 'Ing. Coordinadora', asignada: expect.any(Date) }),
+    });
+    expect(prisma.solicitud.count).not.toHaveBeenCalled(); // el coordinador registra muchas
+  });
+
+  it('pide el nombre del estudiante y valida los datos; sin docente queda por asignar', async () => {
+    const { servicio, prisma } = armar();
+    await expect(servicio.crearPorCoordinador(coord, { ...base, estudiante: '' })).rejects.toThrow('nombre del estudiante');
+    await expect(servicio.crearPorCoordinador(coord, { ...base, tipo: 'EXTERNO', estudiante: 'Ana' })).rejects.toThrow('viene el estudiante');
+    await servicio.crearPorCoordinador(coord, { ...base, tipo: 'EXTERNO', universidadOrigen: 'UCE', periodosAprobados: 2, estudiante: 'Ana' });
+    expect(prisma.solicitud.create.mock.calls[0][0].data).not.toHaveProperty('docenteId');
+    expect(prisma.solicitud.create.mock.calls[0][0].data).not.toHaveProperty('mallaId'); // la malla la sube el docente
+  });
+
+  it('el docente asignado trabaja la solicitud; otro docente no; el coordinador solo la ve', async () => {
+    const s = { id: 1, usuarioId: 5, docenteId: 11, estado: 'BORRADOR', tipo: 'INTERNO', carreraOrigen: 'TI', materias: [] };
+    await expect(armar(s).servicio.ver({ id: 11, rol: 'DOCENTE' }, 1, true)).resolves.toEqual(expect.objectContaining({ id: 1 }));
+    await expect(armar(s).servicio.ver({ id: 12, rol: 'DOCENTE' }, 1)).rejects.toThrow('no está asignada a ti');
+    await expect(armar(s).servicio.ver({ id: 6, rol: 'COORDINADOR' }, 1)).resolves.toEqual(expect.objectContaining({ id: 1 }));
+    await expect(armar(s).servicio.quitarMateria({ id: 6, rol: 'COORDINADOR' }, 1, 'X')).rejects.toThrow('no es tuya');
+  });
+
+  it('el docente sube el expediente: malla, récord, periodos y legalización', async () => {
+    const s = { id: 1, usuarioId: 5, docenteId: 11, estado: 'BORRADOR', tipo: 'EXTERNO', materias: [] };
+    const { servicio, prisma } = armar(s);
+    await servicio.expediente({ id: 11, rol: 'DOCENTE' }, 1, { mallaId: 7, recordId: 8, periodosAprobados: 3, documentosLegalizados: true });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { mallaId: 7, recordId: 8, periodosAprobados: 3, documentosLegalizados: true } });
+    await expect(servicio.expediente({ id: 11, rol: 'DOCENTE' }, 1, { mallaId: -1 })).rejects.toThrow('no es válido');
+    await expect(armar({ ...s, estado: 'ENVIADA' }).servicio.expediente({ id: 11, rol: 'DOCENTE' }, 1, { recordId: 8 })).rejects.toThrow('ya fue enviada');
+  });
+
+  it('una solicitud de otra universidad no se envía sin malla ni récord', async () => {
+    const s = { id: 1, usuarioId: 5, docenteId: 11, estado: 'BORRADOR', tipo: 'EXTERNO', carreraDestino: 'SW', mallaId: null, recordId: null, materias: [{ codigo: 'EXT-A' }] };
+    await expect(armar(s).servicio.enviar({ id: 11, rol: 'DOCENTE' }, 1)).rejects.toThrow('Sube la malla y el récord');
+  });
+});
+

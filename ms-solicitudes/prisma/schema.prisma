@@ -15,8 +15,9 @@ model Solicitud {
   carreraOrigen         String               // INTERNO: código (TI). EXTERNO: nombre escrito por el estudiante
   carreraDestino        String               // SW
   periodo               String               // NOVIEMBRE 2026 - MARZO 2027
-  estado                String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO
+  estado                String               @default("BORRADOR") // BORRADOR, ENVIADA, RESULTADO_LISTO, REVISADA (homologación terminada por el docente)
   creada                DateTime             @default(now())
+  enviada               DateTime?            // cuándo se mandó al agente (la página muestra cuánto lleva revisando)
   // Solo para EXTERNO (T37)
   universidadOrigen     String?
   periodosAprobados     Int?                 // RN-08: al menos 2
@@ -24,10 +25,17 @@ model Solicitud {
   mallaId               Int?                 // id del PDF en ms-documentos
   recordId              Int?                 // id del PDF en ms-documentos
   requisitos            String?              @db.NVarChar(Max) // resultado de RN-08 en JSON (T45)
+  estudiante            String?              // nombre del estudiante (lo ven el coordinador y el docente)
+  // Coordinador y docente: el coordinador asigna un docente y el docente hace la homologación
+  docenteId             Int?
+  docente               String?              // nombre del docente asignado
+  coordinador           String?              // quién lo asignó
+  asignada              DateTime?
+  terminada             DateTime?            // cuando el docente terminó la homologación (estado REVISADA)
+  comentarioFinal       String?              @db.NVarChar(Max)
   materias              AsignaturaAprobada[]
 }
 
-// Materia aprobada que el estudiante registra en su solicitud (HU-05)
 model AsignaturaAprobada {
   id          Int       @id @default(autoincrement())
   solicitudId Int
@@ -49,6 +57,12 @@ model AsignaturaAprobada {
   notaOriginal Float?    // la nota como la puso su universidad (16); en nota queda la convertida (8)
   escala       Int?      // 10, 20 o 100
   silaboId     Int?      // id del sílabo en ms-documentos
+  // HU-26 · códigos de las otras materias aprobadas evaluadas junto con esta, separados por coma
+  juntoCon     String?
+  // El docente asignado puede cambiar el resultado del agente, con su comentario
+  resultadoDocente  String?
+  comentarioDocente String?  @db.NVarChar(1000)
+  docenteCambio     String?  // nombre del docente que lo cambió
   solicitud   Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
 
   @@unique([solicitudId, codigo])
