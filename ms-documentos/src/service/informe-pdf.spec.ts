@@ -229,6 +229,16 @@ describe('homologación del docente en el informe', () => {
             docenteCambio: 'Ing. Ana Pérez',
             informe: JSON.stringify({ nueva: 'QUIMICA (Q)', resultado: 'Homologable', causas: [], temasFaltan: [] }),
           },
+          {
+            ...base,
+            codigo: 'B',
+            nombre: 'Fundamentos de Programación',
+            resultado: 'Sin materia equivalente',
+            resultadoDocente: 'Homologable',
+            comentarioDocente: 'Mismo contenido',
+            docenteCambio: 'Ing. Ana Pérez',
+            nuevaDocente: 'ALGORITMOS Y LOGICA DE PROGRAMACION (SW-AL)',
+          },
         ],
       },
       'Ana',
@@ -239,6 +249,7 @@ describe('homologación del docente en el informe', () => {
     expect(texto).toContain('Revisado con los sílabos');
     expect(texto).toContain('Cambiado por Ing. Ana Pérez');
     expect(texto).toContain('No tiene laboratorio');
+    expect(texto.replace(/\s+/g, ' ')).toContain('Equivale a ALGORITMOS Y LOGICA DE PROGRAMACION (SW-AL) (elegida por el docente)');
   });
 
   it('sin docente dice que el coordinador lo asignará; con docente, que está en revisión', async () => {

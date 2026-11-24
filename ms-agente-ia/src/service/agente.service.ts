@@ -38,7 +38,7 @@ export interface Parecida {
   parecido: number;
 }
 
-const texto = (m: MateriaTexto) =>
+export const textoMateria = (m: MateriaTexto) =>
   [
     `${m.nombre} (${m.codigo})`,
     m.objetivoGeneral ? `Objetivo: ${m.objetivoGeneral}` : '',
@@ -48,12 +48,12 @@ const texto = (m: MateriaTexto) =>
     .join('\n');
 
 export function armarPedido(aprobada: MateriaTexto, nueva: MateriaTexto): string {
-  return `MATERIA APROBADA:\n${texto(aprobada)}\n\nMATERIA NUEVA:\n${texto(nueva)}`;
+  return `MATERIA APROBADA:\n${textoMateria(aprobada)}\n\nMATERIA NUEVA:\n${textoMateria(nueva)}`;
 }
 
 // T44 · Igual que armarPedido, pero la materia aprobada es el texto de su sílabo (de otra universidad)
 export function armarPedidoSilabo(silabo: string, nueva: MateriaTexto): string {
-  return `MATERIA APROBADA (sílabo de otra universidad):\n${recortar(silabo)}\n\nMATERIA NUEVA:\n${texto(nueva)}`;
+  return `MATERIA APROBADA (sílabo de otra universidad):\n${recortar(silabo)}\n\nMATERIA NUEVA:\n${textoMateria(nueva)}`;
 }
 
 // T43 · Candidatas en una línea cada una: "código | nombre | temas de cada unidad (80 letras)"

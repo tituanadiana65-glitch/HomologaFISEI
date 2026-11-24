@@ -63,6 +63,8 @@ model AsignaturaAprobada {
   resultadoDocente  String?
   comentarioDocente String?  @db.NVarChar(1000)
   docenteCambio     String?  // nombre del docente que lo cambió
+  codigoNuevaDocente String? // materia nueva que eligió el docente al marcarla homologable
+  nuevaDocente      String?  // su nombre: "ALGORITMOS Y LOGICA DE PROGRAMACION (UTA-FISEI-...)"
   solicitud   Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
 
   @@unique([solicitudId, codigo])

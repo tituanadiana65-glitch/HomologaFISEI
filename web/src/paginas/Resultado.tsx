@@ -30,6 +30,7 @@ interface Materia {
   resultadoDocente?: string | null; // revisión docente
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null;
 }
 interface Solicitud {
   id: number;
@@ -339,7 +340,12 @@ export default function Resultado({ id, alListo, soloLectura = false }: { id: nu
                   )}
                 </td>
                 <td>
-                  {inf ? (
+                  {f.nuevaDocente ? (
+                    <>
+                      <strong>{f.nuevaDocente.replace(/ \(.*\)$/, '')}</strong>
+                      <small className="equivale">Elegida por el docente</small>
+                    </>
+                  ) : inf ? (
                     <>
                       <strong>{inf.nueva.replace(/ \(.*\)$/, '')}</strong>
                       <small className="equivale">{f.codigoNueva ?? inf.nueva.match(/\((.*)\)$/)?.[1]}</small>

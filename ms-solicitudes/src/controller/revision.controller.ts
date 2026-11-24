@@ -77,7 +77,7 @@ export class RevisionController {
     @Headers('x-usuario-correo') correo: string,
     @Param('id', ParseIntPipe) id: number,
     @Param('codigo') codigo: string,
-    @Body() d: { resultado?: string; comentario?: string },
+    @Body() d: { resultado?: string; comentario?: string; codigoNueva?: string; nombreNueva?: string; confirmo?: boolean },
   ) {
     return this.servicio.cambiar(personaDe('DOCENTE', u, rol, nombreDe(nombre), correo), id, codigo, d);
   }

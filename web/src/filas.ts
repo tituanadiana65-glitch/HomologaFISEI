@@ -14,6 +14,7 @@ export interface MateriaConResultado {
   resultadoDocente?: string | null;
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null;
 }
 
 export interface Fila<M extends MateriaConResultado = MateriaConResultado> {
@@ -24,6 +25,7 @@ export interface Fila<M extends MateriaConResultado = MateriaConResultado> {
   resultadoAgente: string | null;
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null; // materia nueva elegida por el docente
   informe: string | null;
 }
 
@@ -43,6 +45,7 @@ export function armarFilas<M extends MateriaConResultado>(materias: M[]): Fila<M
       resultadoAgente: m.resultado,
       comentarioDocente: m.comentarioDocente,
       docenteCambio: m.docenteCambio,
+      nuevaDocente: m.nuevaDocente,
       informe: m.informe,
     });
   }

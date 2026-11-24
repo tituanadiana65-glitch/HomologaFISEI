@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EventosService } from '../events/eventos.service';
 import { ClientesService } from './clientes.service';
 import { HomologacionService } from './homologacion.service';
-import { AgenteService } from './agente.service';
+import { AgenteService, textoMateria } from './agente.service';
 import { buscarEquivalente, buscarPorNombre, nombreBase } from './equivalencia';
 import type { Informe, MateriaCatalogo, MateriaTexto, ParteJunta, Resultado } from '../dto/tipos';
 
@@ -43,6 +43,7 @@ interface Asignacion {
   silabo?: string; // otra universidad
   aprobada?: MateriaCatalogo; // UTA
   aviso?: string; // HU-26 · es una parte de la materia nueva
+  porTemasUta?: boolean; // UTA con otro nombre: se evalúa sola (no se junta con otras)
 }
 
 // Pausa entre materias por el límite de consultas por minuto de Gemini (en las pruebas: IA_PAUSA_MS=0)
@@ -91,7 +92,7 @@ export class SolicitudesAgenteService implements OnModuleInit {
     const asignaciones: Asignacion[] = [];
     for (const m of d.materias) {
       try {
-        const a = externa ? await this.asignarExterna(m, destino, candidatas, pausar) : await this.asignarUta(m, destino, d.materias);
+        const a = externa ? await this.asignarExterna(m, destino, candidatas, pausar) : await this.asignarUta(m, destino, d.materias, candidatas, pausar);
         if (a) asignaciones.push(a);
         else porCodigo.set(m.codigo, { codigoAprobada: m.codigo, codigoNueva: null, resultado: 'Sin materia equivalente', informe: null });
       } catch (e) {
@@ -104,7 +105,7 @@ export class SolicitudesAgenteService implements OnModuleInit {
     // 2 · HU-26 (RN-10): si dos o más apuntan a la misma materia nueva sin ser de igual nombre, se evalúan juntas
     const grupos = new Map<string, Asignacion[]>();
     for (const a of asignaciones) {
-      if (!a.principal || a.exacta) continue;
+      if (!a.principal || a.exacta || a.porTemasUta) continue;
       grupos.set(a.principal.codigo, [...(grupos.get(a.principal.codigo) ?? []), a]);
     }
 
@@ -131,12 +132,26 @@ export class SolicitudesAgenteService implements OnModuleInit {
   }
 
   // UTA · por nombre: igual (una con una) o "Física I" → "Física" (HU-26, se junta con las otras partes)
-  private async asignarUta(m: MateriaEnviada, destino: { codigo: string; nombre: string }[], enviadas: MateriaEnviada[]): Promise<Asignacion | null> {
+  private async asignarUta(
+    m: MateriaEnviada,
+    destino: { codigo: string; nombre: string }[],
+    enviadas: MateriaEnviada[],
+    candidatas: () => Promise<MateriaTexto[]>,
+    pausar: () => Promise<void>,
+  ): Promise<Asignacion | null> {
     const aprobada = await this.clientes.materia(m.codigo);
     const n = buscarPorNombre(aprobada.nombre, destino);
     const base = { m, nombre: aprobada.nombre, aprobada };
     if (n.exacta) return { ...base, principal: { codigo: n.exacta.codigo, parecido: 100 }, exacta: true };
-    if (!n.base) return null;
+    if (!n.base) {
+      // Corrección (24/11/2026): con otro nombre ("Fundamentos de Programación" frente a "Algoritmos y Lógica de
+      // Programación") se busca por los temas de la matriz de las dos carreras, como con otra universidad.
+      if (!aprobada.unidades?.length) return null;
+      await pausar();
+      const parecida = await this.agente.elegirParecida(textoMateria(aprobada), await candidatas());
+      if (!parecida) return null;
+      return { ...base, principal: { codigo: parecida.codigo, parecido: parecida.parecido }, exacta: false, porTemasUta: true };
+    }
     return { ...base, principal: { codigo: n.base.codigo, parecido: 100 }, exacta: false, aviso: await this.avisoUta(aprobada, n.base.nombre, enviadas) };
   }
 

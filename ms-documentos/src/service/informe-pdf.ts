@@ -14,6 +14,7 @@ export interface MateriaInforme {
   resultadoDocente?: string | null;
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null; // materia nueva elegida por el docente
 }
 
 
@@ -24,6 +25,7 @@ export interface FilaInforme {
   resultadoAgente: string | null;
   comentarioDocente?: string | null;
   docenteCambio?: string | null;
+  nuevaDocente?: string | null;
   informe: string | null;
 }
 
@@ -41,6 +43,7 @@ export function armarFilas(materias: MateriaInforme[]): FilaInforme[] {
       resultadoAgente: m.resultado,
       comentarioDocente: m.comentarioDocente,
       docenteCambio: m.docenteCambio,
+      nuevaDocente: m.nuevaDocente,
       informe: m.informe,
     });
   }
@@ -320,7 +323,7 @@ export function crearPdf(
         .font('Helvetica')
         .fontSize(9)
         .text(
-          `${f.materias.length > 1 ? 'Evaluadas juntas   ·   ' : ''}${notas}${inf?.parecido !== undefined ? `   ·   Parecido ${inf.parecido} %` : ''}${inf?.nueva ? `   ·   Equivale a ${inf.nueva}` : ''}`,
+          `${f.materias.length > 1 ? 'Evaluadas juntas   ·   ' : ''}${notas}${inf?.parecido !== undefined ? `   ·   Parecido ${inf.parecido} %` : ''}${f.nuevaDocente ? `   ·   Equivale a ${f.nuevaDocente} (elegida por el docente)` : inf?.nueva ? `   ·   Equivale a ${inf.nueva}` : ''}`,
           izq + 14,
           doc.y + 2,
           { width: ancho - 14 },
