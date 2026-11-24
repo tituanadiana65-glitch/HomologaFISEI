@@ -144,7 +144,7 @@ export function cedulaValida(cedula: string): boolean {
   const provincia = Number(cedula.slice(0, 2));
   if (!((provincia >= 1 && provincia <= 24) || provincia === 30)) return false;
   if (Number(cedula[2]) >= 6) return false;
-  const suma = [...cedula.slice(0, 9)].reduce((s, c, i) => {
+  const suma = cedula.slice(0, 9).split('').reduce((s, c, i) => {
     let n = Number(c) * (i % 2 === 0 ? 2 : 1);
     if (n > 9) n -= 9;
     return s + n;
@@ -155,7 +155,7 @@ export function cedulaValida(cedula: string): boolean {
 // Devuelve el documento limpio o el error para mostrar
 export function validarDocumento(tipo: unknown, documento: unknown): { tipo: TipoDocumento; documento: string } | { error: string } {
   const t: TipoDocumento = tipo === 'PASAPORTE' ? 'PASAPORTE' : 'CEDULA';
-  const d = String(documento ?? '').replace(/[\s-]/g, '').toUpperCase();
+  const d = (typeof documento === 'string' ? documento : '').replace(/[\s-]/g, '').toUpperCase();
   if (!d) return { error: t === 'CEDULA' ? 'Escribe la cédula del estudiante' : 'Escribe el pasaporte del estudiante' };
   if (t === 'CEDULA' && !cedulaValida(d)) return { error: 'La cédula no es válida: revisa que tenga los 10 dígitos correctos' };
   if (t === 'PASAPORTE' && !/^[A-Z0-9]{5,20}$/.test(d)) return { error: 'El pasaporte debe tener de 5 a 20 letras o números' };
