@@ -28,7 +28,10 @@ export function revisarToken(req: Request, res: Response, next: NextFunction) {
   if (!url.startsWith('/api/') || url.endsWith('/health') || PUBLICAS.includes(url) || consultaCatalogo) return next();
   const token = (req.headers.authorization ?? '').replace(/^Bearer /, '');
   try {
-    const datos = jwt.verify(token, process.env.JWT_SECRETO ?? 'homologa-sprint2-secreto', { algorithms: ['HS256'] }) as jwt.JwtPayload;
+    // La clave viene del archivo .env (T52): no hay una clave escrita en el código
+    const secreto = process.env.JWT_SECRETO;
+    if (!secreto) return responder(res, 500, 'Falta JWT_SECRETO en el archivo .env');
+    const datos = jwt.verify(token, secreto, { algorithms: ['HS256'] }) as jwt.JwtPayload;
     const soloAdmin = SOLO_ADMIN.some((r) => req.method === r.metodo && url.startsWith(r.ruta));
     if (soloAdmin && datos.rol !== 'ADMIN') return responder(res, 403, 'Solo el administrador puede hacer esto');
     const regla = POR_ROL.find((r) => url.startsWith(r.ruta));

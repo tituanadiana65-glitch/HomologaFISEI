@@ -4,7 +4,12 @@ import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../repository/prisma.service';
 import { Registro, validarRegistro } from './validaciones';
 
-const secreto = () => process.env.JWT_SECRETO ?? 'homologa-sprint2-secreto';
+// La clave que firma la sesión viene del archivo .env (T52): no hay una clave escrita en el código
+const secreto = () => {
+  const s = process.env.JWT_SECRETO;
+  if (!s) throw new Error('Falta JWT_SECRETO en el archivo .env');
+  return s;
+};
 
 export const ROLES_PERSONAL = ['COORDINADOR', 'DOCENTE'];
 
@@ -17,9 +22,14 @@ export class IdentidadService implements OnModuleInit {
   // Crea el administrador la primera vez
   async onModuleInit() {
     const correo = process.env.ADMIN_CORREO;
+    const clave = process.env.ADMIN_CLAVE; // viene del archivo .env (T52)
     if (!correo || (await this.prisma.usuario.findUnique({ where: { correo } }))) return;
+    if (!clave) {
+      this.log.warn('No se creó el administrador: falta ADMIN_CLAVE en el archivo .env');
+      return;
+    }
     await this.prisma.usuario.create({
-      data: { nombre: 'Administrador', correo, rol: 'ADMIN', claveHash: await bcrypt.hash(process.env.ADMIN_CLAVE ?? 'Admin2026*', 10) },
+      data: { nombre: 'Administrador', correo, rol: 'ADMIN', claveHash: await bcrypt.hash(clave, 10) },
     });
     this.log.log(`Administrador creado: ${correo}`);
   }

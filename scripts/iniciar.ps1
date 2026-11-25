@@ -22,6 +22,12 @@ Write-Host 'Docker funciona.'
 
 Paso 'Clave de la IA gratuita (Gemini de Google)'
 if (-not (Test-Path .env) -or -not (Select-String -Path .env -Pattern '^IA_PROVEEDOR=' -Quiet)) { Copy-Item .env.example .env -Force }
+# Agrega al .env las claves nuevas del ejemplo que falten (SQL_CLAVE, JWT_SECRETO, ADMIN_CLAVE: T52)
+$faltan = @()
+foreach ($linea in Get-Content .env.example) {
+  if ($linea -match '^([A-Z_]+)=' -and -not (Select-String -Path .env -Pattern ('^' + $Matches[1] + '=') -Quiet)) { $faltan += $linea }
+}
+if ($faltan.Count) { Add-Content .env ("`n" + ($faltan -join "`n")); Write-Host ('Se agregaron al .env: ' + (($faltan | ForEach-Object { $_.Split('=')[0] }) -join ', ')) }
 $envTexto = [IO.File]::ReadAllText((Resolve-Path .env))
 $proveedor = if ($envTexto -match '(?m)^IA_PROVEEDOR=(\S+)') { $Matches[1] } else { 'gemini' }
 if ($proveedor -ne 'ollama' -and $envTexto -notmatch '(?m)^IA_API_KEY=\S+') {
@@ -69,7 +75,8 @@ else {
 foreach ($c in (Invoke-RestMethod http://localhost:3000/api/catalogo/carreras)) { Write-Host ("{0}: {1} asignaturas" -f $c.nombre, $c._count.asignaturas) }
 
 Paso 'Probando una homologación: Cálculo Integral TI -> Software'
-$sesion = Invoke-RestMethod http://localhost:3000/api/identidad/login -Method Post -ContentType 'application/json' -Body (@{ correo = 'admin@uta.edu.ec'; clave = 'Admin2026*' } | ConvertTo-Json)
+$claveAdmin = if ([IO.File]::ReadAllText((Resolve-Path .env)) -match '(?m)^ADMIN_CLAVE=(.+)$') { $Matches[1].Trim() } else { '' }
+$sesion = Invoke-RestMethod http://localhost:3000/api/identidad/login -Method Post -ContentType 'application/json' -Body (@{ correo = 'admin@uta.edu.ec'; clave = $claveAdmin } | ConvertTo-Json)
 $h = @{ Authorization = "Bearer $($sesion.token)" }
 $pedido = @{ codigoAprobada = 'UTA-FISEI-TI-MP-UB-02-01'; codigoNueva = 'UTA-FISEI-SF-MP-UB-02-02'; nota = 8.5; anio = 2025 } | ConvertTo-Json
 try {

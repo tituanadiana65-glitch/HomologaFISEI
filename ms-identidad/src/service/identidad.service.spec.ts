@@ -4,6 +4,8 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { IdentidadService } from './identidad.service';
 import { PrismaService } from '../repository/prisma.service';
 
+process.env.JWT_SECRETO = 'clave-de-prueba'; // en el sistema viene del archivo .env
+
 function armar(existente: object | null = null) {
   const usuario = {
     findUnique: jest.fn().mockResolvedValue(existente),
@@ -23,7 +25,7 @@ describe('IdentidadService', () => {
     expect(creado).toEqual({ id: 1, nombre: 'Ing. Ana', correo: 'ana@uta.edu.ec', rol: 'DOCENTE' }); // sin la contraseña
     usuario.findUnique.mockResolvedValue({ ...guardado, id: 1 });
     const r = await s.entrar({ correo: 'ana@uta.edu.ec', clave: 'Clave2026*' });
-    const datos = jwt.verify(r.token, 'homologa-sprint2-secreto') as jwt.JwtPayload;
+    const datos = jwt.verify(r.token, 'clave-de-prueba') as jwt.JwtPayload;
     expect(datos).toEqual(expect.objectContaining({ rol: 'DOCENTE', correo: 'ana@uta.edu.ec', nombre: 'Ing. Ana' }));
     expect(datos.exp! - datos.iat!).toBe(8 * 3600);
   });
@@ -49,7 +51,7 @@ describe('IdentidadService', () => {
   describe('administrador inicial', () => {
     beforeEach(() => {
       process.env.ADMIN_CORREO = 'admin@uta.edu.ec';
-      process.env.ADMIN_CLAVE = 'Admin2026*';
+      process.env.ADMIN_CLAVE = 'Clave-Admin-Prueba1';
     });
     afterEach(() => {
       delete process.env.ADMIN_CORREO;
@@ -61,7 +63,14 @@ describe('IdentidadService', () => {
       await s.onModuleInit();
       const data = usuario.create.mock.calls[0][0].data;
       expect(data).toEqual(expect.objectContaining({ correo: 'admin@uta.edu.ec', rol: 'ADMIN' }));
-      expect(await bcrypt.compare('Admin2026*', data.claveHash)).toBe(true);
+      expect(await bcrypt.compare('Clave-Admin-Prueba1', data.claveHash)).toBe(true);
+    });
+
+    it('sin ADMIN_CLAVE en .env no se crea con una clave inventada (T52)', async () => {
+      delete process.env.ADMIN_CLAVE;
+      const { s, usuario } = armar(null);
+      await s.onModuleInit();
+      expect(usuario.create).not.toHaveBeenCalled();
     });
 
     it('no se vuelve a crear si ya existe', async () => {

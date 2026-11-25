@@ -13,12 +13,13 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Homologa2026*"
+      SQL_CLAVE_SQLCMD: ${SQL_CLAVE}
+      MSSQL_SA_PASSWORD: ${SQL_CLAVE:?Falta SQL_CLAVE en .env (copia .env.example)}
     ports: ["1433:1433"]
     volumes:
       - sqlserver-datos:/var/opt/mssql # los datos no se pierden al apagar
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Homologa2026*' -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SQL_CLAVE_SQLCMD\" -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
       retries: 12
 
@@ -37,7 +38,7 @@ services:
       MS_AGENTE: http://ms-agente-ia:3005
       MS_SOLICITUDES: http://ms-solicitudes:3003
       MS_DOCUMENTOS: http://ms-documentos:3006
-      JWT_SECRETO: homologa-sprint2-secreto
+      JWT_SECRETO: ${JWT_SECRETO:?Falta JWT_SECRETO en .env (copia .env.example)}
     ports: ["3000:3000"]
     depends_on: [ms-identidad, ms-catalogo, ms-motor-reglas, ms-agente-ia, ms-solicitudes, ms-documentos]
 
@@ -47,10 +48,10 @@ services:
     environment:
       PORT: "3001"
       SERVICIO: ms-identidad
-      DATABASE_URL: "sqlserver://sqlserver:1433;database=identidad_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
-      JWT_SECRETO: homologa-sprint2-secreto
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=identidad_db;user=sa;password=${SQL_CLAVE};trustServerCertificate=true"
+      JWT_SECRETO: ${JWT_SECRETO:?Falta JWT_SECRETO en .env (copia .env.example)}
       ADMIN_CORREO: admin@uta.edu.ec
-      ADMIN_CLAVE: Admin2026*
+      ADMIN_CLAVE: ${ADMIN_CLAVE:?Falta ADMIN_CLAVE en .env (copia .env.example)}
     ports: ["3001:3001"]
 
   ms-catalogo:
@@ -59,7 +60,7 @@ services:
     environment:
       PORT: "3002"
       SERVICIO: ms-catalogo
-      DATABASE_URL: "sqlserver://sqlserver:1433;database=catalogo_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=catalogo_db;user=sa;password=${SQL_CLAVE};trustServerCertificate=true"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       MS_AGENTE: http://ms-agente-ia:3005 # lee con IA los planes que no tienen el formato de la FISEI
       PLANES_DIR: /planes
@@ -73,7 +74,7 @@ services:
     environment:
       PORT: "3004"
       SERVICIO: ms-motor-reglas
-      DATABASE_URL: "sqlserver://sqlserver:1433;database=reglas_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=reglas_db;user=sa;password=${SQL_CLAVE};trustServerCertificate=true"
     ports: ["3004:3004"]
 
   ms-agente-ia:
@@ -82,7 +83,7 @@ services:
     environment:
       PORT: "3005"
       SERVICIO: ms-agente-ia
-      DATABASE_URL: "sqlserver://sqlserver:1433;database=homologacion_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=homologacion_db;user=sa;password=${SQL_CLAVE};trustServerCertificate=true"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       IA_PROVEEDOR: ${IA_PROVEEDOR:-gemini} # gemini, groq, ollama o claude (ver .env.example)
       IA_API_KEY: ${IA_API_KEY:-}
@@ -100,7 +101,7 @@ services:
     environment:
       PORT: "3003"
       SERVICIO: ms-solicitudes
-      DATABASE_URL: "sqlserver://sqlserver:1433;database=solicitudes_db;user=sa;password=Homologa2026*;trustServerCertificate=true"
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=solicitudes_db;user=sa;password=${SQL_CLAVE};trustServerCertificate=true"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       MS_CATALOGO: http://ms-catalogo:3002
     ports: ["3003:3003"]

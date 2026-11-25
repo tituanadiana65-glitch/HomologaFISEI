@@ -1,7 +1,8 @@
 import * as jwt from 'jsonwebtoken';
 import { revisarToken } from './token';
 
-const secreto = 'homologa-sprint2-secreto';
+const secreto = 'clave-de-prueba';
+process.env.JWT_SECRETO = secreto; // en el sistema viene del archivo .env
 
 function llamar(metodo: string, url: string, token?: string) {
   const req: any = { method: metodo, originalUrl: url, headers: token ? { authorization: `Bearer ${token}` } : {} };
@@ -42,6 +43,14 @@ describe('revisarToken', () => {
     for (const [m, u] of [['POST', '/api/identidad/login'], ['GET', '/api/agente/health'], ['GET', '/api/catalogo/carreras']]) {
       expect(llamar(m, u).next).toHaveBeenCalled();
     }
+  });
+  it('sin JWT_SECRETO en .env no acepta ningún token (no hay clave escrita en el código, T52)', () => {
+    const guardada = process.env.JWT_SECRETO;
+    delete process.env.JWT_SECRETO;
+    const { next, res } = llamar('GET', '/api/solicitudes', jwt.sign({ sub: 1, rol: 'ADMIN' }, 'homologa-sprint2-secreto'));
+    process.env.JWT_SECRETO = guardada;
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(500);
   });
   it('el registro ya no es público: sin token responde 401', () => {
     const { next, res } = llamar('POST', '/api/identidad/registro');

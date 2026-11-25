@@ -23,7 +23,7 @@ SQL Server, RabbitMQ y NestJS **no** se instalan aparte: Docker los descarga sol
    git clone https://github.com/tituanadiana65-glitch/HomologaFISEI.git
    cd HomologaFISEI
    ```
-3. Crea tu archivo `.env` a partir del ejemplo y pon la clave de Gemini en `IA_API_KEY`:
+3. Crea tu archivo `.env` a partir del ejemplo. Pon la clave de Gemini en `IA_API_KEY` y cambia `SQL_CLAVE`, `JWT_SECRETO` y `ADMIN_CLAVE` (la contraseña del administrador `admin@uta.edu.ec`). Ninguna clave está escrita en el código; si falta una, `docker compose` avisa cuál:
    ```powershell
    Copy-Item .env.example .env
    notepad .env
@@ -89,7 +89,7 @@ Microservicios con NestJS. Cada uno tiene su propia base de datos en SQL Server 
 | `ms-catalogo` | 3002 | Lee los planes analíticos en PDF y guarda carreras, asignaturas, unidades y requisitos | `catalogo_db` |
 | `ms-motor-reglas` | 3004 | Reglas RN-02 a RN-05 (créditos, horas, nota, vigencia) con valores que el administrador puede cambiar | `reglas_db` |
 | `ms-agente-ia` | 3005 | Agente de IA (Gemini, Groq, Ollama o Claude): compara contenidos (RN-01), elige la materia más parecida a un sílabo, arma el resultado y el informe | `homologacion_db` |
-| `sqlserver` | 1433 | SQL Server 2022 (usuario `sa`, clave `Homologa2026*`) | — |
+| `sqlserver` | 1433 | SQL Server 2022 (usuario `sa`, clave `SQL_CLAVE` del archivo `.env`) | — |
 | `rabbitmq` | 5672 / 15672 | Mensajería de eventos. Panel: http://localhost:15672 (`guest` / `guest`) | — |
 
 Al arrancar, cada servicio crea su base y sus tablas (`prisma db push`). El catálogo registra las carreras TI y SW, y el motor carga las reglas iniciales de `docs/reglas.md`. Cualquier otra carrera de la FISEI se crea sola al importar su plan (T51: la sigla del código del plan, por ejemplo `RO`, pasa a ser el código de la carrera) o a mano con **Nueva carrera** en la pantalla de administración.

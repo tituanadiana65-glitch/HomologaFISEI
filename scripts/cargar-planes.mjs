@@ -33,11 +33,25 @@ if (!archivos.length) {
   process.exit(1);
 }
 
-// Desde el Sprint 2 importar planes pide token de administrador
+// Desde el Sprint 2 importar planes pide token de administrador.
+// La contraseña sale de ADMIN_CLAVE (variable de entorno o archivo .env, T52): no está escrita en el código
+let claveAdmin = process.env.ADMIN_CLAVE;
+if (!claveAdmin) {
+  try {
+    const { readFileSync } = await import('node:fs');
+    claveAdmin = /^ADMIN_CLAVE=(.+)$/m.exec(readFileSync(new URL('../.env', import.meta.url), 'utf8'))?.[1]?.trim();
+  } catch {
+    // sin .env
+  }
+}
+if (!claveAdmin) {
+  console.log('Falta ADMIN_CLAVE: ponla en el archivo .env (copia .env.example)');
+  process.exit(1);
+}
 const sesion = await fetch(`${GATEWAY}/api/identidad/login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ correo: process.env.ADMIN_CORREO ?? 'admin@uta.edu.ec', clave: process.env.ADMIN_CLAVE ?? 'Admin2026*' }),
+  body: JSON.stringify({ correo: process.env.ADMIN_CORREO ?? 'admin@uta.edu.ec', clave: claveAdmin }),
 }).then((r) => r.json());
 if (!sesion.token) {
   console.log('No se pudo iniciar sesión como administrador: ' + (sesion.message ?? 'revisa que ms-identidad esté encendido'));
